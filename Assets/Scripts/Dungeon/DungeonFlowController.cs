@@ -57,8 +57,10 @@ namespace Roguelike.Dungeon
         [SerializeField] private ItemDefinition[] itemPool;
 
         private readonly List<Enemy> _aliveEnemies = new List<Enemy>();
+        private readonly List<ItemDefinition> _availableItems = new List<ItemDefinition>();
         private RoomView _activeRoom;
         private PlayerStats _playerStats;
+        private PlayerInventory _playerInventory;
 
         public PlayerRoomTracker Tracker => tracker;
         public int AliveEnemyCount => _aliveEnemies.Count;
@@ -81,6 +83,7 @@ namespace Roguelike.Dungeon
                 itemPool = Resources.LoadAll<ItemDefinition>("Items");
 
             _playerStats = FindFirstObjectByType<PlayerStats>();
+            _playerInventory = FindFirstObjectByType<PlayerInventory>();
         }
 
         private void OnEnable()
@@ -144,7 +147,14 @@ namespace Roguelike.Dungeon
 
             room.ShopStocked = true;
 
-            var stock = new List<ItemDefinition>(itemPool);
+            // 只上架玩家尚未持有的道具，避免重复购买同一件
+            var stock = BuildAvailableItems();
+            if (stock.Count == 0)
+            {
+                Debug.Log($"[Flow] 商店 {room.GridPosition} 无可售道具（玩家已持有全部道具）");
+                return;
+            }
+
             int count = Mathf.Min(3, stock.Count);
             Vector2 center = room.WorldCenter;
 
@@ -174,7 +184,16 @@ namespace Roguelike.Dungeon
             if (room.RewardClaimed || room.RewardSpawned) return;
             if (itemPickupPrefab == null || itemPool == null || itemPool.Length == 0) return;
 
-            ItemDefinition item = itemPool[Random.Range(0, itemPool.Length)];
+            // 宝箱房也只给尚未持有的道具
+            List<ItemDefinition> available = BuildAvailableItems();
+            if (available.Count == 0)
+            {
+                room.RewardSpawned = true;
+                Debug.Log($"[Flow] 宝箱房 {room.GridPosition} 无可生成道具（玩家已持有全部道具）");
+                return;
+            }
+
+            ItemDefinition item = available[Random.Range(0, available.Count)];
             if (item == null) return;
 
             room.RewardSpawned = true;
@@ -189,6 +208,35 @@ namespace Roguelike.Dungeon
             pickup.Setup(item, room);
 
             Debug.Log($"[Flow] 宝箱房 {room.GridPosition} 生成道具：{item.itemName}");
+        }
+
+        /// <summary>当前可提供的道具：剔除空引用与玩家背包里已有的道具。</summary>
+        private List<ItemDefinition> BuildAvailableItems()
+        {
+            _availableItems.Clear();
+            if (itemPool == null) return _availableItems;
+
+            for (int i = 0; i < itemPool.Length; i++)
+            {
+                ItemDefinition item = itemPool[i];
+                if (item == null || IsOwned(item)) continue;
+                _availableItems.Add(item);
+            }
+
+            return _availableItems;
+        }
+
+        private bool IsOwned(ItemDefinition item)
+        {
+            if (_playerInventory == null) return false;
+
+            IReadOnlyList<ItemDefinition> owned = _playerInventory.Items;
+            for (int i = 0; i < owned.Count; i++)
+            {
+                if (owned[i] == item) return true;
+            }
+
+            return false;
         }
 
         /// <summary>敌人死亡回调：先掉落奖励，再判断是否清空房间。</summary>
