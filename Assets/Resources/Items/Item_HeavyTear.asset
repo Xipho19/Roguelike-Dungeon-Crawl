@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 809a1a0b1f10ffa4baec5a645412a5d9, type: 3}
+  m_Name: Item_HeavyTear
+  m_EditorClassIdentifier: Assembly-CSharp::Roguelike.Items.ItemDefinition
+  itemName: "\u91CD\u578B\u5F39\u4E38"
+  description: "\u4F24\u5BB3 +1\uFF0C\u5C04\u901F\u964D\u4F4E 15%\u3002"
+  rarity: 0
+  icon: {fileID: 21300000, guid: 2f25e5cffb97f404cb3832b1f1174b63, type: 3}
+  color: {r: 0.78, g: 0.28, b: 0.3, a: 1}
+  modifiers:
+  - stat: 1
+    op: 0
+    value: 1
+  - stat: 2
+    op: 1
+    value: 1.15
+  coinBonus: 0
+  healAmount: 0

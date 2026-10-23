@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 809a1a0b1f10ffa4baec5a645412a5d9, type: 3}
+  m_Name: Item_CoinBag
+  m_EditorClassIdentifier: Assembly-CSharp::Roguelike.Items.ItemDefinition
+  itemName: "\u5E78\u8FD0\u5E01\u888B"
+  description: "\u6BCF\u4E2A\u654C\u4EBA\u989D\u5916\u6389\u843D 1 \u679A\u91D1\u5E01\u3002"
+  rarity: 0
+  icon: {fileID: 21300000, guid: a9056cf91ab1c14478d04137a06617c0, type: 3}
+  color: {r: 0.85, g: 0.7, b: 0.25, a: 1}
+  modifiers:
+  - stat: 8
+    op: 0
+    value: 1
+  coinBonus: 0
+  healAmount: 0

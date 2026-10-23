@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 809a1a0b1f10ffa4baec5a645412a5d9, type: 3}
+  m_Name: Item_Slingshot
+  m_EditorClassIdentifier: Assembly-CSharp::Roguelike.Items.ItemDefinition
+  itemName: "\u5F3A\u529B\u5F39\u5F13"
+  description: "\u5F39\u4E38\u901F\u5EA6\u63D0\u5347 30%\u3002"
+  rarity: 0
+  icon: {fileID: 21300000, guid: a0af277f0fe905b4a8727da0c6665c86, type: 3}
+  color: {r: 0.95, g: 0.85, b: 0.3, a: 1}
+  modifiers:
+  - stat: 4
+    op: 1
+    value: 1.3
+  coinBonus: 0
+  healAmount: 0
