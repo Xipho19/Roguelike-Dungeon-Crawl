@@ -46,6 +46,7 @@ namespace Roguelike.Combat
                 Enemy minion = Instantiate(minionPrefab, position, Quaternion.identity, transform.parent);
                 minion.name = "TinyZombie_Split";
                 minion.Initialize(minionHealth, minionSpeed, minionScale, Color.white, false, _flow);
+                minion.ActivateCombat();
 
                 if (_flow != null) _flow.RegisterEnemy(minion);
             }

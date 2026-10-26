@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 809a1a0b1f10ffa4baec5a645412a5d9, type: 3}
+  m_Name: Item_CorpseBomb
+  m_EditorClassIdentifier: Assembly-CSharp::Roguelike.Items.ItemDefinition
+  itemName: "\u5C38\u7206\u83CC"
+  description: "\u88AB\u52A8\uFF1A\u654C\u4EBA\u6B7B\u4EA1\u65F6\u7206\u70B8\uFF0C\u5BF9\u5468\u56F4\u654C\u4EBA\u9020\u6210
+    2 \u70B9\u4F24\u5BB3\u3002"
+  rarity: 1
+  icon: {fileID: 21300000, guid: 852db43d61cf999449a3631e725b0486, type: 3}
+  color: {r: 0.86, g: 0.72, b: 0.5, a: 1}
+  modifiers: []
+  coinBonus: 0
+  healAmount: 0
+  effectPower: 2
+  effectRadius: 2.2
+  triggerCount: 1
+  synergy: 5
+  shopPrice: 13

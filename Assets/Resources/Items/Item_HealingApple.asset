@@ -20,3 +20,8 @@ MonoBehaviour:
   modifiers: []
   coinBonus: 0
   healAmount: 2
+  effectPower: 0
+  effectRadius: 0
+  triggerCount: 1
+  synergy: 0
+  shopPrice: 0

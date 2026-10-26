@@ -51,10 +51,13 @@ namespace Roguelike.EditorTools
                 AssetDatabase.LoadAssetAtPath<ChargerEnemy>(CombatPrefabFactory.ChargerPath) == null ||
                 AssetDatabase.LoadAssetAtPath<BomberEnemy>(CombatPrefabFactory.BomberPath) == null ||
                 AssetDatabase.LoadAssetAtPath<NecromancerEnemy>(CombatPrefabFactory.NecromancerPath) == null ||
-                AssetDatabase.LoadAssetAtPath<SplitterEnemy>(CombatPrefabFactory.SplitterPath) == null)
+                AssetDatabase.LoadAssetAtPath<SplitterEnemy>(CombatPrefabFactory.SplitterPath) == null ||
+                AssetDatabase.LoadAssetAtPath<TearProjectile>(CombatPrefabFactory.TearPath) == null)
                 CombatPrefabFactory.Rebuild();
 
             ItemAssetFactory.EnsureItems();
+            FloorThemeAssetFactory.EnsureThemes();
+            CombatPrefabFactory.EnsureTearExplosionSprite();
 
             RoomView startRoom = builder.GetRoom(builder.Data.Start.Grid);
 
@@ -97,13 +100,18 @@ namespace Roguelike.EditorTools
 
             // 战斗
             var combat = Ensure<PlayerCombat>(player);
+            var inventory = player.GetComponent<PlayerInventory>();
+            var health = player.GetComponent<PlayerHealth>();
+
             var tearPrefab = AssetDatabase.LoadAssetAtPath<TearProjectile>(CombatPrefabFactory.TearPath);
+            var combatObject = new SerializedObject(combat);
             if (tearPrefab != null)
-            {
-                var combatObject = new SerializedObject(combat);
                 combatObject.FindProperty("tearPrefab").objectReferenceValue = tearPrefab;
-                combatObject.ApplyModifiedPropertiesWithoutUndo();
-            }
+            combatObject.FindProperty("inventory").objectReferenceValue = inventory;
+            combatObject.ApplyModifiedPropertiesWithoutUndo();
+
+            // 触发型被动
+            var itemEffects = Ensure<PlayerItemEffects>(player);
 
             if (startRoom != null)
                 player.transform.position = new Vector3(startRoom.WorldCenter.x, startRoom.WorldCenter.y, 0f);
@@ -184,6 +192,9 @@ namespace Roguelike.EditorTools
 
             var hud = Ensure<CombatDebugHud>(builder.gameObject);
             var hudObject = new SerializedObject(hud);
+            hudObject.FindProperty("health").objectReferenceValue = health;
+            hudObject.FindProperty("wallet").objectReferenceValue = player.GetComponent<PlayerWallet>();
+            hudObject.FindProperty("inventory").objectReferenceValue = inventory;
             hudObject.FindProperty("floorIcon").objectReferenceValue = ThirdPartySprites.FloorLadder;
             hudObject.FindProperty("heartIcon").objectReferenceValue = ThirdPartySprites.Heart;
             hudObject.FindProperty("coinIcon").objectReferenceValue = ThirdPartySprites.HudCoin;
@@ -205,11 +216,25 @@ namespace Roguelike.EditorTools
 
             runObject.ApplyModifiedPropertiesWithoutUndo();
 
+            hudObject.FindProperty("runManager").objectReferenceValue = runManager;
+            hudObject.ApplyModifiedPropertiesWithoutUndo();
+
             // Esc 暂停
             var pauseMenu = Ensure<PauseMenu>(builder.gameObject);
             var pauseObject = new SerializedObject(pauseMenu);
             pauseObject.FindProperty("runManager").objectReferenceValue = runManager;
             pauseObject.ApplyModifiedPropertiesWithoutUndo();
+
+            // 触发型被动
+            var effectsObject = new SerializedObject(itemEffects);
+            effectsObject.FindProperty("inventory").objectReferenceValue = inventory;
+            effectsObject.FindProperty("health").objectReferenceValue = health;
+            effectsObject.FindProperty("tracker").objectReferenceValue = tracker;
+            effectsObject.FindProperty("flow").objectReferenceValue = flow;
+            effectsObject.FindProperty("runManager").objectReferenceValue = runManager;
+            effectsObject.FindProperty("hud").objectReferenceValue = hud;
+            effectsObject.FindProperty("explosionSprite").objectReferenceValue = ThirdPartySprites.Explosion;
+            effectsObject.ApplyModifiedPropertiesWithoutUndo();
 
             // Tab 地图
             var mapUi = Ensure<MapUI>(builder.gameObject);

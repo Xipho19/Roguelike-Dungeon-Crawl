@@ -362,10 +362,34 @@ namespace Roguelike.EditorTools
             collider.radius = 0.5f;
             collider.isTrigger = true;
 
-            root.AddComponent<TearProjectile>();
+            var tear = root.AddComponent<TearProjectile>();
+            var serialized = new SerializedObject(tear);
+            serialized.FindProperty("explosionSprite").objectReferenceValue = ThirdPartySprites.Explosion;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
 
             PrefabUtility.SaveAsPrefabAsset(root, TearPath);
             Object.DestroyImmediate(root);
+        }
+
+        /// <summary>给已有的 Tear Prefab 补上爆炸贴图引用，不重建整个 Prefab。</summary>
+        public static void EnsureTearExplosionSprite()
+        {
+            var tear = AssetDatabase.LoadAssetAtPath<TearProjectile>(TearPath);
+            if (tear == null)
+            {
+                Debug.LogWarning("[Combat] 找不到 Tear Prefab，无法补全爆炸贴图引用。");
+                return;
+            }
+
+            var serialized = new SerializedObject(tear);
+            SerializedProperty sprite = serialized.FindProperty("explosionSprite");
+            if (sprite == null || sprite.objectReferenceValue != null) return;
+
+            sprite.objectReferenceValue = ThirdPartySprites.Explosion;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(tear);
+            AssetDatabase.SaveAssets();
+            Debug.Log("[Combat] 已为 Tear Prefab 补上爆炸贴图引用。");
         }
 
         private static void BuildCoin(Sprite sprite)

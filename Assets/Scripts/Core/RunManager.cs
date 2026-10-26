@@ -42,6 +42,14 @@ namespace Roguelike.Core
         [Tooltip("当前楼层，从 1 开始")]
         [SerializeField] private int currentFloor = 1;
 
+        [Header("楼层上限")]
+        [Tooltip("击败该层 Boss 即通关；小于等于 0 表示无尽模式")]
+        [SerializeField] private int maxFloor = 6;
+
+        [Header("楼层主题")]
+        [Tooltip("留空时从 Resources/FloorThemes 加载并按 order 排序")]
+        [SerializeField] private FloorTheme[] floorThemes = new FloorTheme[0];
+
         [Header("跨局继承")]
         [Tooltip("旧版通关继承开关；现在跨楼层会保留道具，死亡时始终清空")]
         [SerializeField] private bool keepItemsAfterVictory = true;
@@ -50,9 +58,21 @@ namespace Roguelike.Core
         private NextFloorPortal _portal;
         private GUIStyle _titleStyle;
         private GUIStyle _bodyStyle;
+        private FloorTheme _currentTheme;
 
         public RunState State => _state;
         public int CurrentFloor => currentFloor;
+        public int MaxFloor => maxFloor;
+        public bool IsEndlessRun => maxFloor <= 0;
+        public FloorTheme CurrentFloorTheme => _currentTheme;
+
+        /// <summary>原地重开完成后触发（换层不触发），用于重置主动冷却与击杀计数。</summary>
+        public event System.Action RunRestarted;
+
+        public string CurrentThemeName =>
+            _currentTheme != null && !string.IsNullOrEmpty(_currentTheme.displayName)
+                ? _currentTheme.displayName
+                : "地牢";
 
         private void Awake()
         {
@@ -69,6 +89,64 @@ namespace Roguelike.Core
 
             if (playerHealth != null) playerHealth.Died += HandlePlayerDied;
             if (flow != null) flow.BossDefeated += HandleBossDefeated;
+
+            if (currentFloor < 1) currentFloor = 1;
+            LoadFloorThemes();
+            ApplyFloorPresentation();
+        }
+
+        private void LoadFloorThemes()
+        {
+            FloorTheme[] themes = floorThemes;
+            if (themes == null || themes.Length == 0)
+                themes = Resources.LoadAll<FloorTheme>("FloorThemes");
+
+            themes = System.Array.FindAll(themes, theme => theme != null);
+            System.Array.Sort(themes, (a, b) =>
+            {
+                int byOrder = a.order.CompareTo(b.order);
+                return byOrder != 0 ? byOrder : string.CompareOrdinal(a.name, b.name);
+            });
+
+            floorThemes = themes;
+
+            if (floorThemes.Length == 0)
+            {
+                Debug.LogWarning(
+                    "[Run] 未找到楼层主题资产，使用默认地牢外观。" +
+                    "请执行 Tools/Roguelike/生成楼层主题。");
+            }
+        }
+
+        private FloorTheme ThemeForFloor(int floor)
+        {
+            if (floorThemes == null || floorThemes.Length == 0) return null;
+
+            int index = ((Mathf.Max(1, floor) - 1) % floorThemes.Length + floorThemes.Length) % floorThemes.Length;
+            return floorThemes[index];
+        }
+
+        private void ApplyFloorPresentation()
+        {
+            _currentTheme = ThemeForFloor(currentFloor);
+
+            if (flow != null) flow.SetFloor(currentFloor, _currentTheme);
+            if (roomCamera != null && _currentTheme != null)
+                roomCamera.SetBackgroundColor(_currentTheme.cameraBackground);
+        }
+
+        private void EnterVictory(string reason)
+        {
+            if (_portal != null)
+            {
+                Destroy(_portal.gameObject);
+                _portal = null;
+            }
+
+            _state = RunState.Victory;
+            Time.timeScale = 0f;
+            AudioService.Play("bookOpen", 0.9f);
+            Debug.Log($"[Run] 通关：{reason}");
         }
 
         private void OnDestroy()
@@ -97,13 +175,17 @@ namespace Roguelike.Core
         {
             if (_state != RunState.Playing) return;
 
+            if (maxFloor > 0 && currentFloor >= maxFloor)
+            {
+                EnterVictory($"击败第 {currentFloor} 层 Boss");
+                return;
+            }
+
             if (portalPrefab == null)
             {
                 // 没有传送门 Prefab 时回退到旧的通关结算，避免 Boss 死后无事发生
-                _state = RunState.Victory;
-                Time.timeScale = 0f;
-                AudioService.Play("bookOpen", 0.9f);
                 Debug.LogWarning("[Run] 缺少 NextFloorPortal Prefab，回退为通关结算");
+                EnterVictory("Boss 已被击败");
                 return;
             }
 
@@ -153,6 +235,12 @@ namespace Roguelike.Core
         {
             if (_state != RunState.Playing) return;
 
+            if (maxFloor > 0 && currentFloor >= maxFloor)
+            {
+                EnterVictory("已达楼层上限");
+                return;
+            }
+
             AudioService.Play("teleport", 0.9f, 0f);
             Time.timeScale = 1f;
 
@@ -165,12 +253,15 @@ namespace Roguelike.Core
             if (flow != null) flow.ResetForNewRun();
 
             currentFloor++;
+            ApplyFloorPresentation();
 
             if (builder != null)
             {
                 builder.SetSeed(Random.Range(1, int.MaxValue));
                 builder.BuildFromSeed();
             }
+
+            if (flow != null) flow.PrepareFloor();
 
             if (tracker != null && builder != null && builder.Data != null)
             {
@@ -181,7 +272,7 @@ namespace Roguelike.Core
             }
 
             _state = RunState.Playing;
-            Debug.Log($"[Run] 进入第 {currentFloor} 层，新种子 {(builder != null ? builder.Seed : 0)}");
+            Debug.Log($"[Run] 进入第 {currentFloor} 层（{CurrentThemeName}），新种子 {(builder != null ? builder.Seed : 0)}");
         }
 
         /// <summary>用新种子原地重开一局。</summary>
@@ -201,12 +292,15 @@ namespace Roguelike.Core
             if (inventory != null && !keepItems) inventory.Clear();
             if (wallet != null) wallet.ResetCoins();
             currentFloor = 1;
+            ApplyFloorPresentation();
 
             if (builder != null)
             {
                 builder.SetSeed(Random.Range(1, int.MaxValue));
                 builder.BuildFromSeed();
             }
+
+            if (flow != null) flow.PrepareFloor();
 
             if (playerHealth != null) playerHealth.ResetForNewRun();
 
@@ -219,6 +313,7 @@ namespace Roguelike.Core
             }
 
             _state = RunState.Playing;
+            RunRestarted?.Invoke();
             Debug.Log($"[Run] 已重开，新种子 {(builder != null ? builder.Seed : 0)}，道具{(keepItems ? "已继承" : "已清空")}");
         }
 
@@ -248,9 +343,13 @@ namespace Roguelike.Core
             GUI.Label(new Rect(cx - 300f, cy - 120f, 600f, 70f),
                 _state == RunState.Victory ? "通关！" : "你死了", _titleStyle);
 
-            GUI.Label(new Rect(cx - 300f, cy - 38f, 600f, 34f),
-                _state == RunState.Victory ? "Boss 已被击败" : "本局结束",
-                _bodyStyle);
+            string body = _state != RunState.Victory
+                ? "本局结束"
+                : maxFloor > 0
+                    ? $"你已征服 {maxFloor} 层地牢"
+                    : "Boss 已被击败";
+
+            GUI.Label(new Rect(cx - 300f, cy - 38f, 600f, 34f), body, _bodyStyle);
 
             if (GUI.Button(new Rect(cx - 110f, cy + 32f, 220f, 48f), "重新开始 (R)"))
                 RestartRun();

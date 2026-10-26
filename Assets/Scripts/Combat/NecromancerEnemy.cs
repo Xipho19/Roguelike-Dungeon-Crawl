@@ -39,9 +39,26 @@ namespace Roguelike.Combat
             _nextSummonTime = Time.time + 1.2f;
         }
 
+        protected override void OnCombatStarted()
+        {
+            base.OnCombatStarted();
+
+            _summoning = false;
+            _nextSummonTime = Time.time + 1.2f;
+            RestoreColor();
+        }
+
         protected override void FixedUpdate()
         {
-            if (IsDead || _target == null || _rb == null) return;
+            if (IsDead || _rb == null) return;
+
+            if (!CombatActive)
+            {
+                UpdatePassiveBehavior();
+                return;
+            }
+
+            if (_target == null) return;
 
             if (_summoning)
             {
@@ -98,6 +115,7 @@ namespace Roguelike.Combat
             Enemy minion = Instantiate(minionPrefab, position, Quaternion.identity, transform.parent);
             minion.name = "Skeleton_Minion";
             minion.Initialize(minionHealth, minionSpeed, minionScale, Color.white, false, _flow);
+            minion.ActivateCombat();
 
             if (_flow != null) _flow.RegisterEnemy(minion);
 

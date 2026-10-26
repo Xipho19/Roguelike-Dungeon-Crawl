@@ -35,6 +35,9 @@ namespace Roguelike.Dungeon
         [Tooltip("顺序：上 / 右 / 下 / 左")]
         [SerializeField] private Transform[] doorMarkers = new Transform[4];
 
+        [Tooltip("未清空战斗房的门槛警示地砖，顺序：上 / 右 / 下 / 左")]
+        [SerializeField] private SpriteRenderer[] doorIndicators = new SpriteRenderer[4];
+
         [Tooltip("门洞触发盒，只要该方向有门就启用，与墙体归属无关")]
         [SerializeField] private Transform[] doorTriggers = new Transform[4];
 
@@ -58,6 +61,9 @@ namespace Roguelike.Dungeon
         [SerializeField] private SpriteRenderer typeBadge;
         [SerializeField] private Color floorBaseColor = new Color(0.22f, 0.23f, 0.28f, 1f);
 
+        private bool _hasFloorTheme;
+        private Color _floorThemeTint = Color.white;
+
         public RoomType RoomType => roomType;
         public Vector2Int GridPosition => gridPosition;
         public DoorDirections Doors => doors;
@@ -73,8 +79,20 @@ namespace Roguelike.Dungeon
         /// <summary>当前门是否处于锁死状态。</summary>
         public bool DoorsLocked { get; private set; }
 
+        private bool _cleared;
+
         /// <summary>房间是否已被清空（由战斗系统写入）。</summary>
-        public bool IsCleared { get; set; }
+        public bool IsCleared
+        {
+            get => _cleared;
+            set
+            {
+                if (_cleared == value) return;
+
+                _cleared = value;
+                RefreshDoorIndicators();
+            }
+        }
 
         /// <summary>宝箱房是否已经生成过奖励，防止重复刷新。</summary>
         public bool RewardSpawned { get; set; }
@@ -164,6 +182,25 @@ namespace Roguelike.Dungeon
         public bool HasDoor(WallSide side) => (doors & side.ToDoor()) != 0;
 
         /// <summary>
+        /// 未清空的战斗房 / Boss 房，在每扇门的门槛上显示警示地砖，
+        /// 让玩家在进入前就能分辨这间房是否已经打过。
+        /// </summary>
+        private void RefreshDoorIndicators()
+        {
+            bool danger = (roomType == RoomType.Combat || roomType == RoomType.Boss) && !_cleared;
+
+            for (int i = 0; i < 4; i++)
+            {
+                if (doorIndicators == null || i >= doorIndicators.Length) continue;
+
+                SpriteRenderer indicator = doorIndicators[i];
+                if (indicator == null) continue;
+
+                indicator.enabled = danger && HasDoor((WallSide)i);
+            }
+        }
+
+        /// <summary>
         /// 根据房间节点配置门洞、墙体归属与入口点，并按需应用调试配色。
         /// </summary>
         public void Configure(RoomNode node, bool debugVisuals = true)
@@ -212,6 +249,7 @@ namespace Roguelike.Dungeon
             }
 
             DoorsLocked = false;
+            RefreshDoorIndicators();
             ApplyDebugVisuals(node.Type, debugVisuals);
         }
 
@@ -229,15 +267,35 @@ namespace Roguelike.Dungeon
             if (decorations != null) decorations.Apply(roomType, doors, roomSeed);
         }
 
+        /// <summary>应用楼层主题：地板与墙体染色。</summary>
+        public void ApplyFloorTheme(FloorTheme theme)
+        {
+            if (theme == null) return;
+
+            _hasFloorTheme = true;
+            _floorThemeTint = theme.floorTint;
+
+            if (roomFloor != null) roomFloor.SetTint(_floorThemeTint);
+            else if (floorRenderer != null) floorRenderer.color = _floorThemeTint;
+
+            if (walls == null) return;
+
+            for (int i = 0; i < walls.Length; i++)
+            {
+                if (walls[i] != null) walls[i].SetTint(theme.wallTint);
+            }
+        }
+
         /// <summary>
         /// 调试用视觉区分：特殊房间地板染色，并在中心放一个同色方块。
         /// 关闭后恢复基础地板色并隐藏标记。
         /// </summary>
         public void ApplyDebugVisuals(RoomType type, bool enabled)
         {
+            Color baseTint = _hasFloorTheme ? _floorThemeTint : floorBaseColor;
             Color tint = enabled
-                ? RoomTypePalette.FloorTint(type, floorBaseColor)
-                : floorBaseColor;
+                ? RoomTypePalette.FloorTint(type, baseTint)
+                : baseTint;
 
             if (roomFloor != null) roomFloor.SetTint(tint);
             else if (floorRenderer != null) floorRenderer.color = tint;
@@ -277,6 +335,7 @@ namespace Roguelike.Dungeon
             Transform center,
             Transform[] entries,
             Transform[] markers,
+            SpriteRenderer[] indicators,
             Transform[] triggers,
             RoomDoorBlocker[] blockers,
             Transform[] enemies,
@@ -291,6 +350,7 @@ namespace Roguelike.Dungeon
             centerPoint = center;
             entryPoints = entries;
             doorMarkers = markers;
+            doorIndicators = indicators;
             doorTriggers = triggers;
             doorBlockers = blockers;
             enemySpawnPoints = enemies;

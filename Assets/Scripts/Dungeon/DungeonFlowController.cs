@@ -19,6 +19,9 @@ namespace Roguelike.Dungeon
     {
         [SerializeField] private PlayerRoomTracker tracker;
 
+        [Tooltip("留空时从同一物体或场景中查找")]
+        [SerializeField] private DungeonBuilder builder;
+
         [Tooltip("允许用 K 键模拟清空房间")]
         [SerializeField] private bool enableDebugClearKey = true;
 
@@ -39,6 +42,37 @@ namespace Roguelike.Dungeon
 
         [SerializeField] private float normalEnemyHealth = 2f;
         [SerializeField] private float bossEnemyHealth = 40f;
+
+        [Header("楼层难度成长")]
+        [Tooltip("每层普通敌人血量成长比例")]
+        [SerializeField] private float enemyHealthGrowthPerFloor = 0.40f;
+
+        [Tooltip("每层普通敌人移速成长比例")]
+        [SerializeField] private float enemySpeedGrowthPerFloor = 0.03f;
+
+        [SerializeField] private float enemySpeedMultiplierCap = 1.20f;
+
+        [Tooltip("每层 Boss 血量成长比例")]
+        [SerializeField] private float bossHealthGrowthPerFloor = 0.40f;
+
+        [Tooltip("每层 Boss 移速成长比例")]
+        [SerializeField] private float bossSpeedGrowthPerFloor = 0.04f;
+
+        [SerializeField] private float bossSpeedMultiplierCap = 1.15f;
+
+        [Tooltip("每多少层增加 1 只普通敌人")]
+        [SerializeField] private int extraEnemyEveryFloors = 2;
+
+        [SerializeField] private int maxExtraEnemies = 2;
+
+        [Tooltip("每高一层，敌人编成距离额外增加多少")]
+        [SerializeField] private int compositionDistancePerFloor = 1;
+
+        [Tooltip("每多少层额外掉 1 枚金币")]
+        [SerializeField] private int coinGrowthEveryFloors = 2;
+
+        [Tooltip("每层商店价格额外增加多少")]
+        [SerializeField] private int shopPriceGrowthPerFloor = 2;
 
         [Header("掉落")]
         [SerializeField] private Pickup coinPrefab;
@@ -63,21 +97,106 @@ namespace Roguelike.Dungeon
         [Tooltip("留空时从 Resources/Items 自动加载")]
         [SerializeField] private SecretAltar secretAltarPrefab;
 
-        private readonly List<Enemy> _aliveEnemies = new List<Enemy>();
+        private readonly Dictionary<RoomView, List<Enemy>> _roomEnemies = new Dictionary<RoomView, List<Enemy>>();
         private readonly List<ItemDefinition> _availableItems = new List<ItemDefinition>();
         private RoomView _activeRoom;
         private PlayerStats _playerStats;
         private PlayerInventory _playerInventory;
+        private bool _floorPrepared;
+
+        private int _floor = 1;
+        private FloorTheme _floorTheme;
 
         public PlayerRoomTracker Tracker => tracker;
-        public int AliveEnemyCount => _aliveEnemies.Count;
+        public int Floor => _floor;
+        public FloorTheme CurrentFloorTheme => _floorTheme;
+
+        /// <summary>当前房间还活着的敌人数（用于亡灵法师的召唤上限）。</summary>
+        public int AliveEnemyCount
+        {
+            get
+            {
+                if (_activeRoom == null || !_roomEnemies.TryGetValue(_activeRoom, out List<Enemy> list))
+                    return 0;
+
+                int count = 0;
+                for (int i = 0; i < list.Count; i++)
+                {
+                    if (list[i] != null && !list[i].IsDead) count++;
+                }
+
+                return count;
+            }
+        }
+
+        /// <summary>由 RunManager 在建楼前写入当前楼层与主题。</summary>
+        public void SetFloor(int floor, FloorTheme theme)
+        {
+            _floor = Mathf.Max(1, floor);
+            _floorTheme = theme;
+
+            // 极端情况下在 PrepareFloor 之后才切换，也立即补一次染色
+            if (_floorPrepared) ApplyFloorThemeToRooms();
+        }
+
+        /// <summary>给当前楼层的所有房间应用主题色（建楼之后调用）。</summary>
+        public void ApplyFloorThemeToRooms()
+        {
+            if (_floorTheme == null) return;
+
+            if (builder == null) builder = GetComponent<DungeonBuilder>();
+            if (builder == null) builder = FindFirstObjectByType<DungeonBuilder>();
+            if (builder == null) return;
+
+            IReadOnlyList<RoomView> rooms = builder.Rooms;
+            for (int i = 0; i < rooms.Count; i++)
+            {
+                if (rooms[i] != null) rooms[i].ApplyFloorTheme(_floorTheme);
+            }
+        }
+
+        private int FloorOffset => Mathf.Max(0, _floor - 1);
+
+        private float EnemyHealthMultiplier =>
+            1f + Mathf.Max(0f, enemyHealthGrowthPerFloor) * FloorOffset;
+
+        private float EnemySpeedMultiplier =>
+            Mathf.Min(
+                Mathf.Max(0.01f, enemySpeedMultiplierCap),
+                1f + Mathf.Max(0f, enemySpeedGrowthPerFloor) * FloorOffset);
+
+        private float BossHealthMultiplier =>
+            1f + Mathf.Max(0f, bossHealthGrowthPerFloor) * FloorOffset;
+
+        private float BossSpeedMultiplier =>
+            Mathf.Min(
+                Mathf.Max(0.01f, bossSpeedMultiplierCap),
+                1f + Mathf.Max(0f, bossSpeedGrowthPerFloor) * FloorOffset);
+
+        private int ExtraEnemiesForFloor =>
+            extraEnemyEveryFloors <= 0
+                ? 0
+                : Mathf.Clamp(FloorOffset / extraEnemyEveryFloors, 0, Mathf.Max(0, maxExtraEnemies));
+
+        private int CoinsFromFloor =>
+            coinGrowthEveryFloors <= 0 ? 0 : FloorOffset / coinGrowthEveryFloors;
+
+        private int ShopPriceBonus => Mathf.Max(0, shopPriceGrowthPerFloor) * FloorOffset;
 
         /// <summary>Boss 被击败时触发，供 RunManager 进入通关状态。</summary>
         public event System.Action BossDefeated;
 
+        /// <summary>任意敌人死亡时触发一次（击杀型被动的唯一计数入口）。</summary>
+        public event System.Action<Enemy> EnemyKilled;
+
+        /// <summary>房间首次被清空时触发（清房奖励类道具的入口）。</summary>
+        public event System.Action<RoomView> RoomCleared;
+
         private void Awake()
         {
             if (tracker == null) tracker = FindFirstObjectByType<PlayerRoomTracker>();
+            if (builder == null) builder = GetComponent<DungeonBuilder>();
+            if (builder == null) builder = FindFirstObjectByType<DungeonBuilder>();
             if (enemyPrefab == null) enemyPrefab = Resources.Load<Enemy>("Combat/Enemy");
             if (shooterPrefab == null) shooterPrefab = Resources.Load<ShooterEnemy>("Combat/Shooter");
             if (chargerPrefab == null) chargerPrefab = Resources.Load<ChargerEnemy>("Combat/Charger");
@@ -109,9 +228,46 @@ namespace Roguelike.Dungeon
 
         private void Start()
         {
+            if (builder == null) builder = GetComponent<DungeonBuilder>();
+            if (builder == null) builder = FindFirstObjectByType<DungeonBuilder>();
+            if (builder != null) builder.EnsureBuilt();
+
+            // 所有战斗房在开局时就生成好怪物，玩家可以从门外观察
+            PrepareFloor();
+
             // 若进入 Play Mode 时玩家已经站在某个房间里，补一次判定
             if (tracker != null && tracker.CurrentRoom != null)
                 HandleRoomChanged(tracker.CurrentRoom);
+        }
+
+        /// <summary>
+        /// 为当前楼层预生成所有房间的敌人。
+        /// 在开局、换层和重开重建地牢之后调用。
+        /// </summary>
+        public void PrepareFloor()
+        {
+            if (_floorPrepared) return;
+
+            ClearAllEncounters();
+
+            if (builder == null) builder = GetComponent<DungeonBuilder>();
+            if (builder == null) builder = FindFirstObjectByType<DungeonBuilder>();
+            if (builder == null || builder.Rooms == null) return;
+
+            _floorPrepared = true;
+            ApplyFloorThemeToRooms();
+
+            IReadOnlyList<RoomView> rooms = builder.Rooms;
+            for (int i = 0; i < rooms.Count; i++)
+            {
+                RoomView room = rooms[i];
+                if (room == null || room.IsCleared) continue;
+
+                if (room.RoomType == RoomType.Combat || room.RoomType == RoomType.Boss)
+                    SpawnRoomEncounter(room, false, false);
+            }
+
+            Debug.Log($"[Flow] 已为 {rooms.Count} 个房间预生成敌人");
         }
 
         private void Update()
@@ -120,14 +276,12 @@ namespace Roguelike.Dungeon
             if (WasClearKeyPressed()) ClearCurrentRoom();
         }
 
-        /// <summary>玩家进入房间：战斗房且未清空则锁门并生成敌人，否则保持开启。</summary>
+        /// <summary>玩家进入房间：战斗房且未清空则锁门并激活预生成的敌人，否则保持开启。</summary>
         public void HandleRoomChanged(RoomView room)
         {
             if (room == null) return;
 
-            if (_activeRoom != null && _activeRoom != room)
-                CleanupEncounter();
-
+            // 换房时不销毁其它房间预生成的敌人，它们会继续留在自己的房间里游荡
             _activeRoom = room;
 
             bool isCombatRoom = room.RoomType == RoomType.Combat || room.RoomType == RoomType.Boss;
@@ -135,7 +289,13 @@ namespace Roguelike.Dungeon
             if (isCombatRoom && !room.IsCleared)
             {
                 room.SetDoorsLocked(true, false);
-                SpawnEncounter(room);
+
+                // 兜底：预生成失败时再补一次
+                if (!HasLivingEnemies(room))
+                    SpawnRoomEncounter(room, true, true);
+                else
+                    ActivateRoomEnemies(room);
+
                 Debug.Log($"[Flow] 房间 {room.GridPosition} 上锁（{room.RoomType}）");
             }
             else
@@ -159,15 +319,15 @@ namespace Roguelike.Dungeon
             if (room.ShopStocked) return;
             if (itemPickupPrefab == null || itemPool == null || itemPool.Length == 0) return;
 
-            room.ShopStocked = true;
-
             // 只上架玩家尚未持有的道具，避免重复购买同一件
-            var stock = BuildAvailableItems();
+            List<ItemDefinition> stock = BuildAvailableItems();
             if (stock.Count == 0)
             {
                 Debug.Log($"[Flow] 商店 {room.GridPosition} 无可售道具（玩家已持有全部道具）");
                 return;
             }
+
+            room.ShopStocked = true;
 
             int count = Mathf.Min(3, stock.Count);
             Vector2 center = room.WorldCenter;
@@ -189,11 +349,25 @@ namespace Roguelike.Dungeon
                     Quaternion.identity,
                     room.transform);
 
-                int price = 5 + (item.modifiers != null ? item.modifiers.Count * 2 : 0);
-                pickup.Setup(item, null, price);
+                pickup.Setup(item, null, CalculateShopPrice(item));
             }
 
             Debug.Log($"[Flow] 商店 {room.GridPosition} 上架 {count} 件道具");
+        }
+
+        private int CalculateShopPrice(ItemDefinition item)
+        {
+            int basePrice = item.shopPrice > 0
+                ? item.shopPrice
+                : 5 + (item.modifiers != null ? item.modifiers.Count * 2 : 0);
+
+            int price = Mathf.Max(1, basePrice + ShopPriceBonus);
+
+            // 折扣券：商店商品半价（向上取整，最低 1 金币）
+            if (_playerInventory != null && _playerInventory.HasSynergy(ItemSynergy.ShopDiscount))
+                price = Mathf.Max(1, Mathf.CeilToInt(price * 0.5f));
+
+            return price;
         }
 
         /// <summary>宝箱房首次进入时生成一个随机道具，领取后不再刷新。</summary>
@@ -202,7 +376,7 @@ namespace Roguelike.Dungeon
             if (room.RewardClaimed || room.RewardSpawned) return;
             if (itemPickupPrefab == null || itemPool == null || itemPool.Length == 0) return;
 
-            // 宝箱房也只给尚未持有的道具
+            // 宝箱房只给尚未持有的道具
             List<ItemDefinition> available = BuildAvailableItems();
             if (available.Count == 0)
             {
@@ -281,39 +455,67 @@ namespace Roguelike.Dungeon
             return false;
         }
 
-        /// <summary>敌人死亡回调：先掉落奖励，再判断是否清空房间。</summary>
+        /// <summary>敌人死亡回调：先掉落奖励，再判断它所在的房间是否清空。</summary>
         public void NotifyEnemyDied(Enemy enemy)
         {
-            if (enemy != null) SpawnDrops(enemy);
+            if (enemy == null) return;
 
-            _aliveEnemies.Remove(enemy);
+            EnemyKilled?.Invoke(enemy);
 
-            if (_aliveEnemies.Count == 0 && _activeRoom != null && !_activeRoom.IsCleared)
+            RoomView room = FindEnemyRoom(enemy);
+            SpawnDrops(enemy, room);
+
+            if (room != null && _roomEnemies.TryGetValue(room, out List<Enemy> list))
+                list.Remove(enemy);
+
+            if (room == null || room.IsCleared || HasLivingEnemies(room)) return;
+
+            if (room == _activeRoom)
+            {
                 ClearCurrentRoom();
+            }
+            else
+            {
+                // 玩家从门外把整间房的怪清掉了：标记为已清空，进入时不再锁门
+                room.IsCleared = true;
+                room.SetDoorsLocked(false, false);
+                Debug.Log($"[Flow] 房间 {room.GridPosition} 在进入前已被清空");
+                RoomCleared?.Invoke(room);
+
+                if (room.RoomType == RoomType.Boss)
+                    BossDefeated?.Invoke();
+            }
         }
 
-        /// <summary>按敌人类型掉落金币 / 回血。</summary>
-        private void SpawnDrops(Enemy enemy)
+        /// <summary>按敌人类型掉落金币 / 回血，掉落物挂在敌人所属的房间里。</summary>
+        private void SpawnDrops(Enemy enemy, RoomView room)
         {
             Vector3 origin = enemy.transform.position;
             int bonus = _playerStats != null ? _playerStats.CoinBonus : 0;
-            int coins = (enemy.IsBoss ? bossCoinDrop : normalCoinDrop) + bonus;
+            int coins = (enemy.IsBoss ? bossCoinDrop : normalCoinDrop) + bonus + CoinsFromFloor;
 
             for (int i = 0; i < coins; i++)
-                SpawnPickup(coinPrefab, ScatterAround(origin, 0.7f));
+                SpawnPickup(coinPrefab, ScatterAround(origin, 0.7f, room), room);
 
-            if (enemy.IsBoss || Random.value < heartDropChance)
-                SpawnPickup(heartPrefab, ScatterAround(origin, 0.35f));
+            float heartChance = heartDropChance;
+            if (_playerInventory != null)
+            {
+                ItemDefinition luck = _playerInventory.FindSynergyItem(ItemSynergy.LuckyDrops);
+                if (luck != null) heartChance += Mathf.Max(0f, luck.effectPower);
+            }
+
+            if (enemy.IsBoss || Random.value < heartChance)
+                SpawnPickup(heartPrefab, ScatterAround(origin, 0.35f, room), room);
         }
 
-        private Vector3 ScatterAround(Vector3 origin, float radius)
+        private static Vector3 ScatterAround(Vector3 origin, float radius, RoomView room)
         {
             Vector2 point = (Vector2)origin + Random.insideUnitCircle * radius;
 
             // 避免掉进墙体
-            if (_activeRoom != null)
+            if (room != null)
             {
-                Rect rect = _activeRoom.WorldRect;
+                Rect rect = room.WorldRect;
                 point.x = Mathf.Clamp(point.x, rect.xMin + 1.5f, rect.xMax - 1.5f);
                 point.y = Mathf.Clamp(point.y, rect.yMin + 1.5f, rect.yMax - 1.5f);
             }
@@ -321,11 +523,11 @@ namespace Roguelike.Dungeon
             return new Vector3(point.x, point.y, origin.z);
         }
 
-        private void SpawnPickup(Pickup prefab, Vector3 position)
+        private void SpawnPickup(Pickup prefab, Vector3 position, RoomView room)
         {
             if (prefab == null) return;
 
-            Transform parent = _activeRoom != null ? _activeRoom.transform : transform;
+            Transform parent = room != null ? room.transform : transform;
             Instantiate(prefab, position, Quaternion.identity, parent);
         }
 
@@ -335,9 +537,15 @@ namespace Roguelike.Dungeon
             RoomView room = _activeRoom != null ? _activeRoom : (tracker != null ? tracker.CurrentRoom : null);
             if (room == null) return;
 
+            bool wasCleared = room.IsCleared;
             room.IsCleared = true;
             room.SetDoorsLocked(false, false);
-            Debug.Log($"[Flow] 房间 {room.GridPosition} 已清空，开门");
+
+            if (!wasCleared)
+            {
+                Debug.Log($"[Flow] 房间 {room.GridPosition} 已清空，开门");
+                RoomCleared?.Invoke(room);
+            }
 
             if (room.RoomType == RoomType.Boss)
                 BossDefeated?.Invoke();
@@ -346,7 +554,8 @@ namespace Roguelike.Dungeon
         /// <summary>重开一局前清理：敌人、子弹、掉落、房间引用。</summary>
         public void ResetForNewRun()
         {
-            CleanupEncounter();
+            ClearAllEncounters();
+            _floorPrepared = false;
 
             foreach (TearProjectile tear in FindObjectsByType<TearProjectile>(FindObjectsSortMode.None))
                 Destroy(tear.gameObject);
@@ -359,44 +568,128 @@ namespace Roguelike.Dungeon
 
             foreach (ItemPickup item in FindObjectsByType<ItemPickup>(FindObjectsSortMode.None))
                 Destroy(item.gameObject);
+
+            foreach (ExplosionFlash flash in FindObjectsByType<ExplosionFlash>(FindObjectsSortMode.None))
+                Destroy(flash.gameObject);
         }
 
-        private void SpawnEncounter(RoomView room)
+        /// <summary>
+        /// 在房间里生成敌人。
+        /// 预生成时不开出生动画、保持待机；作为进入时的兜底生成则直接激活。
+        /// </summary>
+        private void SpawnRoomEncounter(RoomView room, bool playSpawnAnimation, bool activate)
         {
-            bool isBoss = room.RoomType == RoomType.Boss;
+            if (room == null) return;
 
-            if (enemyPrefab == null)
+            bool isBoss = room.RoomType == RoomType.Boss;
+            Enemy requiredPrefab = isBoss ? bossPrefab : enemyPrefab;
+            if (requiredPrefab == null)
             {
                 Debug.LogError("[Combat] 找不到敌人 Prefab，先执行 Tools/Roguelike/生成战斗 Prefab。");
                 return;
             }
 
-            if (_aliveEnemies.Count > 0) return;
+            if (!_roomEnemies.TryGetValue(room, out List<Enemy> list))
+            {
+                list = new List<Enemy>();
+                _roomEnemies[room] = list;
+            }
+
+            if (HasLivingEnemies(room)) return;
 
             int count = isBoss ? bossEnemyCount : EnemyCountFor(room);
             IReadOnlyList<Transform> points = room.EnemySpawnPoints;
-            count = Mathf.Min(count, points.Count);
+
+            int capacity = isBoss ? points.Count : points.Count + ExtraEnemiesForFloor;
+            count = Mathf.Min(count, Mathf.Max(0, capacity));
+
+            int compositionDistance = room.DistanceFromStart +
+                FloorOffset * Mathf.Max(0, compositionDistancePerFloor);
 
             for (int i = 0; i < count; i++)
             {
-                Enemy prefab = isBoss ? bossPrefab : PickPrefab(room.DistanceFromStart, i);
+                Vector3 spawnPosition;
+                if (i < points.Count)
+                {
+                    spawnPosition = points[i].position;
+                }
+                else
+                {
+                    // 超出出生点数量的额外敌人：在原出生点附近小幅偏移，不放到中央/门洞
+                    Vector2 offset = Random.insideUnitCircle * 0.3f;
+                    spawnPosition = points[i % points.Count].position + (Vector3)offset;
+                }
+
+                Enemy prefab = isBoss ? bossPrefab : PickPrefab(compositionDistance, i);
                 if (prefab == null) prefab = enemyPrefab;
 
-                Enemy enemy = Instantiate(prefab, points[i].position, Quaternion.identity, room.transform);
+                Enemy enemy = Instantiate(prefab, spawnPosition, Quaternion.identity, room.transform);
                 enemy.name = isBoss ? "Boss" : $"{prefab.GetType().Name}_{i}";
 
+                float health = isBoss
+                    ? bossEnemyHealth * BossHealthMultiplier
+                    : HealthFor(prefab) * EnemyHealthMultiplier;
+
+                float speed = isBoss
+                    ? 1.7f * BossSpeedMultiplier
+                    : SpeedFor(prefab) * EnemySpeedMultiplier;
+
                 enemy.Initialize(
-                    isBoss ? bossEnemyHealth : HealthFor(prefab),
-                    isBoss ? 1.7f : SpeedFor(prefab),
+                    health,
+                    speed,
                     1f,
                     Color.white,
                     isBoss,
-                    this);
+                    this,
+                    playSpawnAnimation);
 
-                RegisterEnemy(enemy);
+                if (isBoss && enemy is BossEnemy boss)
+                    boss.ApplyFloorScaling(_floor);
+
+                RegisterEnemy(enemy, room);
+
+                if (activate) enemy.ActivateCombat();
             }
 
-            Debug.Log($"[Combat] 房间 {room.GridPosition} 生成 {count} 个敌人（距离 {room.DistanceFromStart}）");
+            Debug.Log($"[Combat] 房间 {room.GridPosition} 生成 {count} 个敌人（第 {_floor} 层，编成距离 {compositionDistance}，预生成={!activate}）");
+        }
+
+        private bool HasLivingEnemies(RoomView room)
+        {
+            if (room == null || !_roomEnemies.TryGetValue(room, out List<Enemy> list)) return false;
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (list[i] != null && !list[i].IsDead) return true;
+            }
+
+            return false;
+        }
+
+        private void ActivateRoomEnemies(RoomView room)
+        {
+            if (room == null || !_roomEnemies.TryGetValue(room, out List<Enemy> list)) return;
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (list[i] != null && !list[i].IsDead)
+                    list[i].ActivateCombat();
+            }
+        }
+
+        private RoomView FindEnemyRoom(Enemy enemy)
+        {
+            if (enemy == null) return null;
+
+            RoomView room = enemy.GetComponentInParent<RoomView>();
+            if (room != null) return room;
+
+            foreach (KeyValuePair<RoomView, List<Enemy>> pair in _roomEnemies)
+            {
+                if (pair.Value.Contains(enemy)) return pair.Key;
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -410,7 +703,7 @@ namespace Roguelike.Dungeon
                 Mathf.Max(0, (room.Height - RoomGeometry.FootprintHeight) / 2);
             int depthBonus = Mathf.Clamp(room.DistanceFromStart / 2, 0, 3);
 
-            return baseCount + sizeBonus + depthBonus;
+            return baseCount + sizeBonus + depthBonus + ExtraEnemiesForFloor;
         }
 
         /// <summary>
@@ -476,19 +769,38 @@ namespace Roguelike.Dungeon
         /// <summary>登记新生成的敌人（包括召唤物与分裂体），保证全部清掉才开门。</summary>
         public void RegisterEnemy(Enemy enemy)
         {
-            if (enemy == null || _aliveEnemies.Contains(enemy)) return;
-
-            _aliveEnemies.Add(enemy);
+            RoomView room = enemy != null ? enemy.GetComponentInParent<RoomView>() : null;
+            RegisterEnemy(enemy, room);
         }
 
-        private void CleanupEncounter()
+        private void RegisterEnemy(Enemy enemy, RoomView room)
         {
-            for (int i = 0; i < _aliveEnemies.Count; i++)
+            if (enemy == null) return;
+            if (room == null) room = _activeRoom;
+            if (room == null) return;
+
+            if (!_roomEnemies.TryGetValue(room, out List<Enemy> list))
             {
-                if (_aliveEnemies[i] != null) Destroy(_aliveEnemies[i].gameObject);
+                list = new List<Enemy>();
+                _roomEnemies[room] = list;
             }
 
-            _aliveEnemies.Clear();
+            if (!list.Contains(enemy)) list.Add(enemy);
+        }
+
+        /// <summary>销毁所有房间里已登记的敌人（换层、重开、重新预生成前调用）。</summary>
+        private void ClearAllEncounters()
+        {
+            foreach (KeyValuePair<RoomView, List<Enemy>> pair in _roomEnemies)
+            {
+                List<Enemy> list = pair.Value;
+                for (int i = 0; i < list.Count; i++)
+                {
+                    if (list[i] != null) Destroy(list[i].gameObject);
+                }
+            }
+
+            _roomEnemies.Clear();
             _activeRoom = null;
         }
 

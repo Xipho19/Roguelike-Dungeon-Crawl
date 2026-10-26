@@ -40,23 +40,65 @@ namespace Roguelike.Combat
         [Tooltip("血量低于该比例进入二阶段")]
         [SerializeField] private float phase2Threshold = 0.5f;
 
+        [Header("楼层成长")]
+        [Tooltip("每多少层额外增加 1 发环形弹幕")]
+        [SerializeField] private int extraBulletEveryFloors = 2;
+
+        [SerializeField] private int maxExtraBullets = 2;
+
+        [Tooltip("每层弹速成长比例")]
+        [SerializeField] private float projectileSpeedGrowthPerFloor = 0.04f;
+
+        [SerializeField] private float maxProjectileSpeedBonus = 0.15f;
+
+        [Tooltip("每层冲锋速度成长比例")]
+        [SerializeField] private float chargeSpeedGrowthPerFloor = 0.03f;
+
+        [SerializeField] private float maxChargeSpeedBonus = 0.12f;
+
         private SpriteRenderer _body;
         private BossState _state = BossState.Intro;
         private float _timer;
         private bool _phase2;
         private int _attackCounter;
         private Vector2 _chargeDirection;
+        private int _floorIndex = 1;
 
         public BossState CurrentState => _state;
         public bool IsPhase2 => _phase2;
 
-        private void OnEnable()
+        /// <summary>血量/移速由生成方按楼层缩放；这里只记录层数用于攻击成长。</summary>
+        public void ApplyFloorScaling(int floor)
         {
+            _floorIndex = Mathf.Max(1, floor);
+        }
+
+        private int FloorBulletBonus =>
+            extraBulletEveryFloors <= 0
+                ? 0
+                : Mathf.Clamp((_floorIndex - 1) / extraBulletEveryFloors, 0, Mathf.Max(0, maxExtraBullets));
+
+        private float FloorProjectileSpeedScale =>
+            1f + Mathf.Clamp(
+                projectileSpeedGrowthPerFloor * Mathf.Max(0, _floorIndex - 1),
+                0f,
+                Mathf.Max(0f, maxProjectileSpeedBonus));
+
+        private float FloorChargeSpeedScale =>
+            1f + Mathf.Clamp(
+                chargeSpeedGrowthPerFloor * Mathf.Max(0, _floorIndex - 1),
+                0f,
+                Mathf.Max(0f, maxChargeSpeedBonus));
+
+        protected override void OnEnable()
+        {
+            base.OnEnable();
             Active = this;
         }
 
-        private void OnDisable()
+        protected override void OnDisable()
         {
+            base.OnDisable();
             if (Active == this) Active = null;
         }
 
@@ -72,9 +114,16 @@ namespace Roguelike.Combat
             _timer = 0.8f;
         }
 
-        public override void Initialize(float health, float speed, float scale, Color tint, bool isBoss, DungeonFlowController flow)
+        public override void Initialize(
+            float health,
+            float speed,
+            float scale,
+            Color tint,
+            bool isBoss,
+            DungeonFlowController flow,
+            bool playSpawnAnimation = true)
         {
-            base.Initialize(health, speed, scale, tint, isBoss, flow);
+            base.Initialize(health, speed, scale, tint, isBoss, flow, playSpawnAnimation);
 
             _state = BossState.Intro;
             _timer = 0.8f;
@@ -82,9 +131,28 @@ namespace Roguelike.Combat
             _attackCounter = 0;
         }
 
+        protected override void OnCombatStarted()
+        {
+            base.OnCombatStarted();
+
+            _state = BossState.Intro;
+            _timer = 0.8f;
+            _attackCounter = 0;
+            _rb.linearVelocity = Vector2.zero;
+        }
+
         protected override void FixedUpdate()
         {
-            if (IsDead || _target == null || _rb == null) return;
+            if (IsDead || _rb == null) return;
+
+            // 玩家进入 Boss 房之前站在场地中央待机
+            if (!CombatActive)
+            {
+                _rb.linearVelocity = Vector2.zero;
+                return;
+            }
+
+            if (_target == null) return;
 
             if (!_phase2 && Health <= MaxHealth * phase2Threshold)
                 EnterPhase2();
@@ -124,7 +192,8 @@ namespace Roguelike.Combat
                     break;
 
                 case BossState.Charging:
-                    _rb.linearVelocity = _chargeDirection * (chargeSpeed * (_phase2 ? 1.25f : 1f));
+                    _rb.linearVelocity = _chargeDirection *
+                        (chargeSpeed * (_phase2 ? 1.25f : 1f) * FloorChargeSpeedScale);
                     if (_timer <= 0f) EnterChase();
                     break;
             }
@@ -167,7 +236,7 @@ namespace Roguelike.Combat
         {
             if (projectilePrefab == null) return;
 
-            int count = _phase2 ? radialBullets + 4 : radialBullets;
+            int count = radialBullets + FloorBulletBonus + (_phase2 ? 4 : 0);
             int rings = _phase2 ? 2 : 1;
             float step = 360f / count;
 
@@ -185,7 +254,10 @@ namespace Roguelike.Combat
                         _rb.position + direction * 0.9f,
                         Quaternion.identity);
 
-                    bullet.Initialize(direction, projectileSpeed * (_phase2 ? 1.2f : 1f), 1, projectileLifetime);
+                    bullet.Initialize(direction,
+                        projectileSpeed * (_phase2 ? 1.2f : 1f) * FloorProjectileSpeedScale,
+                        1,
+                        projectileLifetime);
                 }
             }
         }

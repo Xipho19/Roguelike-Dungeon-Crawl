@@ -1,5 +1,6 @@
 using Roguelike.Audio;
 using Roguelike.Combat;
+using Roguelike.Dungeon;
 using Roguelike.Items;
 using UnityEngine;
 #if ENABLE_INPUT_SYSTEM
@@ -18,6 +19,15 @@ namespace Roguelike.Player
     {
         [Header("射击")]
         [SerializeField] private TearProjectile tearPrefab;
+
+        [Tooltip("用于读取爆炸眼泪等触发型被动；留空时自动查找")]
+        [SerializeField] private PlayerInventory inventory;
+
+        [Tooltip("用于把眼泪限制在发射时所在的房间内；留空时自动查找")]
+        [SerializeField] private PlayerRoomTracker tracker;
+
+        [Tooltip("用于金币加伤类道具；留空时自动查找")]
+        [SerializeField] private PlayerWallet wallet;
 
         [Tooltip("没有 PlayerStats 时的回退值")]
         [SerializeField] private float fireInterval = 0.24f;
@@ -40,6 +50,9 @@ namespace Roguelike.Player
         {
             _camera = Camera.main;
             _stats = GetComponent<PlayerStats>();
+            if (inventory == null) inventory = GetComponent<PlayerInventory>();
+            if (tracker == null) tracker = GetComponent<PlayerRoomTracker>();
+            if (wallet == null) wallet = GetComponent<PlayerWallet>();
         }
 
         private void Start()
@@ -69,6 +82,53 @@ namespace Roguelike.Player
             int pierce = _stats != null ? _stats.Pierce : 0;
             int shots = _stats != null ? _stats.ShotCount : 1;
 
+            ItemDefinition explosive = inventory != null
+                ? inventory.FindSynergyItem(ItemSynergy.ExplosiveTears)
+                : null;
+            ItemDefinition homing = inventory != null
+                ? inventory.FindSynergyItem(ItemSynergy.HomingTears)
+                : null;
+            ItemDefinition poison = inventory != null
+                ? inventory.FindSynergyItem(ItemSynergy.PoisonTears)
+                : null;
+            ItemDefinition crit = inventory != null
+                ? inventory.FindSynergyItem(ItemSynergy.CritTears)
+                : null;
+            ItemDefinition split = inventory != null
+                ? inventory.FindSynergyItem(ItemSynergy.SplitTears)
+                : null;
+            ItemDefinition aura = inventory != null
+                ? inventory.FindSynergyItem(ItemSynergy.TearAura)
+                : null;
+            ItemDefinition coinDamage = inventory != null
+                ? inventory.FindSynergyItem(ItemSynergy.CoinDamage)
+                : null;
+
+            if (coinDamage != null && wallet != null)
+            {
+                float step = coinDamage.effectRadius >= 1f ? coinDamage.effectRadius : 10f;
+                float maxBonus = coinDamage.effectPower > 0f ? coinDamage.effectPower : 2f;
+                damage += Mathf.Min(maxBonus, Mathf.Floor(wallet.Coins / step) * 0.5f);
+            }
+
+            var modifiers = new TearModifiers
+            {
+                ownerRoom = tracker != null ? tracker.CurrentRoom : null,
+                explosionRadius = explosive != null ? explosive.effectRadius : 0f,
+                explosionDamage = explosive != null ? explosive.effectPower : 0f,
+                homingTurnSpeed = homing != null ? homing.effectPower : 0f,
+                homingRange = homing != null ? homing.effectRadius : 0f,
+                poisonDamage = poison != null ? poison.effectPower : 0f,
+                poisonTicks = poison != null ? 4 : 0,
+                poisonInterval = 0.6f,
+                critChance = crit != null ? crit.effectPower : 0f,
+                splitCount = split != null ? split.triggerCount : 0,
+                splitDamageScale = split != null ? split.effectPower : 0.5f,
+                auraDamage = aura != null ? aura.effectPower : 0f,
+                auraRadius = aura != null ? aura.effectRadius : 0f,
+                auraInterval = 0.3f,
+            };
+
             _nextFireTime = Time.time + interval;
             AudioService.Play("tear_shot", 0.55f);
 
@@ -80,7 +140,13 @@ namespace Roguelike.Player
                 Vector2 spawnPosition = (Vector2)transform.position + shotDirection * spawnOffset;
 
                 TearProjectile tear = Instantiate(tearPrefab, spawnPosition, Quaternion.identity);
-                tear.Initialize(shotDirection, speed, damage, lifetime, pierce);
+                tear.Initialize(
+                    shotDirection,
+                    speed,
+                    damage,
+                    lifetime,
+                    pierce,
+                    modifiers);
             }
 
             return true;

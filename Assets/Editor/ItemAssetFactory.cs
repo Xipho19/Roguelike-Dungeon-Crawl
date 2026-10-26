@@ -69,6 +69,116 @@ namespace Roguelike.EditorTools
             Create("Item_HealingApple", "治疗苹果", "立即恢复 2 点生命。",
                 new Color(0.90f, 0.30f, 0.30f), ThirdPartySprites.AppleIcon, 0, 2);
 
+            // 自动触发道具
+            CreateTriggered("Item_ExplosiveTears", "爆炸眼泪",
+                "被动：眼泪命中时在小范围内爆炸，造成 1 点伤害。",
+                new Color(0.55f, 0.78f, 1f), ThirdPartySprites.Tear,
+                ItemRarity.Rare, 1f, 1.8f, 1, ItemSynergy.ExplosiveTears, 12);
+
+            CreateTriggered("Item_VampireFang", "吸血鬼獠牙",
+                "被动：每击杀 5 个敌人回复 1 点生命。",
+                new Color(0.78f, 0.22f, 0.28f), ThirdPartySprites.VampireFangIcon,
+                ItemRarity.Rare, 1f, 0f, 5, ItemSynergy.KillHeal, 12);
+
+            // 参考以撒的自动道具机制，按当前数值体系重新设计
+            CreateTriggered("Item_BentSpoon", "弯勺魔咒",
+                "被动：眼泪会缓慢追踪当前房间内的敌人。伤害 -10%。",
+                new Color(0.72f, 0.62f, 0.96f), ThirdPartySprites.BentSpoonIcon,
+                ItemRarity.Rare, 360f, 6f, 1, ItemSynergy.HomingTears, 12,
+                Mod(StatType.Damage, StatOp.Multiply, 0.9f));
+
+            CreateTriggered("Item_CorrosiveGland", "腐蚀腺体",
+                "被动：眼泪命中时立即造成 0.5 点毒伤，随后 1.8 秒内每 0.6 秒再造成 0.5 点（共 2 点）。",
+                new Color(0.38f, 0.82f, 0.42f), ThirdPartySprites.CorrosiveGlandIcon,
+                ItemRarity.Rare, 0.5f, 0f, 1, ItemSynergy.PoisonTears, 11);
+
+            CreateTriggered("Item_CorpseBomb", "尸爆菌",
+                "被动：敌人死亡时爆炸，对周围敌人造成 2 点伤害。",
+                new Color(0.86f, 0.72f, 0.50f), ThirdPartySprites.CorpseBombIcon,
+                ItemRarity.Rare, 2f, 2.2f, 1, ItemSynergy.DeathExplosion, 13);
+
+            CreateTriggered("Item_ThornHeart", "荆棘之心",
+                "被动：受到伤害时，对周围敌人造成 2 点伤害。",
+                new Color(0.86f, 0.24f, 0.34f), ThirdPartySprites.ThornHeartIcon,
+                ItemRarity.Rare, 2f, 2.8f, 1, ItemSynergy.Thorns, 13);
+
+            CreateTriggered("Item_Coupon", "折扣券",
+                "被动：商店商品半价。",
+                new Color(0.95f, 0.80f, 0.36f), ThirdPartySprites.CouponIcon,
+                ItemRarity.Rare, 0f, 0f, 1, ItemSynergy.ShopDiscount, 10);
+
+            CreateTriggered("Item_DoubleEye", "双生之眼",
+                "被动：一次发射 2 发眼泪，单发伤害 -20%。",
+                new Color(0.62f, 0.82f, 0.98f), ThirdPartySprites.DoubleEyeIcon,
+                ItemRarity.Rare, 0f, 0f, 1, ItemSynergy.None, 10,
+                Mod(StatType.ShotCount, StatOp.Add, 1f),
+                Mod(StatType.Damage, StatOp.Multiply, 0.8f));
+
+            CreateTriggered("Item_CyclopsEye", "独眼巨人",
+                "被动：伤害翻倍，但射速降低 52%。",
+                new Color(0.96f, 0.62f, 0.40f), ThirdPartySprites.CyclopsEyeIcon,
+                ItemRarity.Rare, 0f, 0f, 1, ItemSynergy.None, 14,
+                Mod(StatType.Damage, StatOp.Multiply, 2f),
+                Mod(StatType.FireInterval, StatOp.Multiply, 2.1f));
+
+            // 第二轮扩充：以撒式自动道具
+            CreateTriggered("Item_GreedEye", "贪婪之眼",
+                "被动：每持有 10 金币，伤害 +0.5（最多 +2）。",
+                new Color(0.95f, 0.78f, 0.30f), ThirdPartySprites.GreedEyeIcon,
+                ItemRarity.Rare, 2f, 10f, 1, ItemSynergy.CoinDamage, 13);
+
+            CreateTriggered("Item_EmberChalice", "余烬圣餐",
+                "被动：每清空一个房间，回复 1 点生命。",
+                new Color(0.98f, 0.68f, 0.32f), ThirdPartySprites.EmberChaliceIcon,
+                ItemRarity.Rare, 1f, 0f, 1, ItemSynergy.RoomClearHeal, 12);
+
+            CreateTriggered("Item_HolyVeil", "圣光帷幕",
+                "被动：进入新房间时获得 1.5 秒无敌。",
+                new Color(0.68f, 0.86f, 1f), ThirdPartySprites.HolyVeilIcon,
+                ItemRarity.Rare, 1.5f, 0f, 1, ItemSynergy.RoomEntryShield, 14);
+
+            CreateTriggered("Item_LuckyFoot", "幸运兔脚",
+                "被动：敌人掉落回血的概率 +15%，移动速度 +10%。",
+                new Color(0.70f, 0.88f, 0.48f), ThirdPartySprites.LuckyFootIcon,
+                ItemRarity.Rare, 0.15f, 0f, 1, ItemSynergy.LuckyDrops, 10,
+                Mod(StatType.MoveSpeed, StatOp.Multiply, 1.1f));
+
+            CreateTriggered("Item_CritFang", "尖牙暴击",
+                "被动：眼泪有 20% 概率造成双倍伤害。",
+                new Color(0.98f, 0.86f, 0.44f), ThirdPartySprites.CritFangIcon,
+                ItemRarity.Rare, 0.2f, 0f, 1, ItemSynergy.CritTears, 11);
+
+            CreateTriggered("Item_SplitParasite", "裂体寄生虫",
+                "被动：眼泪首次命中后分裂成 2 颗小眼泪，每颗造成 50% 伤害。",
+                new Color(0.52f, 0.82f, 0.42f), ThirdPartySprites.SplitParasiteIcon,
+                ItemRarity.Rare, 0.5f, 0f, 2, ItemSynergy.SplitTears, 13);
+
+            CreateTriggered("Item_DivineGlimmer", "神性微光",
+                "被动：眼泪飞行时对周围 1.6 半径的敌人每 0.3 秒造成 0.25 点伤害。",
+                new Color(1f, 0.92f, 0.62f), ThirdPartySprites.DivineGlimmerIcon,
+                ItemRarity.Rare, 0.25f, 1.6f, 1, ItemSynergy.TearAura, 14);
+
+            CreateTriggered("Item_GhostPrism", "幽灵棱镜",
+                "被动：穿透 +2，眼泪速度 +10%。",
+                new Color(0.72f, 0.62f, 0.98f), ThirdPartySprites.GhostPrismIcon,
+                ItemRarity.Rare, 0f, 0f, 1, ItemSynergy.None, 10,
+                Mod(StatType.Pierce, StatOp.Add, 2f),
+                Mod(StatType.TearSpeed, StatOp.Multiply, 1.1f));
+
+            CreateTriggered("Item_WindFeather", "风之羽",
+                "被动：移动速度 +25%，眼泪速度 +15%。",
+                new Color(0.52f, 0.90f, 0.92f), ThirdPartySprites.WindFeatherIcon,
+                ItemRarity.Rare, 0f, 0f, 1, ItemSynergy.None, 10,
+                Mod(StatType.MoveSpeed, StatOp.Multiply, 1.25f),
+                Mod(StatType.TearSpeed, StatOp.Multiply, 1.15f));
+
+            CreateTriggered("Item_BloodPact", "血契",
+                "被动：伤害 ×1.5，生命上限 -1。",
+                new Color(0.90f, 0.28f, 0.34f), ThirdPartySprites.BloodPactIcon,
+                ItemRarity.Rare, 0f, 0f, 1, ItemSynergy.None, 12,
+                Mod(StatType.Damage, StatOp.Multiply, 1.5f),
+                Mod(StatType.MaxHealth, StatOp.Add, -1f));
+
             EnsurePickupPrefab();
             EnsureAltarPrefab();
 
@@ -78,16 +188,36 @@ namespace Roguelike.EditorTools
             Debug.Log($"[Items] 已生成道具资产、道具台与祭坛 Prefab：{ItemFolder}");
         }
 
-        /// <summary>确保道具资产存在（创建玩家时调用）。</summary>
+        /// <summary>确保全部 30 件自动道具资产存在（创建玩家时调用）。</summary>
         public static bool EnsureItems()
         {
-            const string samplePath = ItemFolder + "/Item_RapidTrigger.asset";
-            bool hasItems = AssetDatabase.LoadAssetAtPath<ItemDefinition>(samplePath) != null;
+            string[] required =
+            {
+                "Item_RapidTrigger", "Item_HeavyTear", "Item_SpeedBoots", "Item_HeartContainer",
+                "Item_PiercingPrism", "Item_TripleShot", "Item_Slingshot", "Item_GlassCannon",
+                "Item_CoinBag", "Item_LuckyCoin", "Item_HealingApple",
+                "Item_ExplosiveTears", "Item_VampireFang",
+                "Item_BentSpoon", "Item_CorrosiveGland", "Item_CorpseBomb", "Item_ThornHeart",
+                "Item_Coupon", "Item_DoubleEye", "Item_CyclopsEye",
+                "Item_GreedEye", "Item_EmberChalice", "Item_HolyVeil", "Item_LuckyFoot",
+                "Item_CritFang", "Item_SplitParasite", "Item_DivineGlimmer", "Item_GhostPrism",
+                "Item_WindFeather", "Item_BloodPact",
+            };
+
+            bool complete = true;
+            for (int i = 0; i < required.Length; i++)
+            {
+                if (AssetDatabase.LoadAssetAtPath<ItemDefinition>($"{ItemFolder}/{required[i]}.asset") != null)
+                    continue;
+
+                complete = false;
+                break;
+            }
+
             bool hasAltar = AssetDatabase.LoadAssetAtPath<SecretAltar>(AltarPath) != null;
+            if (!complete || !hasAltar) Rebuild();
 
-            if (!hasItems || !hasAltar) Rebuild();
-
-            return AssetDatabase.LoadAssetAtPath<ItemDefinition>(samplePath) != null;
+            return AssetDatabase.LoadAssetAtPath<ItemDefinition>($"{ItemFolder}/{required[0]}.asset") != null;
         }
 
         private static void EnsurePickupPrefab()
@@ -206,6 +336,54 @@ namespace Roguelike.EditorTools
             item.coinBonus = coins;
             item.healAmount = heal;
             item.modifiers = new List<StatModifier>(modifiers);
+
+            // 老资产可能残留触发字段，这里显式恢复为普通被动
+            item.rarity = ItemRarity.Common;
+            item.effectPower = 0f;
+            item.effectRadius = 0f;
+            item.triggerCount = 1;
+            item.synergy = ItemSynergy.None;
+            item.shopPrice = 0;
+
+            if (created) AssetDatabase.CreateAsset(item, path);
+            else EditorUtility.SetDirty(item);
+        }
+
+        /// <summary>自动触发道具：写入效果数值、触发条件与商店价格。</summary>
+        private static void CreateTriggered(
+            string fileName,
+            string displayName,
+            string description,
+            Color color,
+            Sprite icon,
+            ItemRarity rarity,
+            float effectPower,
+            float effectRadius,
+            int triggerCount,
+            ItemSynergy synergy,
+            int shopPrice,
+            params StatModifier[] modifiers)
+        {
+            string path = $"{ItemFolder}/{fileName}.asset";
+
+            var item = AssetDatabase.LoadAssetAtPath<ItemDefinition>(path);
+            bool created = item == null;
+            if (created) item = ScriptableObject.CreateInstance<ItemDefinition>();
+
+            item.itemName = displayName;
+            item.description = description;
+            item.color = color;
+            item.icon = icon;
+            item.rarity = rarity;
+            item.modifiers = new List<StatModifier>(modifiers);
+            item.coinBonus = 0;
+            item.healAmount = 0;
+
+            item.effectPower = effectPower;
+            item.effectRadius = effectRadius;
+            item.triggerCount = Mathf.Max(1, triggerCount);
+            item.synergy = synergy;
+            item.shopPrice = Mathf.Max(0, shopPrice);
 
             if (created) AssetDatabase.CreateAsset(item, path);
             else EditorUtility.SetDirty(item);

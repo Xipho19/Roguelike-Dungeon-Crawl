@@ -23,3 +23,8 @@ MonoBehaviour:
     value: 1
   coinBonus: 0
   healAmount: 0
+  effectPower: 0
+  effectRadius: 0
+  triggerCount: 1
+  synergy: 0
+  shopPrice: 0

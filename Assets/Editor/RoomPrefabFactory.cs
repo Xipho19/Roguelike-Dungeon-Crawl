@@ -20,6 +20,10 @@ namespace Roguelike.EditorTools
         public const string PrefabFolder = "Assets/Resources/Dungeon";
         public const string PrefabPath = PrefabFolder + "/Room.prefab";
 
+        /// <summary>未清空战斗房的门槛警示地砖（3×1 / 1×3 世界单位）。</summary>
+        public const string DoorWarningHorizontalPath = "Assets/Art/DoorWarningH.png";
+        public const string DoorWarningVerticalPath = "Assets/Art/DoorWarningV.png";
+
         /// <summary>所有房间外框尺寸组合（宽 × 高）。</summary>
         public static readonly Vector2Int[] SizeVariants =
         {
@@ -72,6 +76,9 @@ namespace Roguelike.EditorTools
             Sprite doorHorizontal = ThirdPartySprites.DoorHorizontal != null ? ThirdPartySprites.DoorHorizontal : doorSprite;
             Sprite doorVertical = ThirdPartySprites.DoorVertical != null ? ThirdPartySprites.DoorVertical : doorSprite;
 
+            Sprite doorWarningH = LoadDoorWarningSprite(DoorWarningHorizontalPath);
+            Sprite doorWarningV = LoadDoorWarningSprite(DoorWarningVerticalPath);
+
             Sprite[] floorSprites = ThirdPartySprites.FloorVariants;
             bool hasVariants = floorSprites != null && floorSprites.Length > 0 && floorSprites[0] != null;
             if (!hasVariants)
@@ -93,7 +100,8 @@ namespace Roguelike.EditorTools
                 Vector2Int size = SizeVariants[i];
                 GameObject root = BuildHierarchy(
                     white, floorSprites, floorSprite, wallSprite,
-                    doorHorizontal, doorVertical, size.x, size.y);
+                    doorHorizontal, doorVertical, doorWarningH, doorWarningV,
+                    size.x, size.y);
 
                 string path = VariantPath(size.x, size.y);
                 GameObject prefabAsset = PrefabUtility.SaveAsPrefabAsset(root, path);
@@ -125,6 +133,8 @@ namespace Roguelike.EditorTools
             Sprite wallSprite,
             Sprite doorHorizontal,
             Sprite doorVertical,
+            Sprite doorWarningH,
+            Sprite doorWarningV,
             int width,
             int height)
         {
@@ -180,6 +190,39 @@ namespace Roguelike.EditorTools
                 go.transform.localPosition = RoomGeometry.DoorCenter(side, width, height);
                 go.AddComponent<RoomDoor>().Setup(side);
                 doorMarkers[i] = go.transform;
+            }
+
+            // 门槛警示地砖：未清空的战斗房 / Boss 房在门外就能看到
+            var indicatorsRoot = new GameObject("DoorIndicators").transform;
+            indicatorsRoot.SetParent(root.transform, false);
+
+            var doorIndicators = new SpriteRenderer[4];
+            for (int i = 0; i < 4; i++)
+            {
+                WallSide side = (WallSide)i;
+                bool horizontal = side == WallSide.Up || side == WallSide.Down;
+
+                Sprite warning = horizontal ? doorWarningH : doorWarningV;
+                bool hasWarningSprite = warning != null;
+                Sprite sprite = hasWarningSprite ? warning : white;
+                Color color = hasWarningSprite ? Color.white : new Color(0.62f, 0.16f, 0.18f, 1f);
+                Vector2 size = hasWarningSprite
+                    ? Vector2.one
+                    : (horizontal ? new Vector2(3f, 1f) : new Vector2(1f, 3f));
+
+                GameObject go = CreateSprite(
+                    "DoorIndicator_" + side,
+                    indicatorsRoot,
+                    sprite,
+                    color,
+                    RoomGeometry.DoorCenter(side, width, height),
+                    size,
+                    -8,
+                    false);
+
+                var renderer = go.GetComponent<SpriteRenderer>();
+                renderer.enabled = false;
+                doorIndicators[i] = renderer;
             }
 
             // 门洞触发盒：只要该方向有门就启用（左右两侧各一个，互不依赖）
@@ -273,6 +316,7 @@ namespace Roguelike.EditorTools
                 center.transform,
                 entries,
                 doorMarkers,
+                doorIndicators,
                 doorTriggers,
                 doorBlockers,
                 enemies,
@@ -378,6 +422,75 @@ namespace Roguelike.EditorTools
         // ------------------------------------------------------------------
         // 资源
         // ------------------------------------------------------------------
+
+        /// <summary>
+        /// 加载门槛警示图：48×16 / 16×48，PPU = 16，
+        /// 因此横向是 3×1 世界单位、纵向是 1×3。
+        /// </summary>
+        private static Sprite LoadDoorWarningSprite(string path)
+        {
+            string projectRoot = Directory.GetParent(Application.dataPath).FullName;
+            if (!File.Exists(Path.Combine(projectRoot, path))) return null;
+
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+
+            var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer == null) return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+
+            bool changed = false;
+
+            if (importer.textureType != TextureImporterType.Sprite)
+            {
+                importer.textureType = TextureImporterType.Sprite;
+                changed = true;
+            }
+
+            if (importer.spriteImportMode != SpriteImportMode.Single)
+            {
+                importer.spriteImportMode = SpriteImportMode.Single;
+                changed = true;
+            }
+
+            if (!Mathf.Approximately(importer.spritePixelsPerUnit, 16f))
+            {
+                importer.spritePixelsPerUnit = 16f;
+                changed = true;
+            }
+
+            if (importer.filterMode != FilterMode.Point)
+            {
+                importer.filterMode = FilterMode.Point;
+                changed = true;
+            }
+
+            if (importer.textureCompression != TextureImporterCompression.Uncompressed)
+            {
+                importer.textureCompression = TextureImporterCompression.Uncompressed;
+                changed = true;
+            }
+
+            if (importer.mipmapEnabled)
+            {
+                importer.mipmapEnabled = false;
+                changed = true;
+            }
+
+            if (importer.wrapMode != TextureWrapMode.Clamp)
+            {
+                importer.wrapMode = TextureWrapMode.Clamp;
+                changed = true;
+            }
+
+            if (!importer.alphaIsTransparency)
+            {
+                importer.alphaIsTransparency = true;
+                changed = true;
+            }
+
+            if (changed) importer.SaveAndReimport();
+
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        }
 
         /// <summary>确保存在一张 4×4 白色 Sprite，PPU = 4，因此 1 个 Sprite = 1 世界单位。</summary>
         private static Sprite EnsureWhiteSprite()

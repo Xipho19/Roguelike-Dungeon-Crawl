@@ -115,6 +115,14 @@ namespace Roguelike.Player
             _health = Mathf.Clamp(_health + amount, 0, _maxHealth);
         }
 
+        /// <summary>获得一段额外无敌时间（进房护盾等自动效果）。</summary>
+        public void GrantInvulnerability(float seconds)
+        {
+            if (seconds <= 0f || IsDead) return;
+
+            _invulnerableUntil = Mathf.Max(_invulnerableUntil, Time.time + seconds);
+        }
+
         /// <summary>
         /// 主动献祭生命（秘密祭坛等）：只在不会致死时扣除，且不触发无敌帧。
         /// </summary>

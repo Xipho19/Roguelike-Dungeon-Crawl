@@ -39,9 +39,16 @@ namespace Roguelike.Combat
         private GUIStyle _inventoryDescStyle;
         private GUIStyle _inventoryHintStyle;
         private GUIStyle _keyHintStyle;
+        private GUIStyle _themeStyle;
+        private GUIStyle _floorToastStyle;
 
         private string _toastText;
         private float _toastUntil;
+
+        private string _floorToastText;
+        private float _floorToastUntil;
+        private int _lastShownFloor = -1;
+        private string _lastShownTheme;
 
         private bool _inventoryOpen;
         private bool _pausedByInventory;
@@ -78,12 +85,29 @@ namespace Roguelike.Combat
         {
             if (item == null) return;
 
-            _toastText = $"获得道具：{item.itemName}\n{item.description}";
-            _toastUntil = Time.time + 3f;
+            ShowToast($"获得道具：{item.itemName}\n{item.description}", 3f);
+        }
+
+        /// <summary>显示一条顶部提示（道具、事件等）。</summary>
+        public void ShowToast(string text, float duration = 3f)
+        {
+            _toastText = text;
+            _toastUntil = Time.time + Mathf.Max(0.1f, duration);
+        }
+
+        /// <summary>进入新楼层时显示“第 N 层 · 主题”横幅。</summary>
+        public void ShowFloorIntro(int floor, string themeName, float duration = 2.5f)
+        {
+            _floorToastText = string.IsNullOrEmpty(themeName)
+                ? $"第 {floor} 层"
+                : $"第 {floor} 层 · {themeName}";
+            _floorToastUntil = Time.time + Mathf.Max(0.5f, duration);
         }
 
         private void Update()
         {
+            TrackFloorAndTheme();
+
             if (_inventoryOpen)
             {
                 // 结算 / 暂停等其它界面接管时间后自动收起，避免两层界面叠在一起
@@ -101,6 +125,20 @@ namespace Roguelike.Combat
             }
 
             if (WasBackpackPressed()) ToggleInventory();
+        }
+
+        private void TrackFloorAndTheme()
+        {
+            if (runManager == null || runManager.State != RunManager.RunState.Playing) return;
+
+            int floor = runManager.CurrentFloor;
+            string theme = runManager.CurrentThemeName;
+
+            if (floor == _lastShownFloor && theme == _lastShownTheme) return;
+
+            _lastShownFloor = floor;
+            _lastShownTheme = theme;
+            ShowFloorIntro(floor, theme);
         }
 
         /// <summary>打开 / 关闭背包。商店、传送门、暂停与结算界面打开时不响应。</summary>
@@ -164,6 +202,7 @@ namespace Roguelike.Combat
 
             EnsureStyles();
             DrawStatusBar();
+            DrawFloorIntro();
             DrawToast();
             DrawBossBar();
             DrawBackpackButton();
@@ -236,6 +275,20 @@ namespace Roguelike.Combat
                 alignment = TextAnchor.MiddleCenter,
             };
             _keyHintStyle.normal.textColor = new Color(0.62f, 0.66f, 0.76f);
+
+            _themeStyle = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 14,
+                alignment = TextAnchor.MiddleLeft,
+            };
+            _themeStyle.normal.textColor = new Color(0.68f, 0.72f, 0.82f);
+
+            _floorToastStyle = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 22,
+                alignment = TextAnchor.MiddleCenter,
+            };
+            _floorToastStyle.normal.textColor = new Color(0.95f, 0.88f, 0.70f);
         }
 
         private void DrawStatusBar()
@@ -255,8 +308,16 @@ namespace Roguelike.Combat
             const float iconGap = 7f;
             const float groupGap = 22f;
 
-            x = DrawStat(x, y, iconSize, iconGap, floorIcon,
-                (runManager != null ? runManager.CurrentFloor : 1).ToString(), groupGap);
+            int floor = runManager != null ? runManager.CurrentFloor : 1;
+            string floorText = runManager != null && runManager.MaxFloor > 0
+                ? $"{floor}/{runManager.MaxFloor}"
+                : floor.ToString();
+
+            x = DrawStat(x, y, iconSize, iconGap, floorIcon, floorText, 8f);
+
+            string themeLabel = "· " + (runManager != null ? runManager.CurrentThemeName : "地牢");
+            GUI.Label(new Rect(x, y + 8f, 200f, 20f), themeLabel, _themeStyle);
+            x += _themeStyle.CalcSize(new GUIContent(themeLabel)).x + groupGap;
 
             x = DrawStat(x, y, iconSize, iconGap, heartIcon,
                 $"{health.Health}/{health.MaxHealth}", groupGap);
@@ -265,12 +326,36 @@ namespace Roguelike.Combat
                 (wallet != null ? wallet.Coins : 0).ToString(), groupGap);
         }
 
+        private bool FloorIntroVisible =>
+            !_inventoryOpen &&
+            Time.timeScale > 0.001f &&
+            !string.IsNullOrEmpty(_floorToastText) &&
+            Time.time < _floorToastUntil;
+
+        private void DrawFloorIntro()
+        {
+            if (!FloorIntroVisible) return;
+
+            var rect = new Rect(Screen.width * 0.5f - 240f, BarHeight + 12f, 480f, 36f);
+
+            Color previous = GUI.color;
+            GUI.color = new Color(0f, 0f, 0f, 0.55f);
+            GUI.DrawTexture(rect, Texture2D.whiteTexture);
+            GUI.color = previous;
+
+            GUI.Label(
+                new Rect(rect.x, rect.y + 3f, rect.width, 28f),
+                _floorToastText,
+                _floorToastStyle);
+        }
+
         private void DrawToast()
         {
             if (_inventoryOpen) return;
             if (string.IsNullOrEmpty(_toastText) || Time.time >= _toastUntil) return;
 
-            var rect = new Rect(Screen.width * 0.5f - 230f, BarHeight + 14f, 460f, 76f);
+            float top = BarHeight + 14f + (FloorIntroVisible ? 46f : 0f);
+            var rect = new Rect(Screen.width * 0.5f - 230f, top, 460f, 76f);
             GUI.Box(rect, GUIContent.none);
             GUI.Label(new Rect(rect.x + 12f, rect.y + 8f, rect.width - 24f, rect.height - 16f), _toastText, _toastStyle);
         }
@@ -278,7 +363,7 @@ namespace Roguelike.Combat
         private void DrawBossBar()
         {
             BossEnemy boss = BossEnemy.Active;
-            if (boss == null || boss.IsDead) return;
+            if (boss == null || boss.IsDead || !boss.CombatActive) return;
 
             float ratio = boss.MaxHealth > 0f ? Mathf.Clamp01(boss.Health / boss.MaxHealth) : 0f;
             var bar = new Rect(Screen.width * 0.5f - 260f, Screen.height - 48f, 520f, 22f);
@@ -293,16 +378,22 @@ namespace Roguelike.Combat
             GUI.Label(new Rect(bar.x, bar.y - 26f, bar.width, 22f), "BOSS", _bossStyle);
         }
 
+        private Rect GetBackpackButtonRect()
+        {
+            float size = BackpackButtonSize;
+            return new Rect(
+                Screen.width - size - 14f,
+                (BarHeight - size) * 0.5f,
+                size,
+                size);
+        }
+
         private void DrawBackpackButton()
         {
             if (runManager != null && runManager.State != RunManager.RunState.Playing) return;
 
             float size = BackpackButtonSize;
-            var buttonRect = new Rect(
-                Screen.width - size - 14f,
-                (BarHeight - size) * 0.5f,
-                size,
-                size);
+            Rect buttonRect = GetBackpackButtonRect();
 
             Color previousBackground = GUI.backgroundColor;
             GUI.backgroundColor = _inventoryOpen

@@ -30,6 +30,8 @@ namespace Roguelike.Dungeon
         [Tooltip("门洞所在的那一段；有门时隐藏，无门时保留")]
         [SerializeField] private GameObject doorSegment;
 
+        private SpriteRenderer[] _tintRenderers;
+
         public WallSide Side => side;
 
         /// <summary>门段当前是否启用（启用 = 墙是封死的）。</summary>
@@ -52,6 +54,19 @@ namespace Roguelike.Dungeon
 
             if (doorSegment != null)
                 doorSegment.SetActive(!hasDoor);
+        }
+
+        /// <summary>按楼层主题染色；包括当前隐藏的门段，避免开门后颜色不一致。</summary>
+        public void SetTint(Color color)
+        {
+            if (_tintRenderers == null)
+                _tintRenderers = GetComponentsInChildren<SpriteRenderer>(true);
+
+            for (int i = 0; i < _tintRenderers.Length; i++)
+            {
+                if (_tintRenderers[i] != null)
+                    _tintRenderers[i].color = color;
+            }
         }
     }
 }

@@ -4,10 +4,10 @@ using UnityEngine;
 namespace Roguelike.Player
 {
     /// <summary>
-    /// 房间吸附相机。
+    /// 跟随玩家的相机。
     ///
-    /// 以撒式的固定视角：相机永远对准当前房间中心，切换房间时做一次短促的平滑位移，
-    /// 而不是跟随玩家。缩放按房间 footprint 自动计算，保证整间房完整可见。
+    /// 相机平滑跟随角色移动，不再吸附房间中心；
+    /// 切换房间时由平滑跟随自然过渡，不再有整屏的定位动画。
     /// 玩家受伤时附带一次短促的屏幕震动。
     /// </summary>
     [RequireComponent(typeof(Camera))]
@@ -15,11 +15,11 @@ namespace Roguelike.Player
     {
         [SerializeField] private PlayerRoomTracker tracker;
 
-        [Tooltip("房间切换时的镜头过渡时长（秒），0 表示瞬间切换")]
-        [SerializeField] private float transitionDuration = 0.18f;
+        [Tooltip("跟随的平滑时间（秒），越小越紧跟，0 表示完全硬跟随")]
+        [SerializeField] private float followSmoothTime = 0.1f;
 
-        [Tooltip("房间四周额外留出的视野（单位）")]
-        [SerializeField] private float padding = 0.5f;
+        [Tooltip("正交视野半高（世界单位）")]
+        [SerializeField] private float followOrthoSize = 4.25f;
 
         [Header("受击震动")]
         [SerializeField] private float shakeDuration = 0.22f;
@@ -27,14 +27,10 @@ namespace Roguelike.Player
 
         private Camera _camera;
         private PlayerHealth _playerHealth;
-        private Vector3 _from;
-        private Vector3 _target;
+        private Transform _followTarget;
         private Vector3 _basePosition;
-        private float _progress = 1f;
-        private float _fromSize;
-        private float _targetSize;
-        private float _baseSize;
-        private bool _hasTarget;
+        private Vector3 _velocity;
+        private bool _hasBase;
         private float _shakeUntil;
         private float _shakeDuration = 0.22f;
         private float _shakeMagnitude;
@@ -42,6 +38,7 @@ namespace Roguelike.Player
         private void Awake()
         {
             _camera = GetComponent<Camera>();
+            _basePosition = transform.position;
 
             _playerHealth = FindFirstObjectByType<PlayerHealth>();
             if (_playerHealth != null) _playerHealth.Damaged += OnPlayerDamaged;
@@ -52,34 +49,45 @@ namespace Roguelike.Player
             if (_playerHealth != null) _playerHealth.Damaged -= OnPlayerDamaged;
         }
 
-        private void OnEnable()
-        {
-            if (tracker != null) tracker.RoomChanged += HandleRoomChanged;
-        }
-
-        private void OnDisable()
-        {
-            if (tracker != null) tracker.RoomChanged -= HandleRoomChanged;
-        }
-
         private void LateUpdate()
         {
-            if (!_hasTarget) return;
+            Transform target = ResolveTarget();
 
-            if (_progress < 1f)
+            if (target != null)
             {
-                _progress = Mathf.Min(1f, _progress + Time.deltaTime / Mathf.Max(0.01f, transitionDuration));
-                float k = Mathf.SmoothStep(0f, 1f, _progress);
-                _basePosition = Vector3.Lerp(_from, _target, k);
-                _baseSize = Mathf.Lerp(_fromSize, _targetSize, k);
+                Vector3 desired = new Vector3(
+                    target.position.x,
+                    target.position.y,
+                    _basePosition.z);
+
+                if (!_hasBase || followSmoothTime <= 0.0001f)
+                {
+                    _basePosition = desired;
+                    _velocity = Vector3.zero;
+                    _hasBase = true;
+                }
+                else
+                {
+                    _basePosition = Vector3.SmoothDamp(
+                        _basePosition,
+                        desired,
+                        ref _velocity,
+                        followSmoothTime,
+                        Mathf.Infinity,
+                        Time.deltaTime);
+                }
             }
-            else
+            else if (!_hasBase)
             {
-                _basePosition = _target;
-                _baseSize = _targetSize;
+                _basePosition = transform.position;
+                _hasBase = true;
             }
 
-            if (_camera != null) _camera.orthographicSize = _baseSize;
+            if (_camera != null)
+            {
+                _camera.orthographic = true;
+                _camera.orthographicSize = followOrthoSize;
+            }
 
             Vector3 shake = Vector3.zero;
             if (Time.time < _shakeUntil)
@@ -104,58 +112,48 @@ namespace Roguelike.Player
             _shakeMagnitude = magnitude;
         }
 
-        private void HandleRoomChanged(RoomView room)
+        /// <summary>切换楼层主题时设置相机纯色背景。</summary>
+        public void SetBackgroundColor(Color color)
         {
-            if (room == null) return;
+            if (_camera == null) _camera = GetComponent<Camera>();
+            if (_camera == null) return;
 
-            _target = new Vector3(room.WorldCenter.x, room.WorldCenter.y, transform.position.z);
-            _targetSize = ComputeOrthoSize(room);
-
-            if (!_hasTarget)
-            {
-                SnapTo(room);
-                return;
-            }
-
-            _from = _basePosition;
-            _fromSize = _camera != null ? _camera.orthographicSize : _targetSize;
-            _progress = 0f;
+            _camera.clearFlags = CameraClearFlags.SolidColor;
+            _camera.backgroundColor = color;
         }
 
-        /// <summary>立即把相机对准指定房间（编辑器搭建、重开与开局使用）。</summary>
+        /// <summary>立即把相机对准玩家（编辑器搭建、换层、重开与开局使用）。</summary>
         public void SnapTo(RoomView room)
         {
-            if (room == null) return;
+            Transform target = ResolveTarget();
+            Vector3 point = target != null
+                ? target.position
+                : room != null
+                    ? (Vector3)room.WorldCenter
+                    : _basePosition;
 
-            _hasTarget = true;
-            _target = new Vector3(room.WorldCenter.x, room.WorldCenter.y, transform.position.z);
-            _from = _target;
-            _basePosition = _target;
-            _progress = 1f;
-
-            _targetSize = ComputeOrthoSize(room);
-            _fromSize = _targetSize;
-            _baseSize = _targetSize;
-
-            transform.position = _target;
+            _basePosition = new Vector3(point.x, point.y, transform.position.z);
+            _velocity = Vector3.zero;
+            _hasBase = true;
 
             if (_camera == null) _camera = GetComponent<Camera>();
             if (_camera != null)
             {
                 _camera.orthographic = true;
-                _camera.orthographicSize = _targetSize;
+                _camera.orthographicSize = followOrthoSize;
             }
+
+            transform.position = _basePosition;
         }
 
-        private float ComputeOrthoSize(RoomView room)
+        private Transform ResolveTarget()
         {
-            if (_camera == null) _camera = GetComponent<Camera>();
+            if (_followTarget != null) return _followTarget;
 
-            float halfHeight = room.WorldRect.height * 0.5f + padding;
-            float halfWidth = room.WorldRect.width * 0.5f + padding;
-            float aspect = _camera != null && _camera.aspect > 0.01f ? _camera.aspect : 16f / 9f;
+            if (tracker == null) tracker = FindFirstObjectByType<PlayerRoomTracker>();
+            _followTarget = tracker != null ? tracker.transform : null;
 
-            return Mathf.Max(halfHeight, halfWidth / aspect);
+            return _followTarget;
         }
     }
 }

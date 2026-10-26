@@ -34,9 +34,26 @@ namespace Roguelike.Combat
             _nextShotTime = Time.time + Random.Range(0.8f, 1.6f);
         }
 
+        protected override void OnCombatStarted()
+        {
+            base.OnCombatStarted();
+
+            _windingUp = false;
+            _nextShotTime = Time.time + Random.Range(0.6f, 1.2f);
+            RestoreColor();
+        }
+
         protected override void FixedUpdate()
         {
-            if (IsDead || _target == null || _rb == null) return;
+            if (IsDead || _rb == null) return;
+
+            if (!CombatActive)
+            {
+                UpdatePassiveBehavior();
+                return;
+            }
+
+            if (_target == null) return;
 
             Vector2 toTarget = (Vector2)_target.position - _rb.position;
             float distance = toTarget.magnitude;

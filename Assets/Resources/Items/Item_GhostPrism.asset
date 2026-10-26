@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 809a1a0b1f10ffa4baec5a645412a5d9, type: 3}
+  m_Name: Item_GhostPrism
+  m_EditorClassIdentifier: Assembly-CSharp::Roguelike.Items.ItemDefinition
+  itemName: "\u5E7D\u7075\u68F1\u955C"
+  description: "\u88AB\u52A8\uFF1A\u7A7F\u900F +2\uFF0C\u773C\u6CEA\u901F\u5EA6 +10%\u3002"
+  rarity: 1
+  icon: {fileID: 21300000, guid: ec352c3c55f4a594c9591c3c26ae6914, type: 3}
+  color: {r: 0.72, g: 0.62, b: 0.98, a: 1}
+  modifiers:
+  - stat: 6
+    op: 0
+    value: 2
+  - stat: 4
+    op: 1
+    value: 1.1
+  coinBonus: 0
+  healAmount: 0
+  effectPower: 0
+  effectRadius: 0
+  triggerCount: 1
+  synergy: 0
+  shopPrice: 10

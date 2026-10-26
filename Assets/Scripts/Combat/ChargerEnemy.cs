@@ -36,9 +36,26 @@ namespace Roguelike.Combat
             if (_renderer != null) _baseColor = _renderer.color;
         }
 
+        protected override void OnCombatStarted()
+        {
+            base.OnCombatStarted();
+
+            _state = ChargeState.Chasing;
+            _timer = 0f;
+            RestoreColor();
+        }
+
         protected override void FixedUpdate()
         {
-            if (IsDead || _target == null || _rb == null) return;
+            if (IsDead || _rb == null) return;
+
+            if (!CombatActive)
+            {
+                UpdatePassiveBehavior();
+                return;
+            }
+
+            if (_target == null) return;
 
             _timer -= Time.fixedDeltaTime;
 

@@ -1,9 +1,30 @@
 using System.Collections.Generic;
+using Roguelike.Audio;
+using Roguelike.Dungeon;
 using Roguelike.Player;
 using UnityEngine;
 
 namespace Roguelike.Combat
 {
+    /// <summary>一颗眼泪的附加触发属性；由 PlayerCombat 根据背包里的自动道具填充。</summary>
+    public struct TearModifiers
+    {
+        public RoomView ownerRoom;
+        public float explosionRadius;
+        public float explosionDamage;
+        public float homingTurnSpeed;
+        public float homingRange;
+        public float poisonDamage;
+        public int poisonTicks;
+        public float poisonInterval;
+        public float critChance;
+        public int splitCount;
+        public float splitDamageScale;
+        public float auraDamage;
+        public float auraRadius;
+        public float auraInterval;
+    }
+
     /// <summary>
     /// 玩家的眼泪弹。
     ///
@@ -19,11 +40,34 @@ namespace Roguelike.Combat
         [SerializeField] private float lifetime = 1f;
         [SerializeField] private float damage = 1f;
 
+        [Header("爆炸眼泪")]
+        [SerializeField] private Sprite explosionSprite;
+
         private readonly HashSet<Enemy> _hitEnemies = new HashSet<Enemy>();
 
         private Rigidbody2D _rb;
         private int _remainingPierce;
         private float _dieAt;
+        private float _explosionRadius;
+        private float _explosionDamage;
+        private bool _exploded;
+        private RoomView _ownerRoom;
+        private float _homingTurnSpeed;
+        private float _homingRange = 6f;
+        private Enemy _homingTarget;
+        private float _nextHomingSearch;
+        private float _poisonDamage;
+        private int _poisonTicks;
+        private float _poisonInterval = 0.6f;
+        private TearModifiers _modifiers;
+        private float _critChance;
+        private int _splitCount;
+        private float _splitDamageScale = 0.5f;
+        private bool _canSplit = true;
+        private float _auraDamage;
+        private float _auraRadius;
+        private float _auraInterval = 0.3f;
+        private float _nextAuraTick;
 
         private void Awake()
         {
@@ -32,12 +76,35 @@ namespace Roguelike.Combat
             _rb.constraints = RigidbodyConstraints2D.FreezeRotation;
         }
 
-        public void Initialize(Vector2 direction, float shotSpeed, float amount, float life, int pierce)
+        public void Initialize(
+            Vector2 direction,
+            float shotSpeed,
+            float amount,
+            float life,
+            int pierce,
+            TearModifiers modifiers = default)
         {
             speed = shotSpeed;
             damage = amount;
             lifetime = life;
             _remainingPierce = Mathf.Max(0, pierce);
+
+            _ownerRoom = modifiers.ownerRoom;
+            _explosionRadius = Mathf.Max(0f, modifiers.explosionRadius);
+            _explosionDamage = Mathf.Max(0f, modifiers.explosionDamage);
+            _homingTurnSpeed = Mathf.Max(0f, modifiers.homingTurnSpeed);
+            _homingRange = modifiers.homingRange > 0f ? modifiers.homingRange : 6f;
+            _poisonDamage = Mathf.Max(0f, modifiers.poisonDamage);
+            _poisonTicks = Mathf.Max(0, modifiers.poisonTicks);
+            _poisonInterval = modifiers.poisonInterval > 0f ? modifiers.poisonInterval : 0.6f;
+            _modifiers = modifiers;
+            _critChance = Mathf.Clamp01(modifiers.critChance);
+            _splitCount = Mathf.Max(0, modifiers.splitCount);
+            _splitDamageScale = Mathf.Clamp(modifiers.splitDamageScale, 0.1f, 1f);
+            _auraDamage = Mathf.Max(0f, modifiers.auraDamage);
+            _auraRadius = Mathf.Max(0f, modifiers.auraRadius);
+            _auraInterval = modifiers.auraInterval > 0f ? modifiers.auraInterval : 0.3f;
+            _nextAuraTick = Time.time + _auraInterval;
 
             if (_rb == null) _rb = GetComponent<Rigidbody2D>();
             _rb.linearVelocity = direction.normalized * speed;
@@ -47,7 +114,116 @@ namespace Roguelike.Combat
 
         private void Update()
         {
-            if (Time.time >= _dieAt) Destroy(gameObject);
+            if (Time.time >= _dieAt)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            // 眼泪不跨越房间边界：站在门外朝未进入的房间射击时，弹体会在门口消失
+            if (_ownerRoom != null && !_ownerRoom.WorldRect.Contains(transform.position))
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            if (_homingTurnSpeed > 0f) UpdateHoming();
+            if (_auraDamage > 0f) UpdateAura();
+        }
+
+        /// <summary>弯勺：朝当前房间内最近的敌人缓慢转向。</summary>
+        private void UpdateHoming()
+        {
+            if (_rb == null) return;
+            if (!IsValidHomingTarget(_homingTarget))
+            {
+                if (Time.time < _nextHomingSearch) return;
+
+                _homingTarget = FindHomingTarget();
+                _nextHomingSearch = Time.time + 0.2f;
+                if (_homingTarget == null) return;
+            }
+
+            Vector2 current = _rb.linearVelocity;
+            if (current.sqrMagnitude < 0.0001f) return;
+
+            Vector2 toTarget = (Vector2)_homingTarget.transform.position - _rb.position;
+            if (toTarget.sqrMagnitude < 0.0001f) return;
+
+            float angle = Vector2.SignedAngle(current, toTarget.normalized);
+            float maxTurn = _homingTurnSpeed * Time.deltaTime;
+            if (Mathf.Abs(angle) > maxTurn) angle = Mathf.Sign(angle) * maxTurn;
+
+            Vector2 direction = Rotate(current.normalized, angle);
+            _rb.linearVelocity = direction * speed;
+        }
+
+        private bool IsValidHomingTarget(Enemy enemy)
+        {
+            return enemy != null
+                && !enemy.IsDead
+                && enemy.CombatActive
+                && _ownerRoom != null
+                && enemy.Room == _ownerRoom;
+        }
+
+        private Enemy FindHomingTarget()
+        {
+            if (_ownerRoom == null || _rb == null) return null;
+
+            Enemy best = null;
+            float bestSqr = _homingRange * _homingRange;
+            IReadOnlyList<Enemy> all = Enemy.AllActiveEnemies;
+
+            for (int i = 0; i < all.Count; i++)
+            {
+                Enemy enemy = all[i];
+                if (!IsValidHomingTarget(enemy)) continue;
+
+                float sqr = ((Vector2)enemy.transform.position - _rb.position).sqrMagnitude;
+                if (sqr > bestSqr) continue;
+
+                bestSqr = sqr;
+                best = enemy;
+            }
+
+            return best;
+        }
+
+        /// <summary>神性微光：眼泪飞行时周期性灼烧周围同房间的敌人。</summary>
+        private void UpdateAura()
+        {
+            if (_ownerRoom == null || _auraRadius <= 0f) return;
+            if (Time.time < _nextAuraTick) return;
+
+            _nextAuraTick = Time.time + _auraInterval;
+
+            Collider2D[] overlaps = Physics2D.OverlapCircleAll(transform.position, _auraRadius);
+            var damaged = new HashSet<Enemy>();
+
+            for (int i = 0; i < overlaps.Length; i++)
+            {
+                Collider2D collider = overlaps[i];
+                if (collider == null) continue;
+
+                Enemy enemy = collider.GetComponentInParent<Enemy>();
+                if (enemy == null || enemy.IsDead || !enemy.CombatActive) continue;
+                if (enemy.Room != _ownerRoom) continue;
+                if (!damaged.Add(enemy)) continue;
+
+                enemy.TakeDamageSilent(_auraDamage);
+            }
+        }
+
+        private static Vector2 Rotate(Vector2 direction, float degrees)
+        {
+            float radians = degrees * Mathf.Deg2Rad;
+            float cos = Mathf.Cos(radians);
+            float sin = Mathf.Sin(radians);
+
+            return new Vector2(
+                direction.x * cos - direction.y * sin,
+                direction.x * sin + direction.y * cos);
         }
 
         private void OnTriggerEnter2D(Collider2D other)
@@ -67,12 +243,28 @@ namespace Roguelike.Combat
             var enemy = other.GetComponentInParent<Enemy>();
             if (enemy != null)
             {
+                // 预生成但尚未激活战斗的敌人不参与受击结算
+                if (!enemy.CombatActive) return;
+
+                // 兜底：不伤害发射时所在房间之外的敌人
+                if (_ownerRoom != null && enemy.Room != _ownerRoom) return;
+
                 if (!_hitEnemies.Add(enemy)) return; // 同一敌人只结算一次
 
                 Vector2 pushDirection = _rb != null ? _rb.linearVelocity : Vector2.zero;
 
-                enemy.TakeDamage(damage);
+                float dealt = damage;
+                if (_critChance > 0f && Random.value < _critChance) dealt *= 2f;
+                enemy.TakeDamage(dealt);
                 enemy.ApplyKnockback(pushDirection, 5f);
+
+                if (_poisonTicks > 0 && _poisonDamage > 0f)
+                    enemy.ApplyPoison(_poisonDamage, _poisonTicks, _poisonInterval);
+
+                TrySplit();
+
+                // 每颗眼泪只爆炸一次；后续穿透命中不会再触发
+                TryExplode(enemy);
 
                 if (_remainingPierce > 0)
                 {
@@ -86,6 +278,81 @@ namespace Roguelike.Combat
 
             // 撞到实心墙体
             if (!other.isTrigger) Destroy(gameObject);
+        }
+
+        /// <summary>裂体寄生虫：首次命中后分裂成数颗较弱的小眼泪。</summary>
+        private void TrySplit()
+        {
+            if (!_canSplit || _splitCount <= 0) return;
+
+            _canSplit = false;
+
+            TearProjectile prefab = Resources.Load<TearProjectile>("Combat/Tear");
+            if (prefab == null || _rb == null) return;
+
+            Vector2 baseDirection = _rb.linearVelocity.sqrMagnitude > 0.0001f
+                ? _rb.linearVelocity.normalized
+                : Vector2.right;
+
+            int count = Mathf.Clamp(_splitCount, 1, 4);
+
+            for (int i = 0; i < count; i++)
+            {
+                float angle = count == 1 ? 0f : (i - (count - 1) * 0.5f) * 30f;
+                Vector2 direction = Rotate(baseDirection, angle);
+                Vector2 position = (Vector2)transform.position + direction * 0.25f;
+
+                TearProjectile child = Instantiate(prefab, position, Quaternion.identity);
+
+                TearModifiers modifiers = _modifiers;
+                modifiers.explosionRadius = 0f;
+                modifiers.explosionDamage = 0f;
+                modifiers.splitCount = 0;
+                modifiers.auraDamage = 0f;
+                modifiers.auraRadius = 0f;
+
+                child.Initialize(
+                    direction,
+                    speed * 0.9f,
+                    damage * _splitDamageScale,
+                    Mathf.Max(0.2f, lifetime * 0.75f),
+                    0,
+                    modifiers);
+
+                child._canSplit = false;
+            }
+        }
+
+        /// <summary>爆炸眼泪：对命中点周围同房间的敌人造成一次小范围伤害，排除直接命中目标。</summary>
+        private void TryExplode(Enemy directHit)
+        {
+            if (_exploded || _explosionRadius <= 0f || _explosionDamage <= 0f) return;
+
+            _exploded = true;
+
+            Vector2 center = transform.position;
+            ExplosionFlash.Spawn(center, explosionSprite, _explosionRadius);
+            AudioService.Play("explosion", 0.4f);
+
+            RoomView room = directHit != null ? directHit.Room : null;
+            if (room == null) return;
+
+            Collider2D[] overlaps = Physics2D.OverlapCircleAll(center, _explosionRadius);
+            var damaged = new HashSet<Enemy>();
+
+            for (int i = 0; i < overlaps.Length; i++)
+            {
+                Collider2D collider = overlaps[i];
+                if (collider == null) continue;
+
+                Enemy enemy = collider.GetComponentInParent<Enemy>();
+                if (enemy == null || enemy.IsDead) continue;
+                if (enemy == directHit) continue;
+                if (enemy.Room != room) continue;
+                if (!damaged.Add(enemy)) continue;
+
+                enemy.TakeDamage(_explosionDamage);
+            }
         }
     }
 }

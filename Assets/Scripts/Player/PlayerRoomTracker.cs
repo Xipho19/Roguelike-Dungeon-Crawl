@@ -69,10 +69,10 @@ namespace Roguelike.Player
             {
                 Vector2 center = _currentRoom.WorldCenter;
 
-                if (_rb != null)
-                    _rb.position = center;
-                else
-                    transform.position = new Vector3(center.x, center.y, transform.position.z);
+                if (_rb != null) _rb.position = center;
+
+                // 同步 Transform，保证相机在同一帧就能读到新位置
+                transform.position = new Vector3(center.x, center.y, transform.position.z);
             }
             else
             {
@@ -104,10 +104,10 @@ namespace Roguelike.Player
             Vector2 destination = entry != null ? (Vector2)entry.position : target.WorldCenter;
 
             // 直接设置刚体位置，避免与插值/物理同步冲突
-            if (_rb != null)
-                _rb.position = destination;
-            else
-                transform.position = new Vector3(destination.x, destination.y, transform.position.z);
+            if (_rb != null) _rb.position = destination;
+
+            // 同步 Transform，保证相机在同一帧就能读到新位置
+            transform.position = new Vector3(destination.x, destination.y, transform.position.z);
 
             _currentRoom = target;
             _currentRoom.IsVisited = true;
@@ -129,10 +129,9 @@ namespace Roguelike.Player
                 _rb.position = center;
                 _rb.linearVelocity = Vector2.zero;
             }
-            else
-            {
-                transform.position = new Vector3(center.x, center.y, transform.position.z);
-            }
+
+            // 同步 Transform，保证相机在同一帧就能读到新位置
+            transform.position = new Vector3(center.x, center.y, transform.position.z);
 
             _currentRoom = room;
             _currentRoom.IsVisited = true;

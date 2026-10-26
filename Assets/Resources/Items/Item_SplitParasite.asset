@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 809a1a0b1f10ffa4baec5a645412a5d9, type: 3}
+  m_Name: Item_SplitParasite
+  m_EditorClassIdentifier: Assembly-CSharp::Roguelike.Items.ItemDefinition
+  itemName: "\u88C2\u4F53\u5BC4\u751F\u866B"
+  description: "\u88AB\u52A8\uFF1A\u773C\u6CEA\u9996\u6B21\u547D\u4E2D\u540E\u5206\u88C2\u6210
+    2 \u9897\u5C0F\u773C\u6CEA\uFF0C\u6BCF\u9897\u9020\u6210 50% \u4F24\u5BB3\u3002"
+  rarity: 1
+  icon: {fileID: 21300000, guid: cd96f7db375b1c24a917016ae523a3b6, type: 3}
+  color: {r: 0.52, g: 0.82, b: 0.42, a: 1}
+  modifiers: []
+  coinBonus: 0
+  healAmount: 0
+  effectPower: 0.5
+  effectRadius: 0
+  triggerCount: 2
+  synergy: 13
+  shopPrice: 13

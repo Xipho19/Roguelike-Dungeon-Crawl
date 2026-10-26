@@ -121,6 +121,10 @@ namespace Roguelike.Dungeon
             for (int i = transform.childCount - 1; i >= 0; i--)
             {
                 GameObject child = transform.GetChild(i).gameObject;
+
+                // 先隐藏再销毁：Destroy 会延迟到帧末，避免新旧房间在同一帧重叠显示
+                child.SetActive(false);
+
                 if (Application.isPlaying) Destroy(child);
                 else DestroyImmediate(child);
             }
