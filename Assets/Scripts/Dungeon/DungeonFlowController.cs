@@ -56,6 +56,10 @@ namespace Roguelike.Dungeon
         [Tooltip("留空时会从 Resources/Items 自动加载所有 ItemDefinition")]
         [SerializeField] private ItemDefinition[] itemPool;
 
+        [Header("秘密房")]
+        [Tooltip("留空时从 Resources/Items 自动加载")]
+        [SerializeField] private SecretAltar secretAltarPrefab;
+
         private readonly List<Enemy> _aliveEnemies = new List<Enemy>();
         private readonly List<ItemDefinition> _availableItems = new List<ItemDefinition>();
         private RoomView _activeRoom;
@@ -78,6 +82,7 @@ namespace Roguelike.Dungeon
             if (coinPrefab == null) coinPrefab = Resources.Load<Pickup>("Combat/Coin");
             if (heartPrefab == null) heartPrefab = Resources.Load<Pickup>("Combat/Heart");
             if (itemPickupPrefab == null) itemPickupPrefab = Resources.Load<ItemPickup>("Items/ItemPickup");
+            if (secretAltarPrefab == null) secretAltarPrefab = Resources.Load<SecretAltar>("Items/SecretAltar");
 
             if (itemPool == null || itemPool.Length == 0)
                 itemPool = Resources.LoadAll<ItemDefinition>("Items");
@@ -137,6 +142,9 @@ namespace Roguelike.Dungeon
 
             if (room.RoomType == RoomType.Shop)
                 TryStockShop(room);
+
+            if (room.RoomType == RoomType.Secret)
+                TrySpawnSecretEvent(room);
         }
 
         /// <summary>商店首次进入时上架 3 件随机道具，价格按效果数量计算。</summary>
@@ -208,6 +216,30 @@ namespace Roguelike.Dungeon
             pickup.Setup(item, room);
 
             Debug.Log($"[Flow] 宝箱房 {room.GridPosition} 生成道具：{item.itemName}");
+        }
+
+        /// <summary>秘密房首次进入时生成祭坛，祭品从玩家尚未持有的道具中抽取。</summary>
+        private void TrySpawnSecretEvent(RoomView room)
+        {
+            if (room.SecretEventSpawned || room.SecretEventUsed) return;
+            if (secretAltarPrefab == null) return;
+
+            List<ItemDefinition> available = BuildAvailableItems();
+            if (available.Count == 0)
+            {
+                room.SecretEventSpawned = true;
+                Debug.Log($"[Flow] 秘密房 {room.GridPosition} 无可用祭品（玩家已持有全部道具）");
+                return;
+            }
+
+            room.SecretEventSpawned = true;
+
+            ItemDefinition item = available[Random.Range(0, available.Count)];
+            Vector3 position = new Vector3(room.WorldCenter.x, room.WorldCenter.y, 0f);
+            SecretAltar altar = Instantiate(secretAltarPrefab, position, Quaternion.identity, room.transform);
+            altar.Setup(item, room);
+
+            Debug.Log($"[Flow] 秘密房 {room.GridPosition} 生成祭坛，祭品：{item.itemName}");
         }
 
         /// <summary>当前可提供的道具：剔除空引用与玩家背包里已有的道具。</summary>

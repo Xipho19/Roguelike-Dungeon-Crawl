@@ -115,6 +115,18 @@ namespace Roguelike.Player
             _health = Mathf.Clamp(_health + amount, 0, _maxHealth);
         }
 
+        /// <summary>
+        /// 主动献祭生命（秘密祭坛等）：只在不会致死时扣除，且不触发无敌帧。
+        /// </summary>
+        public bool TrySacrifice(int amount)
+        {
+            if (amount <= 0 || IsDead || _health <= amount) return false;
+
+            _health -= amount;
+            AudioService.Play("chop", 0.75f);
+            return true;
+        }
+
         private void Die()
         {
             if (_rb != null) _rb.linearVelocity = Vector2.zero;

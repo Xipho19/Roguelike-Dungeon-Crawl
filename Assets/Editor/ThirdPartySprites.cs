@@ -49,6 +49,7 @@ namespace Roguelike.EditorTools
         public static Sprite FloorLadder => Load("dungeon-floor/floor_ladder.png");
         public static Sprite HudCoin => Load("frames/hud_coin.png");
         public static Sprite BackpackIcon => Load("frames/backpack.png");
+        public static Sprite Altar => Load("frames/altar.png");
 
         // 自制 16×16 道具图标（原创，保持 0x72 风格）
         public static Sprite BootsIcon => Load("frames/icons/icon_boots.png");

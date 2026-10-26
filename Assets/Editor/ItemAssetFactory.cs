@@ -15,6 +15,7 @@ namespace Roguelike.EditorTools
     {
         public const string ItemFolder = "Assets/Resources/Items";
         public const string PickupPath = ItemFolder + "/ItemPickup.prefab";
+        public const string AltarPath = ItemFolder + "/SecretAltar.prefab";
 
         private const string SpritePath = "Assets/Art/White.png";
 
@@ -69,19 +70,22 @@ namespace Roguelike.EditorTools
                 new Color(0.90f, 0.30f, 0.30f), ThirdPartySprites.AppleIcon, 0, 2);
 
             EnsurePickupPrefab();
+            EnsureAltarPrefab();
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            Debug.Log($"[Items] 已生成道具资产与道具台 Prefab：{ItemFolder}");
+            Debug.Log($"[Items] 已生成道具资产、道具台与祭坛 Prefab：{ItemFolder}");
         }
 
         /// <summary>确保道具资产存在（创建玩家时调用）。</summary>
         public static bool EnsureItems()
         {
             const string samplePath = ItemFolder + "/Item_RapidTrigger.asset";
-            if (AssetDatabase.LoadAssetAtPath<ItemDefinition>(samplePath) == null)
-                Rebuild();
+            bool hasItems = AssetDatabase.LoadAssetAtPath<ItemDefinition>(samplePath) != null;
+            bool hasAltar = AssetDatabase.LoadAssetAtPath<SecretAltar>(AltarPath) != null;
+
+            if (!hasItems || !hasAltar) Rebuild();
 
             return AssetDatabase.LoadAssetAtPath<ItemDefinition>(samplePath) != null;
         }
@@ -120,6 +124,57 @@ namespace Roguelike.EditorTools
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             PrefabUtility.SaveAsPrefabAsset(root, PickupPath);
+            Object.DestroyImmediate(root);
+        }
+
+        /// <summary>秘密房祭坛：石台 + 悬浮的祭品图标。</summary>
+        private static void EnsureAltarPrefab()
+        {
+            Sprite fallback = AssetDatabase.LoadAssetAtPath<Sprite>(SpritePath);
+            if (fallback == null)
+            {
+                RoomPrefabFactory.Rebuild();
+                fallback = AssetDatabase.LoadAssetAtPath<Sprite>(SpritePath);
+            }
+
+            if (fallback == null) return;
+
+            var root = new GameObject("SecretAltar");
+
+            var altarObject = new GameObject("Altar");
+            altarObject.transform.SetParent(root.transform, false);
+            var altarRenderer = altarObject.AddComponent<SpriteRenderer>();
+            Sprite altarSprite = ThirdPartySprites.Altar;
+            altarRenderer.sprite = altarSprite != null ? altarSprite : fallback;
+            altarRenderer.sortingOrder = 3;
+
+            var iconObject = new GameObject("RewardIcon");
+            iconObject.transform.SetParent(root.transform, false);
+            iconObject.transform.localPosition = new Vector3(0f, 1.55f, 0f);
+            iconObject.transform.localScale = Vector3.one * 0.8f;
+            var iconRenderer = iconObject.AddComponent<SpriteRenderer>();
+            Sprite potion = ThirdPartySprites.Potion;
+            iconRenderer.sprite = potion != null ? potion : fallback;
+            iconRenderer.sortingOrder = 7;
+
+            // 石头底座挡住玩家，交互范围用较大的触发器
+            var blockObject = new GameObject("Block");
+            blockObject.transform.SetParent(root.transform, false);
+            blockObject.transform.localPosition = new Vector3(0f, -0.25f, 0f);
+            var block = blockObject.AddComponent<BoxCollider2D>();
+            block.size = new Vector2(1.8f, 1.5f);
+
+            var collider = root.AddComponent<CircleCollider2D>();
+            collider.radius = 1.35f;
+            collider.isTrigger = true;
+
+            var altar = root.AddComponent<SecretAltar>();
+            var serialized = new SerializedObject(altar);
+            serialized.FindProperty("rewardIcon").objectReferenceValue = iconRenderer;
+            serialized.FindProperty("altarRenderer").objectReferenceValue = altarRenderer;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            PrefabUtility.SaveAsPrefabAsset(root, AltarPath);
             Object.DestroyImmediate(root);
         }
 

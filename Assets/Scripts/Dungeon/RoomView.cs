@@ -80,6 +80,12 @@ namespace Roguelike.Dungeon
 
         /// <summary>商店是否已经进货。</summary>
         public bool ShopStocked { get; set; }
+
+        /// <summary>秘密房祭坛是否已经生成，防止重复刷新。</summary>
+        public bool SecretEventSpawned { get; set; }
+
+        /// <summary>秘密房祭坛是否已经完成交易。</summary>
+        public bool SecretEventUsed { get; set; }
         public IReadOnlyList<Transform> EntryPoints => entryPoints;
         public IReadOnlyList<Transform> DoorMarkers => doorMarkers;
         public IReadOnlyList<RoomWall> Walls => walls;

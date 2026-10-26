@@ -1,4 +1,3 @@
-using Roguelike.Audio;
 using Roguelike.Dungeon;
 using Roguelike.Player;
 using UnityEngine;
@@ -186,17 +185,10 @@ namespace Roguelike.Items
         {
             if (item == null) return;
 
-            if (inventory != null) inventory.AddItem(item);
-
-            if (item.healAmount > 0 && health != null)
-                health.Heal(item.healAmount);
-
-            if (item.coinBonus > 0 && wallet != null)
-                wallet.AddCoins(item.coinBonus);
+            ItemGrant.Apply(item, inventory, health, wallet);
 
             if (rewardRoom != null) rewardRoom.RewardClaimed = true;
 
-            AudioService.Play("bookFlip1", 0.7f);
             Destroy(gameObject);
         }
 

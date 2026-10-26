@@ -154,6 +154,10 @@ namespace Roguelike.EditorTools
             if (itemPickup != null)
                 flowObject.FindProperty("itemPickupPrefab").objectReferenceValue = itemPickup;
 
+            var secretAltar = AssetDatabase.LoadAssetAtPath<SecretAltar>(ItemAssetFactory.AltarPath);
+            if (secretAltar != null)
+                flowObject.FindProperty("secretAltarPrefab").objectReferenceValue = secretAltar;
+
             flowObject.ApplyModifiedPropertiesWithoutUndo();
 
             var hud = Ensure<CombatDebugHud>(builder.gameObject);
