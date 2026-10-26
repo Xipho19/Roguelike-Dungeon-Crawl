@@ -33,6 +33,25 @@ namespace Roguelike.EditorTools
         public static Sprite[] EnemyChargerRun => LoadFrames("frames/anim/enemy_charger_run", 4);
         public static Sprite[] BossIdle => LoadFrames("frames/anim/boss_idle", 4);
         public static Sprite[] BossRun => LoadFrames("frames/anim/boss_run", 4);
+
+        // 新敌人：自爆史莱姆 / 亡灵法师 / 分裂僵尸及其召唤物
+        public static Sprite[] BomberIdle => LoadFrames("frames/anim/bomber_idle", 4);
+        public static Sprite[] BomberRun => LoadFrames("frames/anim/bomber_run", 4);
+        public static Sprite[] NecromancerIdle => LoadFrames("frames/anim/necromancer_idle", 4);
+        public static Sprite[] NecromancerRun => LoadFrames("frames/anim/necromancer_run", 4);
+        public static Sprite[] SkeletonIdle => LoadFrames("frames/anim/skeleton_idle", 4);
+        public static Sprite[] SkeletonRun => LoadFrames("frames/anim/skeleton_run", 4);
+        public static Sprite[] SplitterIdle => LoadFrames("frames/anim/splitter_idle", 4);
+        public static Sprite[] SplitterRun => LoadFrames("frames/anim/splitter_run", 4);
+        public static Sprite[] TinyZombieIdle => LoadFrames("frames/anim/tiny_zombie_idle", 4);
+        public static Sprite[] TinyZombieRun => LoadFrames("frames/anim/tiny_zombie_run", 4);
+        public static Sprite Bomber => Load("frames/anim/bomber_idle_0.png");
+        public static Sprite Necromancer => Load("frames/anim/necromancer_idle_0.png");
+        public static Sprite Skeleton => Load("frames/anim/skeleton_idle_0.png");
+        public static Sprite Splitter => Load("frames/anim/splitter_idle_0.png");
+        public static Sprite TinyZombie => Load("frames/anim/tiny_zombie_idle_0.png");
+        public static Sprite Explosion => Load("frames/explosion.png");
+
         public static Sprite EnemyChaser => Load("frames/enemy_chaser.png");
         public static Sprite EnemyShooter => Load("frames/enemy_shooter.png");
         public static Sprite EnemyCharger => Load("frames/enemy_charger.png");
@@ -88,6 +107,7 @@ namespace Roguelike.EditorTools
         public static Sprite WallHole => Load("dungeon-walls/wall_hole_1.png");
         public static Sprite WallGoo => Load("dungeon-walls/wall_goo.png");
         public static Sprite Chest => Load("frames/chest.png");
+        public static Sprite ChestOpen => Load("frames/chest_open.png");
 
         // 蓝 / 绿 / 红 / 黄
         public static Sprite[] Banners => new[]

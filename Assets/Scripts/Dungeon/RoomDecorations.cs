@@ -1,3 +1,4 @@
+using Roguelike.Combat;
 using UnityEngine;
 using Random = System.Random;
 
@@ -27,6 +28,7 @@ namespace Roguelike.Dungeon
         [SerializeField] private Sprite wallHole;
         [SerializeField] private Sprite wallGoo;
         [SerializeField] private Sprite chest;
+        [SerializeField] private Sprite chestOpen;
 
         public void Apply(RoomType type, DoorDirections doors, int seed)
         {
@@ -73,14 +75,21 @@ namespace Roguelike.Dungeon
             switch (type)
             {
                 case RoomType.Treasure:
+                {
                     // 放在侧后方，避免堵住上下门之间的通路
-                    AddSolid("Chest", chest, new Vector2(11.0f, innerTopY - 1.4f), 2, new Vector2(0.9f, 0.75f), new Vector2(0f, -0.05f));
+                    GameObject chestObject = AddSolid("Chest", chest, new Vector2(11.0f, innerTopY - 1.4f), 2, new Vector2(0.9f, 0.75f), new Vector2(0f, -0.05f));
+                    MakeChestBreakable(chestObject, chestOpen);
                     break;
+                }
 
                 case RoomType.Shop:
-                    AddSolid("Crate_L", crate, new Vector2(4.2f, innerBottomY + 0.7f), 2, new Vector2(0.85f, 1.05f), Vector2.zero);
-                    AddSolid("Crate_R", crate, new Vector2(10.8f, innerBottomY + 0.7f), 2, new Vector2(0.85f, 1.05f), Vector2.zero);
+                {
+                    GameObject leftCrate = AddSolid("Crate_L", crate, new Vector2(4.2f, innerBottomY + 0.7f), 2, new Vector2(0.85f, 1.05f), Vector2.zero);
+                    GameObject rightCrate = AddSolid("Crate_R", crate, new Vector2(10.8f, innerBottomY + 0.7f), 2, new Vector2(0.85f, 1.05f), Vector2.zero);
+                    MakeCrateBreakable(leftCrate);
+                    MakeCrateBreakable(rightCrate);
                     break;
+                }
 
                 case RoomType.Boss:
                     Add("Skull_L", skull, new Vector2(3.0f, innerTopY - 0.6f), 2);
@@ -89,7 +98,7 @@ namespace Roguelike.Dungeon
                     break;
 
                 case RoomType.Start:
-                    AddSolid("Crate", crate, new Vector2(12.8f, innerBottomY + 0.7f), 2, new Vector2(0.85f, 1.05f), Vector2.zero);
+                    MakeCrateBreakable(AddSolid("Crate", crate, new Vector2(12.8f, innerBottomY + 0.7f), 2, new Vector2(0.85f, 1.05f), Vector2.zero));
                     Add("Skull", skull, new Vector2(2.2f, innerBottomY + 0.5f), 2);
                     break;
 
@@ -112,13 +121,13 @@ namespace Roguelike.Dungeon
 
                         if (isCrate)
                         {
-                            AddSolid(
+                            MakeCrateBreakable(AddSolid(
                                 "Crate_" + i,
                                 crate,
                                 new Vector2(x, innerBottomY + 0.7f),
                                 2,
                                 new Vector2(0.85f, 1.05f),
-                                Vector2.zero);
+                                Vector2.zero));
                         }
                         else
                         {
@@ -179,7 +188,7 @@ namespace Roguelike.Dungeon
         }
 
         /// <summary>视觉 + 实心碰撞体（木箱、宝箱）。</summary>
-        private void AddSolid(
+        private GameObject AddSolid(
             string objectName,
             Sprite sprite,
             Vector2 localPosition,
@@ -188,11 +197,30 @@ namespace Roguelike.Dungeon
             Vector2 colliderOffset)
         {
             GameObject go = Add(objectName, sprite, localPosition, sortingOrder);
-            if (go == null) return;
+            if (go == null) return null;
 
             var box = go.AddComponent<BoxCollider2D>();
             box.size = colliderSize;
             box.offset = colliderOffset;
+            return go;
+        }
+
+        /// <summary>木箱：3 次命中后破碎，30% 概率掉 1 金币。</summary>
+        private static void MakeCrateBreakable(GameObject crateObject)
+        {
+            if (crateObject == null) return;
+
+            var prop = crateObject.AddComponent<BreakableProp>();
+            prop.Setup(3, 1, 1, 0.3f, null, false);
+        }
+
+        /// <summary>宝箱：3 次命中后打开，掉落 3–6 金币并保留打开贴图。</summary>
+        private static void MakeChestBreakable(GameObject chestObject, Sprite openSprite)
+        {
+            if (chestObject == null) return;
+
+            var prop = chestObject.AddComponent<BreakableProp>();
+            prop.Setup(3, 3, 6, 1f, openSprite, true);
         }
 
         /// <summary>只有碰撞体的障碍物（立柱整体）。</summary>
@@ -228,7 +256,8 @@ namespace Roguelike.Dungeon
             Sprite skullSprite,
             Sprite wallHoleSprite,
             Sprite wallGooSprite,
-            Sprite chestSprite)
+            Sprite chestSprite,
+            Sprite chestOpenSprite)
         {
             container = decorContainer;
             banners = bannerSprites;
@@ -240,6 +269,7 @@ namespace Roguelike.Dungeon
             wallHole = wallHoleSprite;
             wallGoo = wallGooSprite;
             chest = chestSprite;
+            chestOpen = chestOpenSprite;
         }
 #endif
     }

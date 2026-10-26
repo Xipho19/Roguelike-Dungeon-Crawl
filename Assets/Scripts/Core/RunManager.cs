@@ -153,6 +153,7 @@ namespace Roguelike.Core
         {
             if (_state != RunState.Playing) return;
 
+            AudioService.Play("teleport", 0.9f, 0f);
             Time.timeScale = 1f;
 
             if (_portal != null)
@@ -180,7 +181,6 @@ namespace Roguelike.Core
             }
 
             _state = RunState.Playing;
-            AudioService.Play("doorOpen_1", 0.6f);
             Debug.Log($"[Run] 进入第 {currentFloor} 层，新种子 {(builder != null ? builder.Seed : 0)}");
         }
 

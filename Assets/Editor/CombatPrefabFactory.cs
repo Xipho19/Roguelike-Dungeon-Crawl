@@ -21,6 +21,11 @@ namespace Roguelike.EditorTools
         public const string HeartPath = Folder + "/Heart.prefab";
         public const string ShooterPath = Folder + "/Shooter.prefab";
         public const string ChargerPath = Folder + "/Charger.prefab";
+        public const string BomberPath = Folder + "/Bomber.prefab";
+        public const string NecromancerPath = Folder + "/Necromancer.prefab";
+        public const string SplitterPath = Folder + "/Splitter.prefab";
+        public const string SkeletonPath = Folder + "/Skeleton.prefab";
+        public const string TinyZombiePath = Folder + "/TinyZombie.prefab";
         public const string BossPath = Folder + "/Boss.prefab";
         public const string EnemyProjectilePath = Folder + "/EnemyProjectile.prefab";
         public const string PortalPath = Folder + "/NextFloorPortal.prefab";
@@ -49,6 +54,11 @@ namespace Roguelike.EditorTools
             BuildEnemy(sprite);
             BuildShooter(sprite);
             BuildCharger(sprite);
+            Enemy skeleton = BuildSkeleton(sprite);
+            Enemy tinyZombie = BuildTinyZombie(sprite);
+            BuildBomber(sprite);
+            BuildNecromancer(sprite, skeleton);
+            BuildSplitter(sprite, tinyZombie);
             BuildBoss(sprite);
             BuildTear(sprite);
             BuildEnemyProjectile(sprite);
@@ -57,7 +67,7 @@ namespace Roguelike.EditorTools
             BuildPortal(sprite);
             AssetDatabase.SaveAssets();
 
-            Debug.Log("[Combat] 战斗 Prefab 已生成：Enemy / Shooter / Charger / Boss / Tear / EnemyProjectile / Coin / Heart / NextFloorPortal");
+            Debug.Log("[Combat] 战斗 Prefab 已生成：Enemy / Shooter / Charger / Bomber / Necromancer / Splitter / Skeleton / TinyZombie / Boss / Tear / EnemyProjectile / Coin / Heart / NextFloorPortal");
         }
 
         private static Sprite ArtOr(Sprite art, Sprite fallback) => art != null ? art : fallback;
@@ -134,6 +144,151 @@ namespace Roguelike.EditorTools
             AttachAnimator(root, ThirdPartySprites.EnemyChargerIdle, ThirdPartySprites.EnemyChargerRun);
 
             PrefabUtility.SaveAsPrefabAsset(root, ChargerPath);
+            Object.DestroyImmediate(root);
+        }
+
+        private static Enemy BuildSkeleton(Sprite sprite)
+        {
+            var root = new GameObject("Skeleton");
+
+            var renderer = root.AddComponent<SpriteRenderer>();
+            renderer.sprite = ArtOr(ThirdPartySprites.Skeleton, sprite);
+            renderer.color = Color.white;
+            renderer.sortingOrder = 8;
+
+            var body = root.AddComponent<Rigidbody2D>();
+            body.gravityScale = 0f;
+            body.constraints = RigidbodyConstraints2D.FreezeRotation;
+            body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            body.interpolation = RigidbodyInterpolation2D.Interpolate;
+
+            var collider = root.AddComponent<CircleCollider2D>();
+            collider.radius = 0.32f;
+
+            root.AddComponent<Enemy>();
+            AttachAnimator(root, ThirdPartySprites.SkeletonIdle, ThirdPartySprites.SkeletonRun);
+
+            GameObject saved = PrefabUtility.SaveAsPrefabAsset(root, SkeletonPath);
+            Object.DestroyImmediate(root);
+            return saved != null ? saved.GetComponent<Enemy>() : null;
+        }
+
+        private static Enemy BuildTinyZombie(Sprite sprite)
+        {
+            var root = new GameObject("TinyZombie");
+
+            var renderer = root.AddComponent<SpriteRenderer>();
+            renderer.sprite = ArtOr(ThirdPartySprites.TinyZombie, sprite);
+            renderer.color = Color.white;
+            renderer.sortingOrder = 8;
+
+            var body = root.AddComponent<Rigidbody2D>();
+            body.gravityScale = 0f;
+            body.constraints = RigidbodyConstraints2D.FreezeRotation;
+            body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            body.interpolation = RigidbodyInterpolation2D.Interpolate;
+
+            var collider = root.AddComponent<CircleCollider2D>();
+            collider.radius = 0.28f;
+
+            root.AddComponent<Enemy>();
+            AttachAnimator(root, ThirdPartySprites.TinyZombieIdle, ThirdPartySprites.TinyZombieRun);
+
+            GameObject saved = PrefabUtility.SaveAsPrefabAsset(root, TinyZombiePath);
+            Object.DestroyImmediate(root);
+            return saved != null ? saved.GetComponent<Enemy>() : null;
+        }
+
+        private static void BuildBomber(Sprite sprite)
+        {
+            var root = new GameObject("Bomber");
+
+            var renderer = root.AddComponent<SpriteRenderer>();
+            renderer.sprite = ArtOr(ThirdPartySprites.Bomber, sprite);
+            renderer.color = Color.white;
+            renderer.sortingOrder = 8;
+
+            var body = root.AddComponent<Rigidbody2D>();
+            body.gravityScale = 0f;
+            body.constraints = RigidbodyConstraints2D.FreezeRotation;
+            body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            body.interpolation = RigidbodyInterpolation2D.Interpolate;
+
+            var collider = root.AddComponent<CircleCollider2D>();
+            collider.radius = 0.42f;
+
+            var bomber = root.AddComponent<BomberEnemy>();
+            var serialized = new SerializedObject(bomber);
+            serialized.FindProperty("explosionSprite").objectReferenceValue = ThirdPartySprites.Explosion;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            AttachAnimator(root, ThirdPartySprites.BomberIdle, ThirdPartySprites.BomberRun);
+
+            PrefabUtility.SaveAsPrefabAsset(root, BomberPath);
+            Object.DestroyImmediate(root);
+        }
+
+        private static void BuildNecromancer(Sprite sprite, Enemy minionPrefab)
+        {
+            var root = new GameObject("Necromancer");
+
+            var renderer = root.AddComponent<SpriteRenderer>();
+            renderer.sprite = ArtOr(ThirdPartySprites.Necromancer, sprite);
+            renderer.color = Color.white;
+            renderer.sortingOrder = 8;
+
+            var body = root.AddComponent<Rigidbody2D>();
+            body.gravityScale = 0f;
+            body.constraints = RigidbodyConstraints2D.FreezeRotation;
+            body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            body.interpolation = RigidbodyInterpolation2D.Interpolate;
+
+            var collider = root.AddComponent<CircleCollider2D>();
+            collider.radius = 0.4f;
+
+            var necromancer = root.AddComponent<NecromancerEnemy>();
+            if (minionPrefab != null)
+            {
+                var serialized = new SerializedObject(necromancer);
+                serialized.FindProperty("minionPrefab").objectReferenceValue = minionPrefab;
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+            }
+
+            AttachAnimator(root, ThirdPartySprites.NecromancerIdle, ThirdPartySprites.NecromancerRun);
+
+            PrefabUtility.SaveAsPrefabAsset(root, NecromancerPath);
+            Object.DestroyImmediate(root);
+        }
+
+        private static void BuildSplitter(Sprite sprite, Enemy minionPrefab)
+        {
+            var root = new GameObject("Splitter");
+
+            var renderer = root.AddComponent<SpriteRenderer>();
+            renderer.sprite = ArtOr(ThirdPartySprites.Splitter, sprite);
+            renderer.color = Color.white;
+            renderer.sortingOrder = 8;
+
+            var body = root.AddComponent<Rigidbody2D>();
+            body.gravityScale = 0f;
+            body.constraints = RigidbodyConstraints2D.FreezeRotation;
+            body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            body.interpolation = RigidbodyInterpolation2D.Interpolate;
+
+            var collider = root.AddComponent<CircleCollider2D>();
+            collider.radius = 0.42f;
+
+            var splitter = root.AddComponent<SplitterEnemy>();
+            if (minionPrefab != null)
+            {
+                var serialized = new SerializedObject(splitter);
+                serialized.FindProperty("minionPrefab").objectReferenceValue = minionPrefab;
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+            }
+
+            AttachAnimator(root, ThirdPartySprites.SplitterIdle, ThirdPartySprites.SplitterRun);
+
+            PrefabUtility.SaveAsPrefabAsset(root, SplitterPath);
             Object.DestroyImmediate(root);
         }
 

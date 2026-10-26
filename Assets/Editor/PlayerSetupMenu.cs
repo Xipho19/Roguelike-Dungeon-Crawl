@@ -45,7 +45,10 @@ namespace Roguelike.EditorTools
             if (AssetDatabase.LoadAssetAtPath<Enemy>(CombatPrefabFactory.EnemyPath) == null ||
                 AssetDatabase.LoadAssetAtPath<BossEnemy>(CombatPrefabFactory.BossPath) == null ||
                 AssetDatabase.LoadAssetAtPath<ShooterEnemy>(CombatPrefabFactory.ShooterPath) == null ||
-                AssetDatabase.LoadAssetAtPath<ChargerEnemy>(CombatPrefabFactory.ChargerPath) == null)
+                AssetDatabase.LoadAssetAtPath<ChargerEnemy>(CombatPrefabFactory.ChargerPath) == null ||
+                AssetDatabase.LoadAssetAtPath<BomberEnemy>(CombatPrefabFactory.BomberPath) == null ||
+                AssetDatabase.LoadAssetAtPath<NecromancerEnemy>(CombatPrefabFactory.NecromancerPath) == null ||
+                AssetDatabase.LoadAssetAtPath<SplitterEnemy>(CombatPrefabFactory.SplitterPath) == null)
                 CombatPrefabFactory.Rebuild();
 
             ItemAssetFactory.EnsureItems();
@@ -137,6 +140,18 @@ namespace Roguelike.EditorTools
             var chargerPrefab = AssetDatabase.LoadAssetAtPath<ChargerEnemy>(CombatPrefabFactory.ChargerPath);
             if (chargerPrefab != null)
                 flowObject.FindProperty("chargerPrefab").objectReferenceValue = chargerPrefab;
+
+            var bomberPrefab = AssetDatabase.LoadAssetAtPath<BomberEnemy>(CombatPrefabFactory.BomberPath);
+            if (bomberPrefab != null)
+                flowObject.FindProperty("bomberPrefab").objectReferenceValue = bomberPrefab;
+
+            var necromancerPrefab = AssetDatabase.LoadAssetAtPath<NecromancerEnemy>(CombatPrefabFactory.NecromancerPath);
+            if (necromancerPrefab != null)
+                flowObject.FindProperty("necromancerPrefab").objectReferenceValue = necromancerPrefab;
+
+            var splitterPrefab = AssetDatabase.LoadAssetAtPath<SplitterEnemy>(CombatPrefabFactory.SplitterPath);
+            if (splitterPrefab != null)
+                flowObject.FindProperty("splitterPrefab").objectReferenceValue = splitterPrefab;
 
             var bossPrefab = AssetDatabase.LoadAssetAtPath<BossEnemy>(CombatPrefabFactory.BossPath);
             if (bossPrefab != null)

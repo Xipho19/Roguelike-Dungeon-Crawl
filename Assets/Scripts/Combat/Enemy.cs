@@ -57,7 +57,7 @@ namespace Roguelike.Combat
         private float _targetScale = 1f;
         private float _knockbackUntil;
         protected Color _baseColor = Color.white;
-        private DungeonFlowController _flow;
+        protected DungeonFlowController _flow;
 
         private float _baseAvoidRadius;
         private int _detourSign;
@@ -425,7 +425,8 @@ namespace Roguelike.Combat
             if (body != null) body.color = _baseColor;
         }
 
-        private void Die()
+        /// <summary>死亡结算；子类可以重写以加入分裂、爆炸等效果，再调用 base.Die()。</summary>
+        protected virtual void Die()
         {
             _health = 0f;
             AudioService.Play("enemy_pop", 0.65f);

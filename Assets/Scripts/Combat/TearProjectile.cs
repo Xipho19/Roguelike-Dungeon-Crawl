@@ -55,6 +55,15 @@ namespace Roguelike.Combat
             // 忽略玩家自己
             if (other.GetComponentInParent<PlayerHealth>() != null) return;
 
+            // 可击破的场景道具：每次命中计数一次，眼泪随即消失
+            var breakable = other.GetComponentInParent<BreakableProp>();
+            if (breakable != null)
+            {
+                breakable.TakeHit();
+                Destroy(gameObject);
+                return;
+            }
+
             var enemy = other.GetComponentInParent<Enemy>();
             if (enemy != null)
             {

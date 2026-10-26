@@ -26,6 +26,9 @@ namespace Roguelike.Dungeon
         [SerializeField] private Enemy enemyPrefab;
         [SerializeField] private ShooterEnemy shooterPrefab;
         [SerializeField] private ChargerEnemy chargerPrefab;
+        [SerializeField] private BomberEnemy bomberPrefab;
+        [SerializeField] private NecromancerEnemy necromancerPrefab;
+        [SerializeField] private SplitterEnemy splitterPrefab;
         [SerializeField] private BossEnemy bossPrefab;
 
         [Tooltip("普通战斗房生成的敌人数")]
@@ -78,6 +81,9 @@ namespace Roguelike.Dungeon
             if (enemyPrefab == null) enemyPrefab = Resources.Load<Enemy>("Combat/Enemy");
             if (shooterPrefab == null) shooterPrefab = Resources.Load<ShooterEnemy>("Combat/Shooter");
             if (chargerPrefab == null) chargerPrefab = Resources.Load<ChargerEnemy>("Combat/Charger");
+            if (bomberPrefab == null) bomberPrefab = Resources.Load<BomberEnemy>("Combat/Bomber");
+            if (necromancerPrefab == null) necromancerPrefab = Resources.Load<NecromancerEnemy>("Combat/Necromancer");
+            if (splitterPrefab == null) splitterPrefab = Resources.Load<SplitterEnemy>("Combat/Splitter");
             if (bossPrefab == null) bossPrefab = Resources.Load<BossEnemy>("Combat/Boss");
             if (coinPrefab == null) coinPrefab = Resources.Load<Pickup>("Combat/Coin");
             if (heartPrefab == null) heartPrefab = Resources.Load<Pickup>("Combat/Heart");
@@ -376,41 +382,85 @@ namespace Roguelike.Dungeon
                 enemy.name = isBoss ? "Boss" : $"{prefab.GetType().Name}_{i}";
 
                 enemy.Initialize(
-                    isBoss ? bossEnemyHealth : normalEnemyHealth,
+                    isBoss ? bossEnemyHealth : HealthFor(prefab),
                     isBoss ? 1.7f : SpeedFor(prefab),
                     1f,
                     Color.white,
                     isBoss,
                     this);
 
-                _aliveEnemies.Add(enemy);
+                RegisterEnemy(enemy);
             }
 
             Debug.Log($"[Combat] 房间 {room.GridPosition} 生成 {count} 个敌人（距离 {room.DistanceFromStart}）");
         }
 
-        /// <summary>按房间距离混编敌人：近处只有追猎者，越深越多样。</summary>
+        /// <summary>
+        /// 按房间距离混编敌人：
+        ///   近处只有追猎者；中段加入射击者、冲锋者与自爆史莱姆；
+        ///   深处固定出现亡灵法师与分裂僵尸，保证新怪物能实际登场。
+        /// </summary>
         private Enemy PickPrefab(int distance, int index)
         {
+            if (distance < 3) return enemyPrefab;
+
             if (distance >= 6)
             {
-                int kind = index % 3;
-                if (kind == 1 && shooterPrefab != null) return shooterPrefab;
-                if (kind == 2 && chargerPrefab != null) return chargerPrefab;
-                return enemyPrefab;
+                switch (index % 3)
+                {
+                    case 0: return FirstAvailable(bomberPrefab, enemyPrefab);
+                    case 1: return FirstAvailable(necromancerPrefab, shooterPrefab, enemyPrefab);
+                    default: return FirstAvailable(splitterPrefab, chargerPrefab, enemyPrefab);
+                }
             }
 
-            if (distance >= 3 && index % 3 == 2 && shooterPrefab != null)
-                return shooterPrefab;
+            if (distance >= 4)
+            {
+                switch (index % 3)
+                {
+                    case 0: return FirstAvailable(shooterPrefab, enemyPrefab);
+                    case 1: return FirstAvailable(bomberPrefab, chargerPrefab, enemyPrefab);
+                    default: return FirstAvailable(chargerPrefab, enemyPrefab);
+                }
+            }
+
+            if (index % 3 == 1) return FirstAvailable(shooterPrefab, enemyPrefab);
+            return enemyPrefab;
+        }
+
+        private Enemy FirstAvailable(params Enemy[] options)
+        {
+            for (int i = 0; i < options.Length; i++)
+            {
+                if (options[i] != null) return options[i];
+            }
 
             return enemyPrefab;
+        }
+
+        private float HealthFor(Enemy prefab)
+        {
+            if (prefab is SplitterEnemy) return normalEnemyHealth * 2f;
+            if (prefab is NecromancerEnemy) return normalEnemyHealth * 1.5f;
+            return normalEnemyHealth;
         }
 
         private static float SpeedFor(Enemy prefab)
         {
             if (prefab is ShooterEnemy) return 2.0f;
             if (prefab is ChargerEnemy) return 2.6f;
+            if (prefab is BomberEnemy) return 2.2f;
+            if (prefab is NecromancerEnemy) return 1.9f;
+            if (prefab is SplitterEnemy) return 1.6f;
             return 2.4f;
+        }
+
+        /// <summary>登记新生成的敌人（包括召唤物与分裂体），保证全部清掉才开门。</summary>
+        public void RegisterEnemy(Enemy enemy)
+        {
+            if (enemy == null || _aliveEnemies.Contains(enemy)) return;
+
+            _aliveEnemies.Add(enemy);
         }
 
         private void CleanupEncounter()

@@ -94,7 +94,8 @@ namespace Roguelike.EditorTools
                 ThirdPartySprites.Skull,
                 ThirdPartySprites.WallHole,
                 ThirdPartySprites.WallGoo,
-                ThirdPartySprites.Chest);
+                ThirdPartySprites.Chest,
+                ThirdPartySprites.ChestOpen);
 
             // 房间类型调试标记：位于地板之上、墙体之下
             GameObject badge = CreateSprite("TypeBadge", root.transform, white, Color.white,
