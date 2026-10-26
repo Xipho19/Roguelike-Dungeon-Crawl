@@ -21,6 +21,18 @@ namespace Roguelike.Dungeon
         /// <summary>到起点房间的最短步数，BFS 计算；-1 表示尚未计算。</summary>
         public int DistanceFromStart { get; internal set; } = -1;
 
+        /// <summary>房间外框宽度（含墙），由尺寸分配 pass 写入。</summary>
+        public int Width { get; internal set; } = RoomGeometry.FootprintWidth;
+
+        /// <summary>房间外框高度（含墙），由尺寸分配 pass 写入。</summary>
+        public int Height { get; internal set; } = RoomGeometry.FootprintHeight;
+
+        /// <summary>房间外框左下角在地牢本地坐标中的位置。</summary>
+        public Vector2 WorldOrigin { get; internal set; }
+
+        /// <summary>房间外框（地牢本地坐标）。</summary>
+        public Rect WorldRect => new Rect(WorldOrigin, new Vector2(Width, Height));
+
         /// <summary>所有直接相邻且连通的房间。</summary>
         public List<RoomNode> Neighbors { get; } = new List<RoomNode>(4);
 

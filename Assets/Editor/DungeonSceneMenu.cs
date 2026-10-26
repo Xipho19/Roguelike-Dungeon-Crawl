@@ -19,6 +19,9 @@ namespace Roguelike.EditorTools
         [MenuItem("Tools/Roguelike/构建地牢到当前场景")]
         public static void BuildIntoScene()
         {
+            if (!RoomPrefabFactory.AllVariantsExist())
+                RoomPrefabFactory.Rebuild();
+
             RoomView prefab = AssetDatabase.LoadAssetAtPath<RoomView>(RoomPrefabFactory.PrefabPath);
             if (prefab == null)
                 prefab = RoomPrefabFactory.Rebuild();
@@ -44,7 +47,7 @@ namespace Roguelike.EditorTools
             }
 
             DungeonData data = builder.BuildFromSeed();
-            FrameMainCamera(data);
+            FrameMainCamera(data, root.transform.position);
 
             EditorSceneManager.MarkSceneDirty(root.scene);
             Selection.activeGameObject = root;
@@ -52,23 +55,18 @@ namespace Roguelike.EditorTools
             Debug.Log($"[Dungeon] 已构建 {data.RoomCount} 个房间（seed={data.Seed}，最远 {data.MaxDistance} 步）。");
         }
 
-        private static void FrameMainCamera(DungeonData data)
+        private static void FrameMainCamera(DungeonData data, Vector3 worldOrigin)
         {
             Camera camera = Camera.main;
             if (camera == null) return;
 
-            RectInt bounds = data.GetBounds();
-            Vector2Int spacing = RoomGeometry.Spacing;
+            Rect bounds = data.GetWorldBounds();
+            if (bounds.width <= 0.01f || bounds.height <= 0.01f) return;
 
-            float minX = bounds.xMin * spacing.x;
-            float minY = bounds.yMin * spacing.y;
-            float maxX = (bounds.xMax - 1) * spacing.x + RoomGeometry.FootprintWidth;
-            float maxY = (bounds.yMax - 1) * spacing.y + RoomGeometry.FootprintHeight;
-
-            float centerX = (minX + maxX) * 0.5f;
-            float centerY = (minY + maxY) * 0.5f;
-            float width = maxX - minX;
-            float height = maxY - minY;
+            float centerX = worldOrigin.x + bounds.center.x;
+            float centerY = worldOrigin.y + bounds.center.y;
+            float width = bounds.width;
+            float height = bounds.height;
 
             const float padding = 2f;
             float aspect = camera.aspect > 0.01f ? camera.aspect : 16f / 9f;

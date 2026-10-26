@@ -21,6 +21,10 @@ namespace Roguelike.Dungeon
         [SerializeField] private DoorDirections doors;
         [SerializeField] private int distanceFromStart = -1;
 
+        [Header("外框尺寸")]
+        [Tooltip("外框宽高（含 1 格墙），由对应尺寸的 Prefab 决定")]
+        [SerializeField] private Vector2Int footprint = new Vector2Int(RoomGeometry.FootprintWidth, RoomGeometry.FootprintHeight);
+
         [Header("场景引用")]
         [Tooltip("房间中心点")]
         [SerializeField] private Transform centerPoint;
@@ -57,6 +61,9 @@ namespace Roguelike.Dungeon
         public RoomType RoomType => roomType;
         public Vector2Int GridPosition => gridPosition;
         public DoorDirections Doors => doors;
+        public Vector2Int Footprint => footprint;
+        public int Width => footprint.x;
+        public int Height => footprint.y;
 
         /// <summary>到起点房的最短步数，用于战斗难度与敌人编成。</summary>
         public int DistanceFromStart => distanceFromStart;
@@ -92,12 +99,23 @@ namespace Roguelike.Dungeon
         public IReadOnlyList<Transform> EnemySpawnPoints => enemySpawnPoints;
 
         /// <summary>房间在世界空间中的矩形（footprint）。</summary>
-        public Rect WorldRect => new Rect(transform.position, new Vector2(RoomGeometry.FootprintWidth, RoomGeometry.FootprintHeight));
+        public Rect WorldRect => new Rect(transform.position, new Vector2(footprint.x, footprint.y));
+
+        /// <summary>房间内部（不含墙）的世界矩形。</summary>
+        public Rect InteriorRect
+        {
+            get
+            {
+                float inset = RoomGeometry.WallThickness;
+                return new Rect(
+                    (Vector2)transform.position + new Vector2(inset, inset),
+                    new Vector2(footprint.x - inset * 2f, footprint.y - inset * 2f));
+            }
+        }
 
         /// <summary>房间中心的世界坐标。</summary>
-        public Vector2 WorldCenter => centerPoint != null
-            ? (Vector2)centerPoint.position
-            : (Vector2)transform.position + RoomGeometry.Center;
+        public Vector2 WorldCenter =>
+            (Vector2)transform.position + new Vector2(footprint.x * 0.5f, footprint.y * 0.5f);
 
         public RoomWall GetWall(WallSide side)
         {
@@ -156,6 +174,14 @@ namespace Roguelike.Dungeon
             gridPosition = node.Grid;
             doors = node.Doors;
             distanceFromStart = node.DistanceFromStart;
+
+            if (node.Width != footprint.x || node.Height != footprint.y)
+            {
+                Debug.LogError(
+                    $"[Dungeon] 房间 {node.Grid} 需要 {node.Width}x{node.Height} 的 Prefab，" +
+                    $"实际是 {footprint.x}x{footprint.y}。请重新生成房间 Prefab 后再构建。",
+                    this);
+            }
 
             for (int i = 0; i < 4; i++)
             {
@@ -258,8 +284,10 @@ namespace Roguelike.Dungeon
             SpriteRenderer floor,
             SpriteRenderer badge,
             RoomFloor floorTiles,
-            RoomDecorations roomDecorations)
+            RoomDecorations roomDecorations,
+            Vector2Int size)
         {
+            footprint = size;
             centerPoint = center;
             entryPoints = entries;
             doorMarkers = markers;

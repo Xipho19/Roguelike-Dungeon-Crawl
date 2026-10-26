@@ -35,6 +35,9 @@ namespace Roguelike.EditorTools
 
             if (builder.Data == null) builder.BuildFromSeed();
 
+            if (!RoomPrefabFactory.AllVariantsExist())
+                RoomPrefabFactory.Rebuild();
+
             Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(SpritePath);
             if (sprite == null)
             {
@@ -128,6 +131,10 @@ namespace Roguelike.EditorTools
             var flow = Ensure<DungeonFlowController>(builder.gameObject);
             var flowObject = new SerializedObject(flow);
             flowObject.FindProperty("tracker").objectReferenceValue = tracker;
+
+            SerializedProperty enemyCountProperty = flowObject.FindProperty("combatEnemyCount");
+            if (enemyCountProperty != null && enemyCountProperty.intValue < 4)
+                enemyCountProperty.intValue = 4;
 
             var enemyPrefab = AssetDatabase.LoadAssetAtPath<Enemy>(CombatPrefabFactory.EnemyPath);
             if (enemyPrefab != null)

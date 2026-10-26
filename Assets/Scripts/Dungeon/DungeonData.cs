@@ -12,9 +12,17 @@ namespace Roguelike.Dungeon
     {
         private readonly Dictionary<Vector2Int, RoomNode> _rooms = new Dictionary<Vector2Int, RoomNode>();
         private readonly List<RoomNode> _ordered = new List<RoomNode>();
+        private readonly int[] _columnWidths;
+        private readonly int[] _rowHeights;
 
         public int Seed { get; }
         public DungeonConfig Config { get; }
+
+        /// <summary>每一列房间的外框宽度（含墙）。</summary>
+        public IReadOnlyList<int> ColumnWidths => _columnWidths;
+
+        /// <summary>每一行房间的外框高度（含墙）。</summary>
+        public IReadOnlyList<int> RowHeights => _rowHeights;
 
         /// <summary>出生房。</summary>
         public RoomNode Start { get; internal set; }
@@ -34,6 +42,78 @@ namespace Roguelike.Dungeon
         {
             Seed = seed;
             Config = config;
+
+            _columnWidths = new int[config.width];
+            _rowHeights = new int[config.height];
+
+            for (int x = 0; x < _columnWidths.Length; x++)
+                _columnWidths[x] = RoomGeometry.FootprintWidth;
+
+            for (int y = 0; y < _rowHeights.Length; y++)
+                _rowHeights[y] = RoomGeometry.FootprintHeight;
+        }
+
+        public int GetColumnWidth(int x) => _columnWidths[x];
+        public int GetRowHeight(int y) => _rowHeights[y];
+
+        internal void SetColumnWidth(int x, int width)
+        {
+            if (x >= 0 && x < _columnWidths.Length) _columnWidths[x] = width;
+        }
+
+        internal void SetRowHeight(int y, int height)
+        {
+            if (y >= 0 && y < _rowHeights.Length) _rowHeights[y] = height;
+        }
+
+        /// <summary>
+        /// 用当前列宽 / 行高计算每个房间的世界原点与尺寸。
+        /// 相邻列/行共享 1 格墙，因此前缀和每次减去 WallThickness。
+        /// </summary>
+        internal void ApplyLayout()
+        {
+            var originX = new int[_columnWidths.Length];
+            var originY = new int[_rowHeights.Length];
+
+            for (int x = 1; x < originX.Length; x++)
+                originX[x] = originX[x - 1] + _columnWidths[x - 1] - (int)RoomGeometry.WallThickness;
+
+            for (int y = 1; y < originY.Length; y++)
+                originY[y] = originY[y - 1] + _rowHeights[y - 1] - (int)RoomGeometry.WallThickness;
+
+            for (int i = 0; i < _ordered.Count; i++)
+            {
+                RoomNode room = _ordered[i];
+                Vector2Int grid = room.Grid;
+
+                if (grid.x < 0 || grid.y < 0 ||
+                    grid.x >= _columnWidths.Length || grid.y >= _rowHeights.Length)
+                    continue;
+
+                room.Width = _columnWidths[grid.x];
+                room.Height = _rowHeights[grid.y];
+                room.WorldOrigin = new Vector2(originX[grid.x], originY[grid.y]);
+            }
+        }
+
+        /// <summary>所有实际房间的世界空间包围盒。</summary>
+        public Rect GetWorldBounds()
+        {
+            if (_ordered.Count == 0) return new Rect(0f, 0f, 0f, 0f);
+
+            float minX = float.MaxValue, minY = float.MaxValue;
+            float maxX = float.MinValue, maxY = float.MinValue;
+
+            for (int i = 0; i < _ordered.Count; i++)
+            {
+                RoomNode room = _ordered[i];
+                minX = Mathf.Min(minX, room.WorldOrigin.x);
+                minY = Mathf.Min(minY, room.WorldOrigin.y);
+                maxX = Mathf.Max(maxX, room.WorldOrigin.x + room.Width);
+                maxY = Mathf.Max(maxY, room.WorldOrigin.y + room.Height);
+            }
+
+            return Rect.MinMaxRect(minX, minY, maxX, maxY);
         }
 
         internal RoomNode AddRoom(Vector2Int grid)
@@ -135,7 +215,120 @@ namespace Roguelike.Dungeon
             if (RoomCount <= 2)
                 issues.Add("[警告] 房间数过少，几乎不成形");
 
+            ValidateLayout(issues);
+
             return issues;
+        }
+
+        private void ValidateLayout(List<string> issues)
+        {
+            if (_columnWidths.Length != Config.width || _rowHeights.Length != Config.height)
+            {
+                issues.Add("[错误] 列宽 / 行高数组尺寸与配置不符");
+                return;
+            }
+
+            for (int x = 0; x < _columnWidths.Length; x++)
+            {
+                int width = _columnWidths[x];
+                if (width < RoomGeometry.MinFootprintWidth || width % 2 == 0)
+                    issues.Add($"[错误] 第 {x} 列宽度非法：{width}");
+            }
+
+            for (int y = 0; y < _rowHeights.Length; y++)
+            {
+                int height = _rowHeights[y];
+                if (height < RoomGeometry.MinFootprintHeight || height % 2 == 0)
+                    issues.Add($"[错误] 第 {y} 行高度非法：{height}");
+            }
+
+            for (int i = 0; i < _ordered.Count; i++)
+            {
+                RoomNode room = _ordered[i];
+                if (room.Width != _columnWidths[room.Grid.x] || room.Height != _rowHeights[room.Grid.y])
+                    issues.Add($"[错误] 房间 {room.Grid} 的尺寸与所在行列不一致");
+
+                Vector2 expected = ExpectedOrigin(room.Grid);
+                if ((room.WorldOrigin - expected).sqrMagnitude > 0.0001f)
+                    issues.Add($"[错误] 房间 {room.Grid} 的世界原点与布局不符");
+            }
+
+            // 相邻房间：共享墙长度、门心必须一致
+            for (int i = 0; i < _ordered.Count; i++)
+            {
+                RoomNode room = _ordered[i];
+                for (int n = 0; n < room.Neighbors.Count; n++)
+                {
+                    RoomNode neighbor = room.Neighbors[n];
+
+                    if (neighbor.Grid == room.Grid + Vector2Int.right)
+                        ValidateHorizontalEdge(room, neighbor, issues);
+                    else if (neighbor.Grid == room.Grid + Vector2Int.up)
+                        ValidateVerticalEdge(room, neighbor, issues);
+                }
+            }
+
+            // 房间内部不能互相重叠（共享墙带允许重叠）
+            for (int i = 0; i < _ordered.Count; i++)
+            {
+                Rect a = InteriorRect(_ordered[i]);
+                for (int j = i + 1; j < _ordered.Count; j++)
+                {
+                    Rect b = InteriorRect(_ordered[j]);
+                    if (a.Overlaps(b))
+                        issues.Add($"[错误] 房间 {_ordered[i].Grid} 与 {_ordered[j].Grid} 的内部区域重叠");
+                }
+            }
+        }
+
+        private void ValidateHorizontalEdge(RoomNode left, RoomNode right, List<string> issues)
+        {
+            if (left.Height != right.Height || Mathf.Abs(left.WorldOrigin.y - right.WorldOrigin.y) > 0.0001f)
+                issues.Add($"[错误] 横向邻居 {left.Grid} / {right.Grid} 的行高或原点不一致");
+
+            if (Mathf.Abs((left.WorldOrigin.x + left.Width - RoomGeometry.WallThickness) - right.WorldOrigin.x) > 0.0001f)
+                issues.Add($"[错误] 横向邻居 {left.Grid} / {right.Grid} 的共享墙未对齐");
+
+            Vector2 doorA = left.WorldOrigin + RoomGeometry.DoorCenter(WallSide.Right, left.Width, left.Height);
+            Vector2 doorB = right.WorldOrigin + RoomGeometry.DoorCenter(WallSide.Left, right.Width, right.Height);
+            if ((doorA - doorB).sqrMagnitude > 0.0001f)
+                issues.Add($"[错误] 横向邻居 {left.Grid} / {right.Grid} 的门心不重合");
+        }
+
+        private void ValidateVerticalEdge(RoomNode bottom, RoomNode top, List<string> issues)
+        {
+            if (bottom.Width != top.Width || Mathf.Abs(bottom.WorldOrigin.x - top.WorldOrigin.x) > 0.0001f)
+                issues.Add($"[错误] 纵向邻居 {bottom.Grid} / {top.Grid} 的列宽或原点不一致");
+
+            if (Mathf.Abs((bottom.WorldOrigin.y + bottom.Height - RoomGeometry.WallThickness) - top.WorldOrigin.y) > 0.0001f)
+                issues.Add($"[错误] 纵向邻居 {bottom.Grid} / {top.Grid} 的共享墙未对齐");
+
+            Vector2 doorA = bottom.WorldOrigin + RoomGeometry.DoorCenter(WallSide.Up, bottom.Width, bottom.Height);
+            Vector2 doorB = top.WorldOrigin + RoomGeometry.DoorCenter(WallSide.Down, top.Width, top.Height);
+            if ((doorA - doorB).sqrMagnitude > 0.0001f)
+                issues.Add($"[错误] 纵向邻居 {bottom.Grid} / {top.Grid} 的门心不重合");
+        }
+
+        private Vector2 ExpectedOrigin(Vector2Int grid)
+        {
+            float x = 0f;
+            float y = 0f;
+
+            for (int i = 0; i < grid.x; i++)
+                x += _columnWidths[i] - RoomGeometry.WallThickness;
+
+            for (int j = 0; j < grid.y; j++)
+                y += _rowHeights[j] - RoomGeometry.WallThickness;
+
+            return new Vector2(x, y);
+        }
+
+        private static Rect InteriorRect(RoomNode room)
+        {
+            float inset = RoomGeometry.WallThickness;
+            return new Rect(
+                room.WorldOrigin + new Vector2(inset, inset),
+                new Vector2(room.Width - inset * 2f, room.Height - inset * 2f));
         }
 
         /// <summary>把房间图打印成 ASCII，方便在 Console 里快速检查（上北下南）。</summary>

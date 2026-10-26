@@ -20,6 +20,33 @@ namespace Roguelike.EditorTools
         public const string PrefabFolder = "Assets/Resources/Dungeon";
         public const string PrefabPath = PrefabFolder + "/Room.prefab";
 
+        /// <summary>所有房间外框尺寸组合（宽 × 高）。</summary>
+        public static readonly Vector2Int[] SizeVariants =
+        {
+            new Vector2Int(15, 9),
+            new Vector2Int(15, 11),
+            new Vector2Int(17, 9),
+            new Vector2Int(17, 11),
+            new Vector2Int(19, 9),
+            new Vector2Int(19, 11),
+        };
+
+        public static string VariantPath(int width, int height) =>
+            $"{PrefabFolder}/{RoomGeometry.PrefabStem(width, height)}.prefab";
+
+        /// <summary>六种尺寸的 Prefab 是否都已生成。</summary>
+        public static bool AllVariantsExist()
+        {
+            for (int i = 0; i < SizeVariants.Length; i++)
+            {
+                Vector2Int size = SizeVariants[i];
+                if (AssetDatabase.LoadAssetAtPath<RoomView>(VariantPath(size.x, size.y)) == null)
+                    return false;
+            }
+
+            return true;
+        }
+
         private const string ArtFolder = "Assets/Art";
         private const string SpritePath = "Assets/Art/White.png";
 
@@ -57,28 +84,55 @@ namespace Roguelike.EditorTools
                     if (floorSprites[i] == null) floorSprites[i] = floorSprite;
             }
 
-            GameObject root = BuildHierarchy(white, floorSprites, floorSprite, wallSprite, doorHorizontal, doorVertical);
-
             EnsureFolder(PrefabFolder);
-            GameObject prefabAsset = PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
-            Object.DestroyImmediate(root);
+
+            RoomView canonical = null;
+
+            for (int i = 0; i < SizeVariants.Length; i++)
+            {
+                Vector2Int size = SizeVariants[i];
+                GameObject root = BuildHierarchy(
+                    white, floorSprites, floorSprite, wallSprite,
+                    doorHorizontal, doorVertical, size.x, size.y);
+
+                string path = VariantPath(size.x, size.y);
+                GameObject prefabAsset = PrefabUtility.SaveAsPrefabAsset(root, path);
+
+                if (size.x == RoomGeometry.FootprintWidth && size.y == RoomGeometry.FootprintHeight)
+                {
+                    canonical = prefabAsset != null ? prefabAsset.GetComponent<RoomView>() : null;
+                    PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
+                }
+
+                Object.DestroyImmediate(root);
+                Debug.Log($"[Dungeon] 房间 Prefab 已生成：{path}（{size.x}×{size.y}）");
+            }
+
             AssetDatabase.SaveAssets();
 
-            Debug.Log($"[Dungeon] 房间 Prefab 已生成：{PrefabPath}");
-            return prefabAsset != null ? prefabAsset.GetComponent<RoomView>() : null;
+            Debug.Log($"[Dungeon] 房间 Prefab 完成：{SizeVariants.Length} 种尺寸，另保留 {PrefabPath}");
+            return canonical;
         }
 
         // ------------------------------------------------------------------
         // 层级构建
         // ------------------------------------------------------------------
 
-        private static GameObject BuildHierarchy(Sprite white, Sprite[] floorSprites, Sprite floorSprite, Sprite wallSprite, Sprite doorHorizontal, Sprite doorVertical)
+        private static GameObject BuildHierarchy(
+            Sprite white,
+            Sprite[] floorSprites,
+            Sprite floorSprite,
+            Sprite wallSprite,
+            Sprite doorHorizontal,
+            Sprite doorVertical,
+            int width,
+            int height)
         {
             var root = new GameObject("Room");
             var view = root.AddComponent<RoomView>();
 
-            // 地板：15×9 个独立瓦片，由 RoomFloor 按房间种子挑选变体
-            GameObject floor = BuildFloor(root.transform, floorSprites, floorSprite);
+            // 地板：width × height 个独立瓦片，由 RoomFloor 按房间种子挑选变体
+            GameObject floor = BuildFloor(root.transform, floorSprites, floorSprite, width, height);
 
             // 墙面 / 地面装饰：空容器，由 RoomDecorations 在构建时按房间类型生成
             var decorationsRoot = new GameObject("Decorations");
@@ -95,11 +149,13 @@ namespace Roguelike.EditorTools
                 ThirdPartySprites.WallHole,
                 ThirdPartySprites.WallGoo,
                 ThirdPartySprites.Chest,
-                ThirdPartySprites.ChestOpen);
+                ThirdPartySprites.ChestOpen,
+                width,
+                height);
 
             // 房间类型调试标记：位于地板之上、墙体之下
             GameObject badge = CreateSprite("TypeBadge", root.transform, white, Color.white,
-                RoomGeometry.Center,
+                RoomGeometry.GetCenter(width, height),
                 new Vector2(2f, 2f),
                 -9, false);
 
@@ -109,7 +165,7 @@ namespace Roguelike.EditorTools
 
             var walls = new RoomWall[4];
             for (int i = 0; i < 4; i++)
-                walls[i] = BuildWall(wallsRoot, wallSprite, (WallSide)i);
+                walls[i] = BuildWall(wallsRoot, wallSprite, (WallSide)i, width, height);
 
             // 门标记（逻辑锚点，只在该侧墙体归本房间时启用）
             var doorsRoot = new GameObject("Doors").transform;
@@ -121,7 +177,7 @@ namespace Roguelike.EditorTools
                 WallSide side = (WallSide)i;
                 var go = new GameObject("Door_" + side);
                 go.transform.SetParent(doorsRoot, false);
-                go.transform.localPosition = RoomGeometry.DoorCenter(side);
+                go.transform.localPosition = RoomGeometry.DoorCenter(side, width, height);
                 go.AddComponent<RoomDoor>().Setup(side);
                 doorMarkers[i] = go.transform;
             }
@@ -136,7 +192,7 @@ namespace Roguelike.EditorTools
                 WallSide side = (WallSide)i;
                 var go = new GameObject("DoorTrigger_" + side);
                 go.transform.SetParent(triggersRoot, false);
-                go.transform.localPosition = RoomGeometry.DoorCenter(side);
+                go.transform.localPosition = RoomGeometry.DoorCenter(side, width, height);
 
                 var box = go.AddComponent<BoxCollider2D>();
                 box.isTrigger = true;
@@ -164,7 +220,7 @@ namespace Roguelike.EditorTools
 
                 var go = new GameObject("DoorBlocker_" + side);
                 go.transform.SetParent(blockersRoot, false);
-                go.transform.localPosition = RoomGeometry.DoorCenter(side);
+                go.transform.localPosition = RoomGeometry.DoorCenter(side, width, height);
 
                 var box = go.AddComponent<BoxCollider2D>();
                 box.size = size;
@@ -190,20 +246,20 @@ namespace Roguelike.EditorTools
                 WallSide side = (WallSide)i;
                 var go = new GameObject("Entry_" + side);
                 go.transform.SetParent(entriesRoot, false);
-                go.transform.localPosition = RoomGeometry.EntryPoint(side);
+                go.transform.localPosition = RoomGeometry.EntryPoint(side, width, height);
                 entries[i] = go.transform;
             }
 
             // 房间中心
             var center = new GameObject("Spawn_Center");
             center.transform.SetParent(root.transform, false);
-            center.transform.localPosition = RoomGeometry.Center;
+            center.transform.localPosition = RoomGeometry.GetCenter(width, height);
 
             // 敌人出生点
             var enemyRoot = new GameObject("EnemySpawns").transform;
             enemyRoot.SetParent(root.transform, false);
 
-            Vector2[] spawnPoints = RoomGeometry.EnemySpawnPoints;
+            Vector2[] spawnPoints = RoomGeometry.GetEnemySpawnPoints(width, height);
             var enemies = new Transform[spawnPoints.Length];
             for (int i = 0; i < spawnPoints.Length; i++)
             {
@@ -224,24 +280,25 @@ namespace Roguelike.EditorTools
                 null,
                 badge.GetComponent<SpriteRenderer>(),
                 floor.GetComponent<RoomFloor>(),
-                decorations);
+                decorations,
+                new Vector2Int(width, height));
 
             return root;
         }
 
-        /// <summary>创建 15×9 的逐格地板，并把引用交给 RoomFloor。</summary>
-        private static GameObject BuildFloor(Transform parent, Sprite[] sprites, Sprite fallback)
+        /// <summary>创建 width×height 的逐格地板，并把引用交给 RoomFloor。</summary>
+        private static GameObject BuildFloor(Transform parent, Sprite[] sprites, Sprite fallback, int width, int height)
         {
             var floorRoot = new GameObject("Floor");
             floorRoot.transform.SetParent(parent, false);
 
             var roomFloor = floorRoot.AddComponent<RoomFloor>();
-            var tiles = new SpriteRenderer[RoomGeometry.FootprintWidth * RoomGeometry.FootprintHeight];
+            var tiles = new SpriteRenderer[width * height];
             int index = 0;
 
-            for (int y = 0; y < RoomGeometry.FootprintHeight; y++)
+            for (int y = 0; y < height; y++)
             {
-                for (int x = 0; x < RoomGeometry.FootprintWidth; x++)
+                for (int x = 0; x < width; x++)
                 {
                     GameObject tile = CreateSprite(
                         $"Tile_{x}_{y}",
@@ -261,13 +318,13 @@ namespace Roguelike.EditorTools
             return floorRoot;
         }
 
-        private static RoomWall BuildWall(Transform parent, Sprite sprite, WallSide side)
+        private static RoomWall BuildWall(Transform parent, Sprite sprite, WallSide side, int width, int height)
         {
             var go = new GameObject("Wall_" + side);
             go.transform.SetParent(parent, false);
 
             var wall = go.AddComponent<RoomWall>();
-            WallSegment[] segments = RoomGeometry.GetWallSegments(side);
+            WallSegment[] segments = RoomGeometry.GetWallSegments(side, width, height);
 
             CreateSprite("Seg_A", go.transform, sprite, Color.white, segments[0].Center, segments[0].Size, 0, true, SpriteDrawMode.Tiled);
             GameObject doorSegment = CreateSprite("Seg_Door", go.transform, sprite, Color.white, segments[1].Center, segments[1].Size, 0, true, SpriteDrawMode.Tiled);

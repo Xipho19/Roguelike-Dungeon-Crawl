@@ -31,8 +31,8 @@ namespace Roguelike.Dungeon
         [SerializeField] private SplitterEnemy splitterPrefab;
         [SerializeField] private BossEnemy bossPrefab;
 
-        [Tooltip("普通战斗房生成的敌人数")]
-        [SerializeField] private int combatEnemyCount = 3;
+        [Tooltip("普通战斗房的基础敌人数；实际数量会随房间尺寸和距离增加")]
+        [SerializeField] private int combatEnemyCount = 4;
 
         [Tooltip("Boss 房生成的敌人数")]
         [SerializeField] private int bossEnemyCount = 1;
@@ -172,13 +172,17 @@ namespace Roguelike.Dungeon
             int count = Mathf.Min(3, stock.Count);
             Vector2 center = room.WorldCenter;
 
+            // 小房间自动收窄商品间距，保证三件商品都在内部
+            float spacing = Mathf.Clamp((room.InteriorRect.width - 2f) * 0.5f, 1.5f, 3f);
+            float startOffset = -(count - 1) * 0.5f * spacing;
+
             for (int i = 0; i < count; i++)
             {
                 int index = Random.Range(0, stock.Count);
                 ItemDefinition item = stock[index];
                 stock.RemoveAt(index);
 
-                float x = center.x + (i - 1) * 3f;
+                float x = center.x + startOffset + i * spacing;
                 ItemPickup pickup = Instantiate(
                     itemPickupPrefab,
                     new Vector3(x, center.y, 0f),
@@ -369,7 +373,7 @@ namespace Roguelike.Dungeon
 
             if (_aliveEnemies.Count > 0) return;
 
-            int count = isBoss ? bossEnemyCount : combatEnemyCount;
+            int count = isBoss ? bossEnemyCount : EnemyCountFor(room);
             IReadOnlyList<Transform> points = room.EnemySpawnPoints;
             count = Mathf.Min(count, points.Count);
 
@@ -393,6 +397,20 @@ namespace Roguelike.Dungeon
             }
 
             Debug.Log($"[Combat] 房间 {room.GridPosition} 生成 {count} 个敌人（距离 {room.DistanceFromStart}）");
+        }
+
+        /// <summary>
+        /// 普通战斗房的敌人数：基础 4 只，越大、越深的房间越多。
+        /// </summary>
+        private int EnemyCountFor(RoomView room)
+        {
+            int baseCount = Mathf.Max(4, combatEnemyCount);
+            int sizeBonus =
+                Mathf.Max(0, (room.Width - RoomGeometry.FootprintWidth) / 2) +
+                Mathf.Max(0, (room.Height - RoomGeometry.FootprintHeight) / 2);
+            int depthBonus = Mathf.Clamp(room.DistanceFromStart / 2, 0, 3);
+
+            return baseCount + sizeBonus + depthBonus;
         }
 
         /// <summary>

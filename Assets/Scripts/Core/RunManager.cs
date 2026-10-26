@@ -123,10 +123,10 @@ namespace Roguelike.Core
                 return;
             }
 
-            // 放在 Boss 房中央偏下，避开中央柱和下方墙角
+            // 放在 Boss 房中央偏下，避开中央柱和下方墙角；按房间底部定位以适配尺寸
             Vector3 position = new Vector3(
                 bossRoom.WorldCenter.x,
-                bossRoom.WorldCenter.y - 2.4f,
+                bossRoom.WorldRect.yMin + 2.2f,
                 0f);
 
             _portal = Instantiate(portalPrefab, position, Quaternion.identity, bossRoom.transform);

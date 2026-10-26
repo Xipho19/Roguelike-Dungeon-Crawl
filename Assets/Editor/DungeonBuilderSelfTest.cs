@@ -23,6 +23,9 @@ namespace Roguelike.EditorTools
         [MenuItem("Tools/Roguelike/DungeonBuilder 测试")]
         public static void Run()
         {
+            if (!RoomPrefabFactory.AllVariantsExist())
+                RoomPrefabFactory.Rebuild();
+
             RoomView prefab = AssetDatabase.LoadAssetAtPath<RoomView>(RoomPrefabFactory.PrefabPath);
             if (prefab == null) prefab = RoomPrefabFactory.Rebuild();
             if (prefab == null)
@@ -104,7 +107,6 @@ namespace Roguelike.EditorTools
         private static bool Validate(DungeonBuilder builder, DungeonData data, out string error)
         {
             error = null;
-            Vector2Int spacing = builder.RoomSpacing;
             Vector3 origin = builder.transform.position;
 
             if (builder.Rooms.Count != data.RoomCount)
@@ -148,10 +150,24 @@ namespace Roguelike.EditorTools
                     return false;
                 }
 
-                Vector3 expected = origin + new Vector3(node.Grid.x * spacing.x, node.Grid.y * spacing.y, 0f);
+                Vector3 expected = origin + new Vector3(node.WorldOrigin.x, node.WorldOrigin.y, 0f);
                 if ((view.transform.position - expected).sqrMagnitude > 1e-4f)
                 {
                     error = $"房间 {node.Grid} 世界坐标偏移";
+                    return false;
+                }
+
+                if (view.Width != node.Width || view.Height != node.Height)
+                {
+                    error = $"房间 {node.Grid} 尺寸不符：Prefab {view.Width}×{view.Height}，节点 {node.Width}×{node.Height}";
+                    return false;
+                }
+
+                Rect rect = view.WorldRect;
+                if (Mathf.Abs(rect.x - expected.x) > 1e-4f || Mathf.Abs(rect.y - expected.y) > 1e-4f ||
+                    Mathf.Abs(rect.width - node.Width) > 1e-4f || Mathf.Abs(rect.height - node.Height) > 1e-4f)
+                {
+                    error = $"房间 {node.Grid} 的 WorldRect 与尺寸/原点不符";
                     return false;
                 }
 
@@ -160,9 +176,108 @@ namespace Roguelike.EditorTools
                     bool check = ValidateSide(node, view, (WallSide)i, out error);
                     if (!check) return false;
                 }
+
+                if (!ValidateDecorations(view, out error)) return false;
             }
 
+            if (!ValidateDoorAlignment(builder, data, out error)) return false;
+
             return ValidatePassages(builder, data, colliders, out error);
+        }
+
+        /// <summary>
+        /// 实心装饰不能压在入口点或敌人出生点上，否则玩家/敌人会出现即被卡住。
+        /// </summary>
+        private static bool ValidateDecorations(RoomView view, out string error)
+        {
+            error = null;
+
+            Transform decor = view.transform.Find("Decorations");
+            if (decor == null) return true;
+
+            var solids = new List<BoxCollider2D>();
+            foreach (BoxCollider2D collider in decor.GetComponentsInChildren<BoxCollider2D>(false))
+            {
+                if (collider.enabled && !collider.isTrigger)
+                    solids.Add(collider);
+            }
+
+            if (solids.Count == 0) return true;
+
+            for (int i = 0; i < 4; i++)
+            {
+                Transform entry = view.GetEntryPoint((WallSide)i);
+                if (entry == null || !entry.gameObject.activeInHierarchy) continue;
+
+                for (int c = 0; c < solids.Count; c++)
+                {
+                    if (!GetWorldRect(solids[c]).Contains(entry.position)) continue;
+                    error = $"房间 {view.GridPosition} 的 {((WallSide)i)} 入口点被装饰 {solids[c].name} 挡住";
+                    return false;
+                }
+            }
+
+            if (view.RoomType == RoomType.Combat || view.RoomType == RoomType.Boss)
+            {
+                IReadOnlyList<Transform> spawns = view.EnemySpawnPoints;
+                for (int s = 0; s < spawns.Count; s++)
+                {
+                    if (spawns[s] == null) continue;
+
+                    for (int c = 0; c < solids.Count; c++)
+                    {
+                        if (!GetWorldRect(solids[c]).Contains(spawns[s].position)) continue;
+                        error = $"房间 {view.GridPosition} 的敌人出生点 {s} 被装饰 {solids[c].name} 挡住";
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>相邻房间的门心必须在世界空间中完全重合。</summary>
+        private static bool ValidateDoorAlignment(DungeonBuilder builder, DungeonData data, out string error)
+        {
+            error = null;
+
+            foreach (RoomNode node in data.Rooms)
+            {
+                RoomView a = builder.GetRoom(node.Grid);
+                if (a == null) continue;
+
+                foreach (RoomNode neighbor in node.Neighbors)
+                {
+                    RoomView b = builder.GetRoom(neighbor.Grid);
+                    if (b == null) continue;
+
+                    Vector2 doorA;
+                    Vector2 doorB;
+
+                    if (neighbor.Grid.x == node.Grid.x + 1)
+                    {
+                        doorA = (Vector2)a.transform.position + RoomGeometry.DoorCenter(WallSide.Right, a.Width, a.Height);
+                        doorB = (Vector2)b.transform.position + RoomGeometry.DoorCenter(WallSide.Left, b.Width, b.Height);
+                    }
+                    else if (neighbor.Grid.y == node.Grid.y + 1)
+                    {
+                        doorA = (Vector2)a.transform.position + RoomGeometry.DoorCenter(WallSide.Up, a.Width, a.Height);
+                        doorB = (Vector2)b.transform.position + RoomGeometry.DoorCenter(WallSide.Down, b.Width, b.Height);
+                    }
+                    else
+                    {
+                        continue;
+                    }
+
+                    if ((doorA - doorB).sqrMagnitude > 1e-4f)
+                    {
+                        error = $"房间 {node.Grid} → {neighbor.Grid} 的门心不重合";
+                        return false;
+                    }
+                }
+            }
+
+            return true;
         }
 
         private static bool ValidateSide(RoomNode node, RoomView view, WallSide side, out string error)

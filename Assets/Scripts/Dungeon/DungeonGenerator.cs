@@ -84,7 +84,85 @@ namespace Roguelike.Dungeon
             // ---------- 7. 门 ----------
             ComputeDoors(data);
 
+            // ---------- 8. 房间尺寸与世界布局 ----------
+            AssignRoomLayout(data, cfg, seed);
+
             return data;
+        }
+
+        /// <summary>
+        /// 为每一列随机一个宽度、每一行随机一个高度，并计算每个房间的世界原点。
+        /// 使用独立的随机流，避免改变已有种子的拓扑结果。
+        /// </summary>
+        private static void AssignRoomLayout(DungeonData data, DungeonConfig cfg, int seed)
+        {
+            var rng = new SeededRandom(unchecked(seed * 0x27D4EB2D ^ 0x165667B1));
+
+            var usedColumns = new bool[cfg.width];
+            var usedRows = new bool[cfg.height];
+
+            for (int i = 0; i < data.Rooms.Count; i++)
+            {
+                RoomNode room = data.Rooms[i];
+                usedColumns[room.Grid.x] = true;
+                usedRows[room.Grid.y] = true;
+            }
+
+            // 只在真正有房间的列/行里分配尺寸，保证每种大小都能实际出现
+            var columnIndices = new List<int>(cfg.width);
+            for (int x = 0; x < cfg.width; x++)
+                if (usedColumns[x]) columnIndices.Add(x);
+
+            var widths = new List<int>(columnIndices.Count);
+            for (int i = 0; i < columnIndices.Count; i++)
+                widths.Add(RoomGeometry.AllowedWidths[i % RoomGeometry.AllowedWidths.Length]);
+            Shuffle(widths, rng);
+
+            for (int i = 0; i < columnIndices.Count; i++)
+                data.SetColumnWidth(columnIndices[i], widths[i]);
+
+            var rowIndices = new List<int>(cfg.height);
+            for (int y = 0; y < cfg.height; y++)
+                if (usedRows[y]) rowIndices.Add(y);
+
+            var heights = new List<int>(rowIndices.Count);
+            for (int i = 0; i < rowIndices.Count; i++)
+                heights.Add(RoomGeometry.AllowedHeights[i % RoomGeometry.AllowedHeights.Length]);
+            Shuffle(heights, rng);
+
+            for (int i = 0; i < rowIndices.Count; i++)
+                data.SetRowHeight(rowIndices[i], heights[i]);
+
+            // 没有房间的空列/空行使用最小尺寸，避免地图边缘出现大块空白
+            for (int x = 0; x < cfg.width; x++)
+                if (!usedColumns[x]) data.SetColumnWidth(x, RoomGeometry.MinFootprintWidth);
+
+            for (int y = 0; y < cfg.height; y++)
+                if (!usedRows[y]) data.SetRowHeight(y, RoomGeometry.MinFootprintHeight);
+
+            // 起点和 Boss 使用更宽敞的行列，保证出生空间与 Boss 场地
+            if (data.Start != null)
+            {
+                data.SetColumnWidth(data.Start.Grid.x, Mathf.Max(data.GetColumnWidth(data.Start.Grid.x), 17));
+                data.SetRowHeight(data.Start.Grid.y, Mathf.Max(data.GetRowHeight(data.Start.Grid.y), 11));
+            }
+
+            if (data.Boss != null)
+            {
+                data.SetColumnWidth(data.Boss.Grid.x, 19);
+                data.SetRowHeight(data.Boss.Grid.y, 11);
+            }
+
+            data.ApplyLayout();
+        }
+
+        private static void Shuffle<T>(List<T> list, SeededRandom rng)
+        {
+            for (int i = list.Count - 1; i > 0; i--)
+            {
+                int j = rng.Next(i + 1);
+                (list[i], list[j]) = (list[j], list[i]);
+            }
         }
 
         // ------------------------------------------------------------------

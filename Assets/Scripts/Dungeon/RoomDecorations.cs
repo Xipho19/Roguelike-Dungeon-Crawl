@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Roguelike.Combat;
 using UnityEngine;
 using Random = System.Random;
@@ -30,6 +31,10 @@ namespace Roguelike.Dungeon
         [SerializeField] private Sprite chest;
         [SerializeField] private Sprite chestOpen;
 
+        [Header("房间尺寸")]
+        [SerializeField] private int roomWidth = RoomGeometry.FootprintWidth;
+        [SerializeField] private int roomHeight = RoomGeometry.FootprintHeight;
+
         public void Apply(RoomType type, DoorDirections doors, int seed)
         {
             if (container == null) container = transform;
@@ -38,9 +43,11 @@ namespace Roguelike.Dungeon
 
             var rng = new Random(seed ^ 0x1f3a5c7);
 
-            float wallTopY = RoomGeometry.FootprintHeight - RoomGeometry.WallThickness * 0.5f; // 8.5
-            float innerBottomY = RoomGeometry.WallThickness; // 1.0
-            float innerTopY = RoomGeometry.FootprintHeight - RoomGeometry.WallThickness; // 8.0
+            float wallTopY = roomHeight - RoomGeometry.WallThickness * 0.5f;
+            float innerBottomY = RoomGeometry.WallThickness;
+            float innerTopY = roomHeight - RoomGeometry.WallThickness;
+            float centerX = roomWidth * 0.5f;
+            float centerY = roomHeight * 0.5f;
             bool upDoor = (doors & DoorDirections.Up) != 0;
 
             // ---- 顶墙：旗帜 ----
@@ -48,13 +55,13 @@ namespace Roguelike.Dungeon
             int bannerCount = type == RoomType.Boss || type == RoomType.Treasure || type == RoomType.Shop ? 2 : 1;
             Add("Banner_0", banner, new Vector2(3.5f, wallTopY), 1);
             if (bannerCount > 1)
-                Add("Banner_1", banner, new Vector2(11.5f, wallTopY), 1);
+                Add("Banner_1", banner, new Vector2(roomWidth - 3.5f, wallTopY), 1);
 
             // ---- 顶墙：破洞 / 苔藓（约三分之一房间） ----
             if (rng.NextDouble() < 0.35)
             {
                 Sprite grime = rng.NextDouble() < 0.5 ? wallHole : wallGoo;
-                float grimeX = upDoor ? 5.0f : 7.5f;
+                float grimeX = upDoor ? centerX - 2.5f : centerX;
                 Add("WallGrime", grime, new Vector2(grimeX, wallTopY), 1);
             }
 
@@ -63,12 +70,13 @@ namespace Roguelike.Dungeon
             {
                 // Boss 房只在房间正中央立一根柱子，作为唯一掩体；
                 // 四周留出的空间足够玩家完整绕柱，Boss 体型更大、转身更笨重。
-                BuildColumn(new Vector2(RoomGeometry.Center.x, RoomGeometry.Center.y - 1f));
+                BuildColumn(new Vector2(centerX, centerY - 1f));
             }
-            else if (type == RoomType.Treasure || type == RoomType.Shop)
+            else if ((type == RoomType.Treasure || type == RoomType.Shop) && roomWidth >= 13 && roomHeight >= 9)
             {
+                // 小房间跳过侧柱，避免遮挡左右入口和三件商品
                 BuildColumn(new Vector2(2.0f, innerBottomY + 0.5f));
-                BuildColumn(new Vector2(13.0f, innerBottomY + 0.5f));
+                BuildColumn(new Vector2(roomWidth - 2.0f, innerBottomY + 0.5f));
             }
 
             // ---- 地面边缘：木箱 / 骷髅 / 宝箱 ----
@@ -77,15 +85,21 @@ namespace Roguelike.Dungeon
                 case RoomType.Treasure:
                 {
                     // 放在侧后方，避免堵住上下门之间的通路
-                    GameObject chestObject = AddSolid("Chest", chest, new Vector2(11.0f, innerTopY - 1.4f), 2, new Vector2(0.9f, 0.75f), new Vector2(0f, -0.05f));
+                    GameObject chestObject = AddSolid(
+                        "Chest",
+                        chest,
+                        new Vector2(roomWidth - 4.0f, innerTopY - 1.4f),
+                        2,
+                        new Vector2(0.9f, 0.75f),
+                        new Vector2(0f, -0.05f));
                     MakeChestBreakable(chestObject, chestOpen);
                     break;
                 }
 
                 case RoomType.Shop:
                 {
-                    GameObject leftCrate = AddSolid("Crate_L", crate, new Vector2(4.2f, innerBottomY + 0.7f), 2, new Vector2(0.85f, 1.05f), Vector2.zero);
-                    GameObject rightCrate = AddSolid("Crate_R", crate, new Vector2(10.8f, innerBottomY + 0.7f), 2, new Vector2(0.85f, 1.05f), Vector2.zero);
+                    GameObject leftCrate = AddSolid("Crate_L", crate, new Vector2(roomWidth * 0.28f, innerBottomY + 0.7f), 2, new Vector2(0.85f, 1.05f), Vector2.zero);
+                    GameObject rightCrate = AddSolid("Crate_R", crate, new Vector2(roomWidth * 0.72f, innerBottomY + 0.7f), 2, new Vector2(0.85f, 1.05f), Vector2.zero);
                     MakeCrateBreakable(leftCrate);
                     MakeCrateBreakable(rightCrate);
                     break;
@@ -93,30 +107,36 @@ namespace Roguelike.Dungeon
 
                 case RoomType.Boss:
                     Add("Skull_L", skull, new Vector2(3.0f, innerTopY - 0.6f), 2);
-                    Add("Skull_R", skull, new Vector2(12.0f, innerTopY - 0.6f), 2);
-                    Add("Skull_B", skull, new Vector2(7.5f, innerBottomY + 0.5f), 2);
+                    Add("Skull_R", skull, new Vector2(roomWidth - 3.0f, innerTopY - 0.6f), 2);
+                    Add("Skull_B", skull, new Vector2(centerX, innerBottomY + 0.5f), 2);
                     break;
 
                 case RoomType.Start:
-                    MakeCrateBreakable(AddSolid("Crate", crate, new Vector2(12.8f, innerBottomY + 0.7f), 2, new Vector2(0.85f, 1.05f), Vector2.zero));
+                    MakeCrateBreakable(AddSolid("Crate", crate, new Vector2(roomWidth - 2.2f, innerBottomY + 0.7f), 2, new Vector2(0.85f, 1.05f), Vector2.zero));
                     Add("Skull", skull, new Vector2(2.2f, innerBottomY + 0.5f), 2);
                     break;
 
                 default:
-                    int props = rng.Next(1, 4);
-                    float[] edgeXs = { 2.2f, 5.0f, 10.0f, 12.8f };
-                    int[] slots = { 0, 1, 2, 3 };
+                    bool combat = type == RoomType.Combat;
+                    int layout = combat ? rng.Next(3) : 0;
 
-                    // 打乱槽位，保证同房间的道具不会叠在同一处
-                    for (int i = slots.Length - 1; i > 0; i--)
+                    // 中央布局已经占用了空间时，少放一些边缘道具，避免房间过挤
+                    int props = combat && layout != 0 ? rng.Next(0, 2) : rng.Next(1, 4);
+
+                    var safeSlots = new List<float>(4);
+                    float[] candidates = { 2.2f, roomWidth / 3f, roomWidth * 2f / 3f, roomWidth - 2.2f };
+                    for (int i = 0; i < candidates.Length; i++)
                     {
-                        int j = rng.Next(i + 1);
-                        (slots[i], slots[j]) = (slots[j], slots[i]);
+                        if (IsBottomSlotSafe(candidates[i], centerX))
+                            safeSlots.Add(candidates[i]);
                     }
+
+                    Shuffle(safeSlots, rng);
+                    props = Mathf.Min(props, safeSlots.Count);
 
                     for (int i = 0; i < props; i++)
                     {
-                        float x = edgeXs[slots[i]];
+                        float x = safeSlots[i];
                         bool isCrate = rng.NextDouble() < 0.45;
 
                         if (isCrate)
@@ -131,14 +151,67 @@ namespace Roguelike.Dungeon
                         }
                         else
                         {
-                            Add(
-                                "Skull_" + i,
-                                skull,
-                                new Vector2(x, innerBottomY + 0.5f),
-                                2);
+                            Add("Skull_" + i, skull, new Vector2(x, innerBottomY + 0.5f), 2);
                         }
                     }
+
+                    if (combat && layout != 0)
+                        ApplyCombatLayout(layout, centerX, centerY);
                     break;
+            }
+        }
+
+        /// <summary>
+        /// 普通战斗房的中央布局模板：只使用可绕行的立柱与木箱，
+        /// 避开四个敌人出生点和门洞中线，避免困住敌人。
+        /// </summary>
+        private void ApplyCombatLayout(int layout, float centerX, float centerY)
+        {
+            // 只使用低矮木箱，并保持在中线附近，避开上下门的入口点和四个敌人出生点
+            switch (layout)
+            {
+                case 1:
+                    AddSolidCrate("LayoutCrate_L", new Vector2(centerX - 2.5f, centerY));
+                    AddSolidCrate("LayoutCrate_R", new Vector2(centerX + 2.5f, centerY));
+                    break;
+
+                case 2:
+                    AddSolidCrate("LayoutCrate_0", new Vector2(centerX - 2.0f, centerY));
+                    AddSolidCrate("LayoutCrate_1", new Vector2(centerX, centerY));
+                    AddSolidCrate("LayoutCrate_2", new Vector2(centerX + 2.0f, centerY));
+                    break;
+            }
+        }
+
+        private void AddSolidCrate(string objectName, Vector2 localPosition)
+        {
+            MakeCrateBreakable(AddSolid(
+                objectName,
+                crate,
+                localPosition,
+                2,
+                new Vector2(0.85f, 1.05f),
+                Vector2.zero));
+        }
+
+        /// <summary>
+        /// 底部边缘道具槽是否安全：避开下门中线、两个下方敌人出生点和墙角。
+        /// </summary>
+        private bool IsBottomSlotSafe(float x, float centerX)
+        {
+            if (x < 1.5f || x > roomWidth - 1.5f) return false;
+            if (Mathf.Abs(x - centerX) <= 2.2f) return false;
+            if (Mathf.Abs(x - 3.5f) <= 1.2f) return false;
+            if (Mathf.Abs(x - (roomWidth - 3.5f)) <= 1.2f) return false;
+            return true;
+        }
+
+        private static void Shuffle<T>(IList<T> list, Random rng)
+        {
+            for (int i = list.Count - 1; i > 0; i--)
+            {
+                int j = rng.Next(i + 1);
+                (list[i], list[j]) = (list[j], list[i]);
             }
         }
 
@@ -257,8 +330,13 @@ namespace Roguelike.Dungeon
             Sprite wallHoleSprite,
             Sprite wallGooSprite,
             Sprite chestSprite,
-            Sprite chestOpenSprite)
+            Sprite chestOpenSprite,
+            int width,
+            int height)
         {
+            roomWidth = width;
+            roomHeight = height;
+
             container = decorContainer;
             banners = bannerSprites;
             columnTop = columnTopSprite;

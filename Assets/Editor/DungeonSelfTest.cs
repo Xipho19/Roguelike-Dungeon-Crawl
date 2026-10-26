@@ -70,10 +70,18 @@ namespace Roguelike.EditorTools
             if (a.RoomCount != b.RoomCount || a.MaxDistance != b.MaxDistance) return false;
             if (a.Start.Grid != b.Start.Grid || a.Boss.Grid != b.Boss.Grid) return false;
 
+            for (int x = 0; x < a.ColumnWidths.Count; x++)
+                if (a.GetColumnWidth(x) != b.GetColumnWidth(x)) return false;
+
+            for (int y = 0; y < a.RowHeights.Count; y++)
+                if (a.GetRowHeight(y) != b.GetRowHeight(y)) return false;
+
             foreach (RoomNode room in a.Rooms)
             {
                 if (!b.TryGetRoom(room.Grid, out RoomNode other)) return false;
                 if (other.Type != room.Type || other.Doors != room.Doors) return false;
+                if (other.Width != room.Width || other.Height != room.Height) return false;
+                if ((other.WorldOrigin - room.WorldOrigin).sqrMagnitude > 1e-4f) return false;
             }
             return true;
         }

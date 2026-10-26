@@ -17,6 +17,9 @@ namespace Roguelike.Dungeon
     {
         public const string PrefabResourcePath = "Dungeon/Room";
 
+        public static string PrefabResourcePathFor(int width, int height) =>
+            "Dungeon/" + RoomGeometry.PrefabStem(width, height);
+
         [Header("生成参数")]
         [SerializeField] private DungeonConfig config = new DungeonConfig();
         [SerializeField] private int seed = 20261022;
@@ -36,6 +39,7 @@ namespace Roguelike.Dungeon
 
         private readonly List<RoomView> _rooms = new List<RoomView>();
         private readonly Dictionary<Vector2Int, RoomView> _byGrid = new Dictionary<Vector2Int, RoomView>();
+        private readonly Dictionary<Vector2Int, RoomView> _prefabCache = new Dictionary<Vector2Int, RoomView>();
         private DungeonData _data;
 
         public DungeonData Data => _data;
@@ -82,24 +86,20 @@ namespace Roguelike.Dungeon
             _data = data;
             Clear();
 
-            RoomView prefab = ResolvePrefab();
-            if (prefab == null)
-            {
-                Debug.LogError("[Dungeon] 找不到房间 Prefab，请先执行 Tools/Roguelike/生成房间 Prefab。", this);
-                return data;
-            }
-
             Vector3 origin = transform.position;
 
             for (int i = 0; i < data.Rooms.Count; i++)
             {
                 RoomNode node = data.Rooms[i];
 
+                RoomView prefab = ResolvePrefab(node);
+                if (prefab == null) continue;
+
                 RoomView view = Instantiate(prefab, transform);
                 view.name = $"Room_{node.Grid.x}_{node.Grid.y}_{node.Type}";
                 view.transform.position = origin + new Vector3(
-                    node.Grid.x * roomSpacing.x,
-                    node.Grid.y * roomSpacing.y,
+                    node.WorldOrigin.x,
+                    node.WorldOrigin.y,
                     0f);
 
                 view.Configure(node, debugRoomVisuals);
@@ -131,25 +131,60 @@ namespace Roguelike.Dungeon
             return _byGrid.TryGetValue(grid, out RoomView room) ? room : null;
         }
 
-        /// <summary>世界坐标 → 房间网格坐标（不考虑墙体，仅按 footprint 估算）。</summary>
+        /// <summary>世界坐标 → 房间网格坐标。房间尺寸不统一，直接按矩形查找。</summary>
         public Vector2Int WorldToGrid(Vector2 worldPosition)
         {
-            Vector3 local = worldPosition - (Vector2)transform.position;
-            return new Vector2Int(
-                Mathf.FloorToInt(local.x / roomSpacing.x),
-                Mathf.FloorToInt(local.y / roomSpacing.y));
+            for (int i = 0; i < _rooms.Count; i++)
+            {
+                if (_rooms[i].WorldRect.Contains(worldPosition))
+                    return _rooms[i].GridPosition;
+            }
+
+            return new Vector2Int(-1, -1);
         }
 
-        private RoomView ResolvePrefab()
+        public RoomView GetRoomAt(Vector2 worldPosition)
         {
-            if (roomPrefab != null) return roomPrefab;
+            for (int i = 0; i < _rooms.Count; i++)
+            {
+                if (_rooms[i].WorldRect.Contains(worldPosition))
+                    return _rooms[i];
+            }
 
-            roomPrefab = Resources.Load<RoomView>(PrefabResourcePath);
+            return null;
+        }
+
+        private RoomView ResolvePrefab(RoomNode node)
+        {
+            var size = new Vector2Int(node.Width, node.Height);
+
+            if (_prefabCache.TryGetValue(size, out RoomView cached) && cached != null)
+                return cached;
+
+            RoomView prefab = Resources.Load<RoomView>(PrefabResourcePathFor(size.x, size.y));
+
 #if UNITY_EDITOR
-            if (roomPrefab == null)
-                roomPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<RoomView>("Assets/Resources/Dungeon/Room.prefab");
+            if (prefab == null)
+            {
+                prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<RoomView>(
+                    $"Assets/Resources/Dungeon/{RoomGeometry.PrefabStem(size.x, size.y)}.prefab");
+            }
 #endif
-            return roomPrefab;
+
+            // 只有尺寸完全一致时才允许回退，避免用 15×9 的 Prefab 冒充小房间
+            if (prefab == null && roomPrefab != null && roomPrefab.Footprint == size)
+                prefab = roomPrefab;
+
+            if (prefab == null)
+            {
+                Debug.LogError(
+                    $"[Dungeon] 找不到 {size.x}×{size.y} 房间 Prefab，请执行 Tools/Roguelike/生成房间 Prefab。",
+                    this);
+                return null;
+            }
+
+            _prefabCache[size] = prefab;
+            return prefab;
         }
 
         /// <summary>运行时/编辑器切换调试配色，不需要重建房间。</summary>

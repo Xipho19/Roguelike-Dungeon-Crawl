@@ -31,6 +31,9 @@ namespace Roguelike.Player
         private Vector3 _target;
         private Vector3 _basePosition;
         private float _progress = 1f;
+        private float _fromSize;
+        private float _targetSize;
+        private float _baseSize;
         private bool _hasTarget;
         private float _shakeUntil;
         private float _shakeDuration = 0.22f;
@@ -66,12 +69,17 @@ namespace Roguelike.Player
             if (_progress < 1f)
             {
                 _progress = Mathf.Min(1f, _progress + Time.deltaTime / Mathf.Max(0.01f, transitionDuration));
-                _basePosition = Vector3.Lerp(_from, _target, Mathf.SmoothStep(0f, 1f, _progress));
+                float k = Mathf.SmoothStep(0f, 1f, _progress);
+                _basePosition = Vector3.Lerp(_from, _target, k);
+                _baseSize = Mathf.Lerp(_fromSize, _targetSize, k);
             }
             else
             {
                 _basePosition = _target;
+                _baseSize = _targetSize;
             }
+
+            if (_camera != null) _camera.orthographicSize = _baseSize;
 
             Vector3 shake = Vector3.zero;
             if (Time.time < _shakeUntil)
@@ -101,7 +109,7 @@ namespace Roguelike.Player
             if (room == null) return;
 
             _target = new Vector3(room.WorldCenter.x, room.WorldCenter.y, transform.position.z);
-            ApplyZoom();
+            _targetSize = ComputeOrthoSize(room);
 
             if (!_hasTarget)
             {
@@ -110,6 +118,7 @@ namespace Roguelike.Player
             }
 
             _from = _basePosition;
+            _fromSize = _camera != null ? _camera.orthographicSize : _targetSize;
             _progress = 0f;
         }
 
@@ -123,21 +132,30 @@ namespace Roguelike.Player
             _from = _target;
             _basePosition = _target;
             _progress = 1f;
+
+            _targetSize = ComputeOrthoSize(room);
+            _fromSize = _targetSize;
+            _baseSize = _targetSize;
+
             transform.position = _target;
-            ApplyZoom();
+
+            if (_camera == null) _camera = GetComponent<Camera>();
+            if (_camera != null)
+            {
+                _camera.orthographic = true;
+                _camera.orthographicSize = _targetSize;
+            }
         }
 
-        private void ApplyZoom()
+        private float ComputeOrthoSize(RoomView room)
         {
             if (_camera == null) _camera = GetComponent<Camera>();
-            if (_camera == null) return;
 
-            float halfHeight = RoomGeometry.FootprintHeight * 0.5f + padding;
-            float halfWidth = RoomGeometry.FootprintWidth * 0.5f + padding;
-            float aspect = _camera.aspect > 0.01f ? _camera.aspect : 16f / 9f;
+            float halfHeight = room.WorldRect.height * 0.5f + padding;
+            float halfWidth = room.WorldRect.width * 0.5f + padding;
+            float aspect = _camera != null && _camera.aspect > 0.01f ? _camera.aspect : 16f / 9f;
 
-            _camera.orthographic = true;
-            _camera.orthographicSize = Mathf.Max(halfHeight, halfWidth / aspect);
+            return Mathf.Max(halfHeight, halfWidth / aspect);
         }
     }
 }

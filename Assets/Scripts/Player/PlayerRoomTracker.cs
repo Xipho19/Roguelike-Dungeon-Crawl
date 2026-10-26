@@ -144,16 +144,8 @@ namespace Roguelike.Player
         {
             if (builder == null) return null;
 
-            RoomView room = builder.GetRoom(builder.WorldToGrid(position));
-            if (room != null && room.WorldRect.Contains(position)) return room;
-
-            // 房间矩形在共享墙处会重叠，回退为遍历查找
-            var rooms = builder.Rooms;
-            for (int i = 0; i < rooms.Count; i++)
-            {
-                if (rooms[i].WorldRect.Contains(position)) return rooms[i];
-            }
-            return null;
+            // 房间尺寸不统一，直接按世界矩形查找；共享墙处的重叠由遍历顺序决定。
+            return builder.GetRoomAt(position);
         }
 
         private static WallSide Opposite(WallSide side)
