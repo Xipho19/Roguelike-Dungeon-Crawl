@@ -1,3 +1,4 @@
+using Roguelike.Combat;
 using UnityEngine;
 
 namespace Roguelike.Dungeon
@@ -35,6 +36,10 @@ namespace Roguelike.Dungeon
         [Header("Boss")]
         [Tooltip("该主题楼层使用的 Boss 形象")]
         public FloorBossVisual bossVisual = FloorBossVisual.BigDemon;
+
+        [Header("小怪池")]
+        [Tooltip("该楼层普通战斗房和挑战房使用的小怪；留空时回退到 Flow 的默认六种")]
+        public Enemy[] commonEnemies = new Enemy[0];
 
         [Header("BGM")]
         [Tooltip("该楼层循环播放的背景音乐；留空则不播放")]

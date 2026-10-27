@@ -850,6 +850,9 @@ namespace Roguelike.Dungeon
         /// </summary>
         private Enemy PickPrefab(int distance, int index)
         {
+            Enemy themed = PickThemePrefab(distance, index);
+            if (themed != null) return themed;
+
             if (distance < 3) return enemyPrefab;
 
             if (distance >= 6)
@@ -876,6 +879,23 @@ namespace Roguelike.Dungeon
             return enemyPrefab;
         }
 
+        /// <summary>按当前楼层主题的小怪池轮换取怪；池为空时返回 null，走旧的六种编成。</summary>
+        private Enemy PickThemePrefab(int distance, int index)
+        {
+            Enemy[] roster = _floorTheme != null ? _floorTheme.commonEnemies : null;
+            if (roster == null || roster.Length == 0) return null;
+
+            int start = Mathf.Clamp(distance - 2, 0, roster.Length - 1);
+
+            for (int i = 0; i < roster.Length; i++)
+            {
+                int pick = (start + index + i) % roster.Length;
+                if (roster[pick] != null) return roster[pick];
+            }
+
+            return null;
+        }
+
         private Enemy FirstAvailable(params Enemy[] options)
         {
             for (int i = 0; i < options.Length; i++)
@@ -888,19 +908,27 @@ namespace Roguelike.Dungeon
 
         private float HealthFor(Enemy prefab)
         {
-            if (prefab is SplitterEnemy) return normalEnemyHealth * 2f;
-            if (prefab is NecromancerEnemy) return normalEnemyHealth * 1.5f;
-            return normalEnemyHealth;
+            float multiplier = prefab != null ? Mathf.Max(0.1f, prefab.HealthMultiplier) : 1f;
+            float baseHealth = normalEnemyHealth * multiplier;
+
+            if (prefab is SplitterEnemy) return baseHealth * 2f;
+            if (prefab is NecromancerEnemy) return baseHealth * 1.5f;
+            return baseHealth;
         }
 
         private static float SpeedFor(Enemy prefab)
         {
-            if (prefab is ShooterEnemy) return 2.0f;
-            if (prefab is ChargerEnemy) return 2.6f;
-            if (prefab is BomberEnemy) return 2.2f;
-            if (prefab is NecromancerEnemy) return 1.9f;
-            if (prefab is SplitterEnemy) return 1.6f;
-            return 2.4f;
+            float multiplier = prefab != null ? Mathf.Max(0.1f, prefab.SpeedMultiplier) : 1f;
+            float baseSpeed;
+
+            if (prefab is ShooterEnemy) baseSpeed = 2.0f;
+            else if (prefab is ChargerEnemy) baseSpeed = 2.6f;
+            else if (prefab is BomberEnemy) baseSpeed = 2.2f;
+            else if (prefab is NecromancerEnemy) baseSpeed = 1.9f;
+            else if (prefab is SplitterEnemy) baseSpeed = 1.6f;
+            else baseSpeed = 2.4f;
+
+            return baseSpeed * multiplier;
         }
 
         /// <summary>登记新生成的敌人（包括召唤物与分裂体），保证全部清掉才开门。</summary>

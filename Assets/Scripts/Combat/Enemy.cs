@@ -22,6 +22,13 @@ namespace Roguelike.Combat
         [Header("属性")]
         [SerializeField] private float maxHealth = 2f;
         [SerializeField] protected float moveSpeed = 2.4f;
+
+        [Header("生成倍率")]
+        [Tooltip("生成时在该怪物基础血量上再乘的倍率")]
+        [SerializeField, Min(0.1f)] private float healthMultiplier = 1f;
+
+        [Tooltip("生成时在该怪物基础移速上再乘的倍率")]
+        [SerializeField, Min(0.1f)] private float speedMultiplier = 1f;
         [SerializeField] private int contactDamage = 1;
         [SerializeField] private float contactCooldown = 0.8f;
 
@@ -94,6 +101,8 @@ namespace Roguelike.Combat
 
         public float Health => _health;
         public float MaxHealth => maxHealth;
+        public float HealthMultiplier => healthMultiplier;
+        public float SpeedMultiplier => speedMultiplier;
         public bool IsDead => _health <= 0f;
         public bool IsBoss { get; private set; }
         public bool IsElite { get; private set; }
@@ -673,7 +682,7 @@ namespace Roguelike.Combat
         {
             // 未进入战斗时只是待机游荡，不会伤害站在门外的玩家
             if (!CombatActive) return;
-            if (IsDead || Time.time < _nextContactTime) return;
+            if (IsDead || contactDamage <= 0 || Time.time < _nextContactTime) return;
 
             var health = collision.collider.GetComponentInParent<PlayerHealth>();
             if (health == null) return;

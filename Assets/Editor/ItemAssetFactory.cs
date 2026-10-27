@@ -23,6 +23,7 @@ namespace Roguelike.EditorTools
         public static void Rebuild()
         {
             EnsureFolder(ItemFolder);
+            ItemIconFactory.EnsureIcons();
 
             Create("Item_RapidTrigger", "快速触发器", "射速提升 25%。",
                 new Color(0.40f, 0.85f, 1f), ThirdPartySprites.RapidTriggerIcon, 0, 0,
@@ -179,6 +180,42 @@ namespace Roguelike.EditorTools
                 Mod(StatType.Damage, StatOp.Multiply, 1.5f),
                 Mod(StatType.MaxHealth, StatOp.Add, -1f));
 
+            // 第三轮扩充：弹跳、条件增伤、射击节拍、击杀与清房联动
+            CreateTriggered("Item_BounceTear", "弹跳泪滴",
+                "被动：眼泪碰到墙壁后反弹 2 次，每次反弹后速度变为 90%。",
+                new Color(0.42f, 0.72f, 1f), ThirdPartySprites.BounceTearIcon,
+                ItemRarity.Rare, 0.9f, 0f, 2, ItemSynergy.BounceTears, 11);
+
+            CreateTriggered("Item_BloodRage", "血怒",
+                "被动：生命越低伤害越高，最多 +2。",
+                new Color(0.90f, 0.22f, 0.28f), ThirdPartySprites.BloodRageIcon,
+                ItemRarity.Rare, 2f, 0f, 1, ItemSynergy.BloodRage, 13);
+
+            CreateTriggered("Item_CollectorHeart", "收藏家之心",
+                "被动：每持有 5 件道具，伤害 +0.5（最多 +3）。",
+                new Color(0.84f, 0.64f, 0.28f), ThirdPartySprites.CollectorHeartIcon,
+                ItemRarity.Legendary, 3f, 0f, 5, ItemSynergy.ItemCountDamage, 15);
+
+            CreateTriggered("Item_Metronome", "节拍器",
+                "被动：每第 5 次射击额外发射 1 发眼泪。",
+                new Color(0.98f, 0.58f, 0.24f), ThirdPartySprites.MetronomeIcon,
+                ItemRarity.Rare, 1f, 0f, 5, ItemSynergy.EveryNthShot, 12);
+
+            CreateTriggered("Item_HunterBoots", "猎手之靴",
+                "被动：击杀敌人后 1.5 秒内移动速度 +30%。",
+                new Color(0.34f, 0.78f, 0.46f), ThirdPartySprites.HunterBootsIcon,
+                ItemRarity.Rare, 1.5f, 0f, 1, ItemSynergy.KillHaste, 12);
+
+            CreateTriggered("Item_KillEmber", "杀戮余烬",
+                "被动：每击杀 2 个敌人，获得 0.8 秒无敌。",
+                new Color(1f, 0.52f, 0.22f), ThirdPartySprites.KillEmberIcon,
+                ItemRarity.Rare, 0.8f, 0f, 2, ItemSynergy.KillShield, 13);
+
+            CreateTriggered("Item_GuardShell", "守护之壳",
+                "被动：只要还有护盾，受到的伤害只会扣除护盾，不会溢出扣血。",
+                new Color(0.42f, 0.74f, 0.98f), ThirdPartySprites.ShieldIcon,
+                ItemRarity.Rare, 0f, 0f, 1, ItemSynergy.ShieldGuard, 11);
+
             EnsurePickupPrefab();
             EnsureAltarPrefab();
 
@@ -188,9 +225,11 @@ namespace Roguelike.EditorTools
             Debug.Log($"[Items] 已生成道具资产、道具台与祭坛 Prefab：{ItemFolder}");
         }
 
-        /// <summary>确保全部 30 件自动道具资产存在（创建玩家时调用）。</summary>
+        /// <summary>确保全部 37 件自动道具资产存在（创建玩家时调用）。</summary>
         public static bool EnsureItems()
         {
+            ItemIconFactory.EnsureIcons();
+
             string[] required =
             {
                 "Item_RapidTrigger", "Item_HeavyTear", "Item_SpeedBoots", "Item_HeartContainer",
@@ -202,6 +241,8 @@ namespace Roguelike.EditorTools
                 "Item_GreedEye", "Item_EmberChalice", "Item_HolyVeil", "Item_LuckyFoot",
                 "Item_CritFang", "Item_SplitParasite", "Item_DivineGlimmer", "Item_GhostPrism",
                 "Item_WindFeather", "Item_BloodPact",
+                "Item_BounceTear", "Item_BloodRage", "Item_CollectorHeart", "Item_Metronome",
+                "Item_HunterBoots", "Item_KillEmber", "Item_GuardShell",
             };
 
             bool complete = true;

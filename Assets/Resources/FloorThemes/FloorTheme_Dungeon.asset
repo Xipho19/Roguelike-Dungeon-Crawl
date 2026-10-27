@@ -18,5 +18,12 @@ MonoBehaviour:
   wallTint: {r: 1, g: 1, b: 1, a: 1}
   cameraBackground: {r: 0.055, g: 0.05, b: 0.075, a: 1}
   bossVisual: 0
+  commonEnemies:
+  - {fileID: 2878901178862696986, guid: 8f7e4c80b1ff1464087a23307eaafee8, type: 3}
+  - {fileID: 1612283549900821305, guid: 3d1b2ca1851d60f4696b9cb43654afb6, type: 3}
+  - {fileID: 699942053245197710, guid: e52f32eb4b6442740814e44ba52ead2e, type: 3}
+  - {fileID: 6184177864063705264, guid: 6fe6373167e87824fb3792191f872951, type: 3}
+  - {fileID: 8867936199332795166, guid: 52eed826b9bf423499ceccf9ec1443e2, type: 3}
+  - {fileID: 5857923993533168359, guid: 09c786110ed16f544949ffcecf07b2d3, type: 3}
   bgm: {fileID: 8300000, guid: abb217af0c347cc4898dc3af1d516b73, type: 3}
   bgmVolume: 0.5

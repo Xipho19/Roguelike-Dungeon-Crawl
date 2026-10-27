@@ -38,6 +38,7 @@ namespace Roguelike.Player
         private PlayerStats _stats;
         private PlayerController _controller;
         private PlayerCombat _combat;
+        private PlayerInventory _inventory;
         private SpriteRenderer _renderer;
         private Color _baseColor;
 
@@ -59,6 +60,7 @@ namespace Roguelike.Player
             _stats = GetComponent<PlayerStats>();
             _controller = GetComponent<PlayerController>();
             _combat = GetComponent<PlayerCombat>();
+            _inventory = GetComponent<PlayerInventory>();
             _renderer = GetComponentInChildren<SpriteRenderer>();
 
             _maxHealth = _stats != null ? _stats.MaxHealth : maxHealth;
@@ -122,13 +124,26 @@ namespace Roguelike.Player
         {
             if (amount <= 0 || IsDead || IsInvulnerable) return false;
 
+            // 守护之壳：只要还有护盾，伤害就全部由护盾承担，不会溢出扣血。
+            bool shieldGuard = _shield > 0
+                && _inventory != null
+                && _inventory.HasSynergy(ItemSynergy.ShieldGuard);
+
             // 先扣护盾，护盾耗尽后再扣血
             int healthDamage = amount;
             if (_shield > 0)
             {
-                int absorbed = Mathf.Min(_shield, healthDamage);
-                _shield -= absorbed;
-                healthDamage -= absorbed;
+                if (shieldGuard)
+                {
+                    _shield = Mathf.Max(0, _shield - amount);
+                    healthDamage = 0;
+                }
+                else
+                {
+                    int absorbed = Mathf.Min(_shield, healthDamage);
+                    _shield -= absorbed;
+                    healthDamage -= absorbed;
+                }
             }
 
             _lastDamageTime = Time.time;
@@ -140,7 +155,7 @@ namespace Roguelike.Player
             if (healthDamage > 0)
             {
                 _health -= healthDamage;
-                AudioService.Play("chop", 0.75f);
+                AudioService.Play("player_hurt", 1f, 0.03f);
 
                 if (_health <= 0)
                 {
@@ -150,7 +165,9 @@ namespace Roguelike.Player
             }
             else
             {
-                AudioService.Play("metalClick", 0.65f);
+                // metalClick 本身音量极低，叠加金属锁扣和罐体撞击，保证护盾命中可听见。
+                AudioService.Play("metalLatch", 1f, 0.03f);
+                AudioService.Play("metalPot3", 0.65f, 0.02f);
             }
 
             return true;
@@ -169,6 +186,16 @@ namespace Roguelike.Player
             if (seconds <= 0f || IsDead) return;
 
             _invulnerableUntil = Mathf.Max(_invulnerableUntil, Time.time + seconds);
+        }
+
+        /// <summary>恢复护盾；满护盾或死亡时返回 false。</summary>
+        public bool AddShield(int amount)
+        {
+            if (amount <= 0 || IsDead) return false;
+
+            int before = _shield;
+            _shield = Mathf.Clamp(_shield + amount, 0, maxShield);
+            return _shield > before;
         }
 
         /// <summary>

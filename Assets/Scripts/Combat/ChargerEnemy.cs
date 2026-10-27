@@ -22,11 +22,15 @@ namespace Roguelike.Combat
         [SerializeField] private float chargeSpeed = 12f;
         [SerializeField] private float chargeDuration = 0.45f;
         [SerializeField] private float recoverTime = 0.8f;
+        [SerializeField, Min(1)] private int chargeCount = 1;
+        [SerializeField, Min(0f)] private float chargePause = 0.25f;
+        [SerializeField] private Color windupTint = new Color(1f, 0.60f, 0.20f, 1f);
 
         private ChargeState _state = ChargeState.Chasing;
         private float _timer;
         private Vector2 _chargeDirection;
         private SpriteRenderer _renderer;
+        private int _chargesLeft;
 
         protected override void Start()
         {
@@ -42,6 +46,7 @@ namespace Roguelike.Combat
 
             _state = ChargeState.Chasing;
             _timer = 0f;
+            _chargesLeft = 0;
             RestoreColor();
         }
 
@@ -72,9 +77,9 @@ namespace Roguelike.Combat
                     {
                         _state = ChargeState.Windup;
                         _timer = windupTime;
+                        _chargesLeft = Mathf.Max(1, chargeCount);
                         _rb.linearVelocity = Vector2.zero;
-
-                        if (_renderer != null) _renderer.color = new Color(1f, 0.60f, 0.20f, 1f);
+                        SetWindupColor();
                     }
                     break;
 
@@ -95,8 +100,20 @@ namespace Roguelike.Combat
 
                     if (_timer <= 0f)
                     {
-                        _state = ChargeState.Recover;
-                        _timer = recoverTime;
+                        _chargesLeft--;
+
+                        if (_chargesLeft > 0)
+                        {
+                            _state = ChargeState.Windup;
+                            _timer = chargePause;
+                            _rb.linearVelocity = Vector2.zero;
+                            SetWindupColor();
+                        }
+                        else
+                        {
+                            _state = ChargeState.Recover;
+                            _timer = recoverTime;
+                        }
                     }
                     break;
 
@@ -106,6 +123,11 @@ namespace Roguelike.Combat
                     if (_timer <= 0f) _state = ChargeState.Chasing;
                     break;
             }
+        }
+
+        private void SetWindupColor()
+        {
+            if (_renderer != null) _renderer.color = windupTint;
         }
 
         private void RestoreColor()

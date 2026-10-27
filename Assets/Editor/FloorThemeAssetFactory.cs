@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using Roguelike.Combat;
 using Roguelike.Dungeon;
 using UnityEditor;
 using UnityEngine;
@@ -18,6 +20,36 @@ namespace Roguelike.EditorTools
         public const string DungeonPath = ThemeFolder + "/FloorTheme_Dungeon.asset";
         public const string CryptPath = ThemeFolder + "/FloorTheme_Crypt.asset";
         public const string InfernoPath = ThemeFolder + "/FloorTheme_Inferno.asset";
+
+        private static readonly string[] DungeonRoster =
+        {
+            CombatPrefabFactory.EnemyPath,
+            CombatPrefabFactory.ShooterPath,
+            CombatPrefabFactory.ChargerPath,
+            CombatPrefabFactory.GoblinPath,
+            CombatPrefabFactory.OrcWarriorPath,
+            CombatPrefabFactory.MuddyPath,
+        };
+
+        private static readonly string[] CryptRoster =
+        {
+            CombatPrefabFactory.SkeletPath,
+            CombatPrefabFactory.ZombiePath,
+            CombatPrefabFactory.IceZombiePath,
+            CombatPrefabFactory.NecromancerPath,
+            CombatPrefabFactory.WogolPath,
+            CombatPrefabFactory.TinyZombieCloudPath,
+        };
+
+        private static readonly string[] InfernoRoster =
+        {
+            CombatPrefabFactory.ImpPath,
+            CombatPrefabFactory.ChortPath,
+            CombatPrefabFactory.MaskedOrcPath,
+            CombatPrefabFactory.OrcShamanPath,
+            CombatPrefabFactory.BomberPath,
+            CombatPrefabFactory.SplitterPath,
+        };
 
         public const string BgmFolder = "Assets/Resources/Audio/BGM";
         public const string DungeonBgmPath = BgmFolder + "/BGM_Dungeon.ogg";
@@ -149,6 +181,7 @@ namespace Roguelike.EditorTools
             theme.cameraBackground = cameraBackground;
             theme.bossVisual = bossVisual;
             if (bgm != null) theme.bgm = bgm;
+            ApplyRoster(theme, path, true);
 
             EditorUtility.SetDirty(theme);
         }
@@ -181,11 +214,44 @@ namespace Roguelike.EditorTools
                     dirty = true;
                 }
 
+                if (existing.commonEnemies == null || existing.commonEnemies.Length == 0)
+                {
+                    ApplyRoster(existing, path, true);
+                    dirty = true;
+                }
+
                 if (dirty) EditorUtility.SetDirty(existing);
                 return;
             }
 
             CreateOrUpdate(path, displayName, order, floorTint, wallTint, cameraBackground, bossVisual, bgm);
+        }
+
+        private static void ApplyRoster(FloorTheme theme, string path, bool force)
+        {
+            if (theme == null) return;
+            if (!force && theme.commonEnemies != null && theme.commonEnemies.Length > 0) return;
+
+            string[] paths = RosterPathsFor(path);
+            if (paths == null || paths.Length == 0) return;
+
+            var roster = new List<Enemy>(paths.Length);
+            for (int i = 0; i < paths.Length; i++)
+            {
+                Enemy enemy = AssetDatabase.LoadAssetAtPath<Enemy>(paths[i]);
+                if (enemy != null) roster.Add(enemy);
+            }
+
+            if (roster.Count > 0)
+                theme.commonEnemies = roster.ToArray();
+        }
+
+        private static string[] RosterPathsFor(string path)
+        {
+            if (path == DungeonPath) return DungeonRoster;
+            if (path == CryptPath) return CryptRoster;
+            if (path == InfernoPath) return InfernoRoster;
+            return null;
         }
 
         private static void EnsureFolder(string path)

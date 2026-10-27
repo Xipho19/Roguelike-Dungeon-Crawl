@@ -31,6 +31,10 @@ namespace Roguelike.Player
 
         private Rigidbody2D _rb;
         private PlayerStats _stats;
+        private float _slowFactor = 1f;
+        private float _slowUntil;
+        private float _hasteFactor = 1f;
+        private float _hasteUntil;
 
         /// <summary>当前物理速度，供门触发判断移动方向。</summary>
         public Vector2 Velocity => _rb != null ? _rb.linearVelocity : Vector2.zero;
@@ -43,16 +47,55 @@ namespace Roguelike.Player
             _stats = GetComponent<PlayerStats>();
         }
 
+        private void OnEnable()
+        {
+            ClearSlow();
+            ClearSpeedBoost();
+        }
+
         private void FixedUpdate()
         {
             Vector2 input = ReadMoveInput();
             if (input.sqrMagnitude > 1f) input = input.normalized;
 
             float speed = _stats != null ? _stats.MoveSpeed : moveSpeed;
+            if (Time.time < _slowUntil) speed *= _slowFactor;
+            if (Time.time < _hasteUntil) speed *= _hasteFactor;
+
             Vector2 target = input * speed;
             float rate = input.sqrMagnitude > 0.001f ? acceleration : deceleration;
 
             _rb.linearVelocity = Vector2.MoveTowards(_rb.linearVelocity, target, rate * Time.fixedDeltaTime);
+        }
+
+        /// <summary>地面冰面等效果：按比例降低移动速度一段时间。</summary>
+        public void ApplySlow(float factor, float duration)
+        {
+            if (duration <= 0f) return;
+
+            _slowFactor = Mathf.Clamp01(factor);
+            _slowUntil = Mathf.Max(_slowUntil, Time.time + duration);
+        }
+
+        public void ClearSlow()
+        {
+            _slowFactor = 1f;
+            _slowUntil = 0f;
+        }
+
+        /// <summary>击杀触发等临时加速：按比例提高移动速度一段时间。</summary>
+        public void ApplySpeedBoost(float factor, float duration)
+        {
+            if (duration <= 0f || factor <= 1f) return;
+
+            _hasteFactor = Mathf.Max(_hasteFactor, factor);
+            _hasteUntil = Mathf.Max(_hasteUntil, Time.time + duration);
+        }
+
+        public void ClearSpeedBoost()
+        {
+            _hasteFactor = 1f;
+            _hasteUntil = 0f;
         }
 
         private static Vector2 ReadMoveInput()

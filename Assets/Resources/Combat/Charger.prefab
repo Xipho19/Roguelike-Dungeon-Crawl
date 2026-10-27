@@ -172,6 +172,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Roguelike.Combat.ChargerEnemy
   maxHealth: 2
   moveSpeed: 2.4
+  healthMultiplier: 1
+  speedMultiplier: 1
   contactDamage: 1
   contactCooldown: 0.8
   combatContactGrace: 0.5
@@ -190,6 +192,9 @@ MonoBehaviour:
   chargeSpeed: 12
   chargeDuration: 0.45
   recoverTime: 0.8
+  chargeCount: 1
+  chargePause: 0.25
+  windupTint: {r: 1, g: 0.6, b: 0.2, a: 1}
 --- !u!114 &1897070649228810607
 MonoBehaviour:
   m_ObjectHideFlags: 0

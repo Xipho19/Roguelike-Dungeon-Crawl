@@ -27,6 +27,14 @@ namespace Roguelike.Items
         CritTears = 12,
         SplitTears = 13,
         TearAura = 14,
+        BounceTears = 15,
+        BloodRage = 16,
+        ItemCountDamage = 17,
+        EveryNthShot = 18,
+        KillHaste = 19,
+        KillShield = 20,
+        RoomClearShield = 21,
+        ShieldGuard = 22,
     }
 
     /// <summary>

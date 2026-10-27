@@ -1,0 +1,10 @@
+Player hurt grunt: adapted from "Voiceover Pack: Fighter" by Kenney Vleugels (Kenney.nl).
+
+License: Creative Commons Zero (CC0 1.0)
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Source:
+https://kenney.nl/assets/voiceover-pack-fighter
+
+The clip was trimmed, normalized, and mixed with a short impact thump for this project.
+Credit is not mandatory under CC0, but is included here.

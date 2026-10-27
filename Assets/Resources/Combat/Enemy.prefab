@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 1368255670765073480}
   - component: {fileID: 3798789115868478527}
   - component: {fileID: 673411619858672347}
-  - component: {fileID: 1230547516451969643}
+  - component: {fileID: 2878901178862696986}
   - component: {fileID: 3688083441269109659}
   m_Layer: 0
   m_Name: Enemy
@@ -158,7 +158,7 @@ CircleCollider2D:
   m_CompositeOrder: 0
   m_Offset: {x: 0, y: 0}
   m_Radius: 0.45
---- !u!114 &1230547516451969643
+--- !u!114 &2878901178862696986
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -167,11 +167,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 4541157319944562895}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1d012344de7c596409e4e6a51f12d503, type: 3}
+  m_Script: {fileID: 11500000, guid: c36c967bc9893a740a0e674814273856, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Roguelike.Combat.Enemy
+  m_EditorClassIdentifier: Assembly-CSharp::Roguelike.Combat.LungeEnemy
   maxHealth: 2
   moveSpeed: 2.4
+  healthMultiplier: 1
+  speedMultiplier: 1
   contactDamage: 1
   contactCooldown: 0.8
   combatContactGrace: 0.5
@@ -185,6 +187,13 @@ MonoBehaviour:
   wanderIntervalMin: 1.5
   wanderIntervalMax: 3.5
   body: {fileID: 0}
+  triggerRange: 2.8
+  windupTime: 0.3
+  lungeSpeed: 8
+  lungeDuration: 0.22
+  recoverTime: 0.55
+  lungeCooldown: 2.6
+  windupTint: {r: 1, g: 0.65, b: 0.2, a: 1}
 --- !u!114 &3688083441269109659
 MonoBehaviour:
   m_ObjectHideFlags: 0

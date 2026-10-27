@@ -15,6 +15,10 @@ namespace Roguelike.Combat
         [SerializeField] private float windupTime = 0.55f;
         [SerializeField] private float projectileSpeed = 6f;
         [SerializeField] private float projectileLifetime = 4f;
+        [SerializeField, Min(1)] private int projectileCount = 1;
+        [SerializeField, Min(0f)] private float spreadAngle;
+        [SerializeField] private Color projectileTint = Color.white;
+        [SerializeField] private bool stationary;
 
         private SpriteRenderer _renderer;
         private float _nextShotTime;
@@ -73,20 +77,27 @@ namespace Roguelike.Combat
                 return;
             }
 
-            // 太远靠近、太近后退、距离合适则绕行
-            Vector2 movement;
-            if (distance > preferredDistance + 0.6f) movement = direction;
-            else if (distance < preferredDistance - 0.6f) movement = -direction;
-            else movement = new Vector2(-direction.y, direction.x) * 0.7f;
-
-            if (movement.sqrMagnitude > 0.0001f)
+            if (stationary)
             {
-                Vector2 steered = GetSteeredDirection(movement.normalized);
-                _rb.linearVelocity = steered * (moveSpeed * Mathf.Clamp01(movement.magnitude));
+                _rb.linearVelocity = Vector2.zero;
             }
             else
             {
-                _rb.linearVelocity = Vector2.zero;
+                // 太远靠近、太近后退、距离合适则绕行
+                Vector2 movement;
+                if (distance > preferredDistance + 0.6f) movement = direction;
+                else if (distance < preferredDistance - 0.6f) movement = -direction;
+                else movement = new Vector2(-direction.y, direction.x) * 0.7f;
+
+                if (movement.sqrMagnitude > 0.0001f)
+                {
+                    Vector2 steered = GetSteeredDirection(movement.normalized);
+                    _rb.linearVelocity = steered * (moveSpeed * Mathf.Clamp01(movement.magnitude));
+                }
+                else
+                {
+                    _rb.linearVelocity = Vector2.zero;
+                }
             }
 
             if (Time.time >= _nextShotTime)
@@ -103,12 +114,37 @@ namespace Roguelike.Combat
         {
             if (projectilePrefab == null) return;
 
-            EnemyProjectile bullet = Instantiate(
-                projectilePrefab,
-                _rb.position + direction * 0.8f,
-                Quaternion.identity);
+            int count = Mathf.Max(1, projectileCount);
+            float step = count > 1 ? spreadAngle / (count - 1) : 0f;
+            float start = -spreadAngle * 0.5f;
 
-            bullet.Initialize(direction, projectileSpeed, ScaleAttackDamage(1), projectileLifetime);
+            for (int i = 0; i < count; i++)
+            {
+                Vector2 shotDirection = Rotate(direction, start + step * i);
+                EnemyProjectile bullet = Instantiate(
+                    projectilePrefab,
+                    _rb.position + shotDirection * 0.8f,
+                    Quaternion.identity);
+
+                bullet.Initialize(
+                    shotDirection,
+                    projectileSpeed,
+                    ScaleAttackDamage(1),
+                    projectileLifetime);
+
+                bullet.ConfigureVisual(projectileTint);
+            }
+        }
+
+        private static Vector2 Rotate(Vector2 direction, float degrees)
+        {
+            float radians = degrees * Mathf.Deg2Rad;
+            float cos = Mathf.Cos(radians);
+            float sin = Mathf.Sin(radians);
+
+            return new Vector2(
+                direction.x * cos - direction.y * sin,
+                direction.x * sin + direction.y * cos);
         }
 
         private void RestoreColor()

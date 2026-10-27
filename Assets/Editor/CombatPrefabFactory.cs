@@ -30,6 +30,23 @@ namespace Roguelike.EditorTools
         public const string EnemyProjectilePath = Folder + "/EnemyProjectile.prefab";
         public const string PortalPath = Folder + "/NextFloorPortal.prefab";
 
+        // 三层专属小怪
+        public const string GoblinPath = Folder + "/Goblin.prefab";
+        public const string OrcWarriorPath = Folder + "/OrcWarrior.prefab";
+        public const string MuddyPath = Folder + "/Muddy.prefab";
+        public const string SkeletPath = Folder + "/Skelet.prefab";
+        public const string ZombiePath = Folder + "/Zombie.prefab";
+        public const string IceZombiePath = Folder + "/IceZombie.prefab";
+        public const string WogolPath = Folder + "/Wogol.prefab";
+        public const string ImpPath = Folder + "/Imp.prefab";
+        public const string ChortPath = Folder + "/Chort.prefab";
+        public const string MaskedOrcPath = Folder + "/MaskedOrc.prefab";
+        public const string OrcShamanPath = Folder + "/OrcShaman.prefab";
+        public const string SwampyPath = Folder + "/Swampy.prefab";
+        public const string TinyZombieCloudPath = Folder + "/TinyZombieCloud.prefab";
+        public const string FireTotemPath = Folder + "/FireTotem.prefab";
+        public const string EnemyHazardPath = Folder + "/EnemyHazard.prefab";
+
         private const string SpritePath = "Assets/Art/White.png";
 
         [MenuItem("Tools/Roguelike/生成战斗 Prefab")]
@@ -51,6 +68,10 @@ namespace Roguelike.EditorTools
             }
 
             EnsureFolder(Folder);
+
+            EnemyHazard hazard = BuildEnemyHazard(sprite);
+            Enemy fireTotem = BuildFireTotem(sprite);
+
             BuildEnemy(sprite);
             BuildShooter(sprite);
             BuildCharger(sprite);
@@ -60,6 +81,21 @@ namespace Roguelike.EditorTools
             BuildNecromancer(sprite, skeleton);
             BuildSplitter(sprite, tinyZombie);
             BuildBoss(sprite, skeleton);
+
+            BuildGoblin(sprite);
+            BuildOrcWarrior(sprite);
+            BuildMuddy(sprite, hazard);
+            BuildSkelet(sprite);
+            BuildZombie(sprite);
+            BuildIceZombie(sprite, hazard);
+            BuildWogol(sprite);
+            BuildImp(sprite);
+            BuildChort(sprite);
+            BuildMaskedOrc(sprite);
+            BuildOrcShaman(sprite, fireTotem);
+            BuildSwampy(sprite, hazard);
+            BuildTinyZombieCloud(sprite, hazard);
+
             BuildTear(sprite);
             BuildEnemyProjectile(sprite);
             BuildCoin(sprite);
@@ -67,7 +103,7 @@ namespace Roguelike.EditorTools
             BuildPortal(sprite);
             AssetDatabase.SaveAssets();
 
-            Debug.Log("[Combat] 战斗 Prefab 已生成：Enemy / Shooter / Charger / Bomber / Necromancer / Splitter / Skeleton / TinyZombie / Boss / Tear / EnemyProjectile / Coin / Heart / NextFloorPortal");
+            Debug.Log("[Combat] 战斗 Prefab 已生成：基础六种 + 三层小怪 + Boss / Tear / EnemyProjectile / Coin / Heart / NextFloorPortal");
         }
 
         private static Sprite ArtOr(Sprite art, Sprite fallback) => art != null ? art : fallback;
@@ -90,7 +126,7 @@ namespace Roguelike.EditorTools
             var collider = root.AddComponent<CircleCollider2D>();
             collider.radius = 0.45f;
 
-            root.AddComponent<Enemy>();
+            root.AddComponent<LungeEnemy>();
             AttachAnimator(root, ThirdPartySprites.EnemyChaserIdle, ThirdPartySprites.EnemyChaserRun);
 
             PrefabUtility.SaveAsPrefabAsset(root, EnemyPath);
@@ -328,6 +364,504 @@ namespace Roguelike.EditorTools
 
             PrefabUtility.SaveAsPrefabAsset(root, BossPath);
             Object.DestroyImmediate(root);
+        }
+
+        public static bool RosterPrefabsExist()
+        {
+            string[] paths =
+            {
+                GoblinPath, OrcWarriorPath, MuddyPath, SkeletPath, ZombiePath,
+                IceZombiePath, WogolPath, ImpPath, ChortPath, MaskedOrcPath,
+                OrcShamanPath, FireTotemPath, TinyZombieCloudPath,
+            };
+
+            for (int i = 0; i < paths.Length; i++)
+            {
+                if (AssetDatabase.LoadAssetAtPath<Enemy>(paths[i]) == null)
+                    return false;
+            }
+
+            return AssetDatabase.LoadAssetAtPath<EnemyHazard>(EnemyHazardPath) != null;
+        }
+
+        // ---------- 三层专属小怪 ----------
+
+        private static EnemyHazard BuildEnemyHazard(Sprite fallback)
+        {
+            var root = new GameObject("EnemyHazard");
+
+            var renderer = root.AddComponent<SpriteRenderer>();
+            renderer.sprite = ArtOr(ThirdPartySprites.Hazard, fallback);
+            renderer.color = Color.white;
+            renderer.sortingOrder = 1;
+
+            var collider = root.AddComponent<CircleCollider2D>();
+            collider.radius = 0.5f;
+            collider.isTrigger = true;
+
+            root.AddComponent<EnemyHazard>();
+            return SaveMonster<EnemyHazard>(root, EnemyHazardPath);
+        }
+
+        private static Enemy BuildFireTotem(Sprite fallback)
+        {
+            GameObject root = CreateMonsterRoot(
+                "FireTotem",
+                ThirdPartySprites.Altar,
+                fallback,
+                null,
+                null,
+                0.55f,
+                0.28f);
+
+            var totem = root.AddComponent<ShooterEnemy>();
+            var serialized = ConfigureMonster(totem, 1f, 1f, 0);
+            SetBool(serialized, "stationary", true);
+            SetFloat(serialized, "preferredDistance", 0f);
+            SetFloat(serialized, "shootInterval", 1.5f);
+            SetFloat(serialized, "windupTime", 0.3f);
+            SetFloat(serialized, "projectileSpeed", 4.5f);
+            SetFloat(serialized, "projectileLifetime", 4f);
+            SetInt(serialized, "projectileCount", 1);
+            SetFloat(serialized, "spreadAngle", 0f);
+            SetColor(serialized, "projectileTint", new Color(1f, 0.55f, 0.2f, 1f));
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, FireTotemPath);
+        }
+
+        private static Enemy BuildGoblin(Sprite fallback)
+        {
+            GameObject root = CreateMonsterRoot(
+                "Goblin",
+                ThirdPartySprites.Goblin,
+                fallback,
+                ThirdPartySprites.GoblinIdle,
+                ThirdPartySprites.GoblinRun,
+                0.9f,
+                0.34f);
+
+            var enemy = root.AddComponent<LungeEnemy>();
+            var serialized = ConfigureMonster(enemy, 0.9f, 1.25f, 1);
+            SetFloat(serialized, "triggerRange", 2.8f);
+            SetFloat(serialized, "windupTime", 0.3f);
+            SetFloat(serialized, "lungeSpeed", 8f);
+            SetFloat(serialized, "lungeDuration", 0.22f);
+            SetFloat(serialized, "recoverTime", 0.55f);
+            SetFloat(serialized, "lungeCooldown", 2.6f);
+            SetColor(serialized, "windupTint", new Color(1f, 0.62f, 0.18f, 1f));
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, GoblinPath);
+        }
+
+        private static Enemy BuildOrcWarrior(Sprite fallback)
+        {
+            GameObject root = CreateMonsterRoot(
+                "OrcWarrior",
+                ThirdPartySprites.OrcWarrior,
+                fallback,
+                ThirdPartySprites.OrcWarriorIdle,
+                ThirdPartySprites.OrcWarriorRun,
+                1.05f,
+                0.42f);
+
+            var enemy = root.AddComponent<CleaveEnemy>();
+            var serialized = ConfigureMonster(enemy, 1.5f, 0.85f, 1);
+            SetFloat(serialized, "triggerRange", 1.6f);
+            SetFloat(serialized, "windupTime", 0.6f);
+            SetInt(serialized, "damage", 2);
+            SetFloat(serialized, "radius", 1.5f);
+            SetFloat(serialized, "halfAngle", 65f);
+            SetFloat(serialized, "recoverTime", 0.7f);
+            SetFloat(serialized, "attackCooldown", 2.4f);
+            SetBool(serialized, "secondStrike", false);
+            SetColor(serialized, "windupTint", new Color(1f, 0.55f, 0.2f, 1f));
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, OrcWarriorPath);
+        }
+
+        private static Enemy BuildMuddy(Sprite fallback, EnemyHazard hazard)
+        {
+            GameObject root = CreateMonsterRoot(
+                "Muddy",
+                ThirdPartySprites.Muddy,
+                fallback,
+                ThirdPartySprites.MuddyIdle,
+                ThirdPartySprites.MuddyRun,
+                1.05f,
+                0.42f);
+
+            var enemy = root.AddComponent<TrapperEnemy>();
+            var serialized = ConfigureMonster(enemy, 1.6f, 0.65f, 1);
+            SetObject(serialized, "hazardPrefab", hazard);
+            SetFloat(serialized, "triggerRange", 3f);
+            SetFloat(serialized, "dropInterval", 3.2f);
+            SetFloat(serialized, "dropWindup", 0.5f);
+            SetInt(serialized, "hazardDamage", 1);
+            SetFloat(serialized, "hazardTickInterval", 0.75f);
+            SetFloat(serialized, "hazardLifetime", 2.5f);
+            SetFloat(serialized, "hazardRadius", 1f);
+            SetFloat(serialized, "slowFactor", 0.7f);
+            SetFloat(serialized, "slowDuration", 0.5f);
+            SetColor(serialized, "hazardTint", new Color(0.45f, 0.3f, 0.18f, 0.6f));
+            SetColor(serialized, "windupTint", new Color(0.7f, 0.52f, 0.25f, 1f));
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, MuddyPath);
+        }
+
+        private static Enemy BuildSkelet(Sprite fallback)
+        {
+            GameObject root = CreateMonsterRoot(
+                "Skelet",
+                ThirdPartySprites.Skelet,
+                fallback,
+                ThirdPartySprites.SkeletIdle,
+                ThirdPartySprites.SkeletRun,
+                0.95f,
+                0.36f);
+
+            var enemy = root.AddComponent<CleaveEnemy>();
+            var serialized = ConfigureMonster(enemy, 1f, 1f, 1);
+            SetFloat(serialized, "triggerRange", 1.6f);
+            SetFloat(serialized, "windupTime", 0.4f);
+            SetInt(serialized, "damage", 1);
+            SetFloat(serialized, "radius", 1.25f);
+            SetFloat(serialized, "halfAngle", 70f);
+            SetFloat(serialized, "recoverTime", 0.45f);
+            SetFloat(serialized, "attackCooldown", 1.8f);
+            SetBool(serialized, "secondStrike", true);
+            SetFloat(serialized, "secondDelay", 0.22f);
+            SetColor(serialized, "windupTint", new Color(0.9f, 0.95f, 1f, 1f));
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, SkeletPath);
+        }
+
+        private static Enemy BuildZombie(Sprite fallback)
+        {
+            GameObject root = CreateMonsterRoot(
+                "Zombie",
+                ThirdPartySprites.Zombie,
+                fallback,
+                ThirdPartySprites.ZombieIdle,
+                ThirdPartySprites.ZombieRun,
+                1.05f,
+                0.42f);
+
+            var enemy = root.AddComponent<CleaveEnemy>();
+            var serialized = ConfigureMonster(enemy, 2f, 0.7f, 1);
+            SetFloat(serialized, "triggerRange", 1.5f);
+            SetFloat(serialized, "windupTime", 0.7f);
+            SetInt(serialized, "damage", 2);
+            SetFloat(serialized, "radius", 1.3f);
+            SetFloat(serialized, "halfAngle", 55f);
+            SetFloat(serialized, "recoverTime", 0.8f);
+            SetFloat(serialized, "attackCooldown", 2.6f);
+            SetBool(serialized, "secondStrike", false);
+            SetColor(serialized, "windupTint", new Color(0.55f, 1f, 0.55f, 1f));
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, ZombiePath);
+        }
+
+        private static Enemy BuildIceZombie(Sprite fallback, EnemyHazard hazard)
+        {
+            GameObject root = CreateMonsterRoot(
+                "IceZombie",
+                ThirdPartySprites.IceZombie,
+                fallback,
+                ThirdPartySprites.IceZombieIdle,
+                ThirdPartySprites.IceZombieRun,
+                1f,
+                0.4f);
+
+            var enemy = root.AddComponent<TrapperEnemy>();
+            var serialized = ConfigureMonster(enemy, 1.5f, 0.75f, 1);
+            SetObject(serialized, "hazardPrefab", hazard);
+            SetFloat(serialized, "triggerRange", 2.8f);
+            SetFloat(serialized, "dropInterval", 3.5f);
+            SetFloat(serialized, "dropWindup", 0.6f);
+            SetInt(serialized, "hazardDamage", 1);
+            SetFloat(serialized, "hazardTickInterval", 0.8f);
+            SetFloat(serialized, "hazardLifetime", 2.2f);
+            SetFloat(serialized, "hazardRadius", 1.2f);
+            SetFloat(serialized, "slowFactor", 0.55f);
+            SetFloat(serialized, "slowDuration", 0.7f);
+            SetColor(serialized, "hazardTint", new Color(0.45f, 0.85f, 1f, 0.6f));
+            SetColor(serialized, "windupTint", new Color(0.55f, 0.85f, 1f, 1f));
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, IceZombiePath);
+        }
+
+        private static Enemy BuildWogol(Sprite fallback)
+        {
+            GameObject root = CreateMonsterRoot(
+                "Wogol",
+                ThirdPartySprites.Wogol,
+                fallback,
+                ThirdPartySprites.WogolIdle,
+                ThirdPartySprites.WogolRun,
+                1f,
+                0.4f);
+
+            var enemy = root.AddComponent<BlinkShooterEnemy>();
+            var serialized = ConfigureMonster(enemy, 1.2f, 1f, 1);
+            SetFloat(serialized, "preferredDistance", 4f);
+            SetFloat(serialized, "blinkInterval", 4f);
+            SetFloat(serialized, "blinkWindup", 0.35f);
+            SetFloat(serialized, "blinkDistance", 3.2f);
+            SetInt(serialized, "projectileCount", 3);
+            SetFloat(serialized, "spreadAngle", 30f);
+            SetFloat(serialized, "projectileSpeed", 5f);
+            SetFloat(serialized, "projectileLifetime", 4f);
+            SetFloat(serialized, "shootWindup", 0.35f);
+            SetFloat(serialized, "recoverTime", 0.5f);
+            SetColor(serialized, "projectileTint", new Color(0.85f, 0.6f, 1f, 1f));
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, WogolPath);
+        }
+
+        private static Enemy BuildImp(Sprite fallback)
+        {
+            GameObject root = CreateMonsterRoot(
+                "Imp",
+                ThirdPartySprites.Imp,
+                fallback,
+                ThirdPartySprites.ImpIdle,
+                ThirdPartySprites.ImpRun,
+                0.9f,
+                0.34f);
+
+            var enemy = root.AddComponent<ChargerEnemy>();
+            var serialized = ConfigureMonster(enemy, 0.9f, 1.2f, 1);
+            SetFloat(serialized, "triggerRange", 6f);
+            SetFloat(serialized, "windupTime", 0.4f);
+            SetFloat(serialized, "chargeSpeed", 11f);
+            SetFloat(serialized, "chargeDuration", 0.35f);
+            SetFloat(serialized, "recoverTime", 0.5f);
+            SetInt(serialized, "chargeCount", 1);
+            SetFloat(serialized, "chargePause", 0.2f);
+            SetColor(serialized, "windupTint", new Color(1f, 0.4f, 0.15f, 1f));
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, ImpPath);
+        }
+
+        private static Enemy BuildChort(Sprite fallback)
+        {
+            GameObject root = CreateMonsterRoot(
+                "Chort",
+                ThirdPartySprites.Chort,
+                fallback,
+                ThirdPartySprites.ChortIdle,
+                ThirdPartySprites.ChortRun,
+                0.95f,
+                0.38f);
+
+            var enemy = root.AddComponent<ShooterEnemy>();
+            var serialized = ConfigureMonster(enemy, 1f, 1f, 1);
+            SetFloat(serialized, "preferredDistance", 4f);
+            SetFloat(serialized, "shootInterval", 2.2f);
+            SetFloat(serialized, "windupTime", 0.45f);
+            SetFloat(serialized, "projectileSpeed", 5.5f);
+            SetFloat(serialized, "projectileLifetime", 4f);
+            SetInt(serialized, "projectileCount", 3);
+            SetFloat(serialized, "spreadAngle", 30f);
+            SetColor(serialized, "projectileTint", new Color(1f, 0.45f, 0.15f, 1f));
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, ChortPath);
+        }
+
+        private static Enemy BuildMaskedOrc(Sprite fallback)
+        {
+            GameObject root = CreateMonsterRoot(
+                "MaskedOrc",
+                ThirdPartySprites.MaskedOrc,
+                fallback,
+                ThirdPartySprites.MaskedOrcIdle,
+                ThirdPartySprites.MaskedOrcRun,
+                1.05f,
+                0.42f);
+
+            var enemy = root.AddComponent<ChargerEnemy>();
+            var serialized = ConfigureMonster(enemy, 1.8f, 0.95f, 2);
+            SetFloat(serialized, "triggerRange", 6f);
+            SetFloat(serialized, "windupTime", 0.5f);
+            SetFloat(serialized, "chargeSpeed", 11f);
+            SetFloat(serialized, "chargeDuration", 0.4f);
+            SetFloat(serialized, "recoverTime", 0.8f);
+            SetInt(serialized, "chargeCount", 2);
+            SetFloat(serialized, "chargePause", 0.22f);
+            SetColor(serialized, "windupTint", new Color(1f, 0.55f, 0.18f, 1f));
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, MaskedOrcPath);
+        }
+
+        private static Enemy BuildOrcShaman(Sprite fallback, Enemy totemPrefab)
+        {
+            GameObject root = CreateMonsterRoot(
+                "OrcShaman",
+                ThirdPartySprites.OrcShaman,
+                fallback,
+                ThirdPartySprites.OrcShamanIdle,
+                ThirdPartySprites.OrcShamanRun,
+                0.95f,
+                0.38f);
+
+            var enemy = root.AddComponent<NecromancerEnemy>();
+            var serialized = ConfigureMonster(enemy, 1.2f, 0.9f, 1);
+            SetObject(serialized, "minionPrefab", totemPrefab);
+            SetFloat(serialized, "preferredDistance", 4.5f);
+            SetFloat(serialized, "summonInterval", 6f);
+            SetFloat(serialized, "summonWindup", 0.7f);
+            SetInt(serialized, "maxMinions", 1);
+            SetFloat(serialized, "minionHealth", 3f);
+            SetFloat(serialized, "minionSpeed", 0f);
+            SetFloat(serialized, "minionScale", 0.55f);
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, OrcShamanPath);
+        }
+
+        private static Enemy BuildSwampy(Sprite fallback, EnemyHazard hazard)
+        {
+            GameObject root = CreateMonsterRoot(
+                "Swampy",
+                ThirdPartySprites.Swampy,
+                fallback,
+                ThirdPartySprites.SwampyIdle,
+                ThirdPartySprites.SwampyRun,
+                1f,
+                0.4f);
+
+            var enemy = root.AddComponent<TrapperEnemy>();
+            var serialized = ConfigureMonster(enemy, 1.5f, 0.7f, 1);
+            SetObject(serialized, "hazardPrefab", hazard);
+            SetFloat(serialized, "triggerRange", 3f);
+            SetFloat(serialized, "dropInterval", 3f);
+            SetFloat(serialized, "dropWindup", 0.45f);
+            SetInt(serialized, "hazardDamage", 1);
+            SetFloat(serialized, "hazardTickInterval", 0.9f);
+            SetFloat(serialized, "hazardLifetime", 2.8f);
+            SetFloat(serialized, "hazardRadius", 1.1f);
+            SetFloat(serialized, "slowFactor", 0.8f);
+            SetFloat(serialized, "slowDuration", 0.4f);
+            SetColor(serialized, "hazardTint", new Color(0.45f, 0.9f, 0.35f, 0.55f));
+            SetColor(serialized, "windupTint", new Color(0.6f, 1f, 0.5f, 1f));
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, SwampyPath);
+        }
+
+        private static Enemy BuildTinyZombieCloud(Sprite fallback, EnemyHazard hazard)
+        {
+            GameObject root = CreateMonsterRoot(
+                "TinyZombieCloud",
+                ThirdPartySprites.TinyZombie,
+                fallback,
+                ThirdPartySprites.TinyZombieIdle,
+                ThirdPartySprites.TinyZombieRun,
+                1f,
+                0.28f);
+
+            var enemy = root.AddComponent<DeathCloudEnemy>();
+            var serialized = ConfigureMonster(enemy, 1f, 1.15f, 1);
+            SetObject(serialized, "hazardPrefab", hazard);
+            SetInt(serialized, "cloudDamage", 1);
+            SetFloat(serialized, "cloudRadius", 1.2f);
+            SetFloat(serialized, "cloudLifetime", 2f);
+            SetFloat(serialized, "cloudTickInterval", 0.8f);
+            SetColor(serialized, "cloudTint", new Color(0.45f, 1f, 0.35f, 0.55f));
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, TinyZombieCloudPath);
+        }
+
+        private static GameObject CreateMonsterRoot(
+            string name,
+            Sprite art,
+            Sprite fallback,
+            Sprite[] idle,
+            Sprite[] run,
+            float scale,
+            float colliderRadius)
+        {
+            var root = new GameObject(name);
+
+            var renderer = root.AddComponent<SpriteRenderer>();
+            renderer.sprite = ArtOr(art, fallback);
+            renderer.color = Color.white;
+            renderer.sortingOrder = 8;
+
+            var body = root.AddComponent<Rigidbody2D>();
+            body.gravityScale = 0f;
+            body.constraints = RigidbodyConstraints2D.FreezeRotation;
+            body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            body.interpolation = RigidbodyInterpolation2D.Interpolate;
+
+            var collider = root.AddComponent<CircleCollider2D>();
+            collider.radius = colliderRadius;
+
+            root.transform.localScale = Vector3.one * scale;
+            AttachAnimator(root, idle, run);
+            return root;
+        }
+
+        private static SerializedObject ConfigureMonster(
+            Enemy enemy,
+            float healthMultiplier,
+            float speedMultiplier,
+            int contactDamage)
+        {
+            var serialized = new SerializedObject(enemy);
+            SetFloat(serialized, "healthMultiplier", healthMultiplier);
+            SetFloat(serialized, "speedMultiplier", speedMultiplier);
+            SetInt(serialized, "contactDamage", contactDamage);
+            return serialized;
+        }
+
+        private static T SaveMonster<T>(GameObject root, string path) where T : Component
+        {
+            GameObject saved = PrefabUtility.SaveAsPrefabAsset(root, path);
+            Object.DestroyImmediate(root);
+            return saved != null ? saved.GetComponent<T>() : null;
+        }
+
+        private static void SetFloat(SerializedObject serialized, string propertyName, float value)
+        {
+            SerializedProperty property = serialized.FindProperty(propertyName);
+            if (property != null) property.floatValue = value;
+        }
+
+        private static void SetInt(SerializedObject serialized, string propertyName, int value)
+        {
+            SerializedProperty property = serialized.FindProperty(propertyName);
+            if (property != null) property.intValue = value;
+        }
+
+        private static void SetBool(SerializedObject serialized, string propertyName, bool value)
+        {
+            SerializedProperty property = serialized.FindProperty(propertyName);
+            if (property != null) property.boolValue = value;
+        }
+
+        private static void SetColor(SerializedObject serialized, string propertyName, Color value)
+        {
+            SerializedProperty property = serialized.FindProperty(propertyName);
+            if (property != null) property.colorValue = value;
+        }
+
+        private static void SetObject(SerializedObject serialized, string propertyName, Object value)
+        {
+            SerializedProperty property = serialized.FindProperty(propertyName);
+            if (property != null) property.objectReferenceValue = value;
         }
 
         private static void BuildEnemyProjectile(Sprite sprite)

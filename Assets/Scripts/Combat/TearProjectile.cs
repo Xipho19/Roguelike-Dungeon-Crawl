@@ -23,6 +23,8 @@ namespace Roguelike.Combat
         public float auraDamage;
         public float auraRadius;
         public float auraInterval;
+        public int bounceCount;
+        public float bounceSpeedScale;
     }
 
     /// <summary>
@@ -68,6 +70,8 @@ namespace Roguelike.Combat
         private float _auraRadius;
         private float _auraInterval = 0.3f;
         private float _nextAuraTick;
+        private int _remainingBounces;
+        private float _bounceSpeedScale = 1f;
 
         private void Awake()
         {
@@ -105,6 +109,10 @@ namespace Roguelike.Combat
             _auraRadius = Mathf.Max(0f, modifiers.auraRadius);
             _auraInterval = modifiers.auraInterval > 0f ? modifiers.auraInterval : 0.3f;
             _nextAuraTick = Time.time + _auraInterval;
+            _remainingBounces = Mathf.Max(0, modifiers.bounceCount);
+            _bounceSpeedScale = modifiers.bounceSpeedScale > 0f
+                ? Mathf.Clamp(modifiers.bounceSpeedScale, 0.1f, 1f)
+                : 1f;
 
             if (_rb == null) _rb = GetComponent<Rigidbody2D>();
             _rb.linearVelocity = direction.normalized * speed;
@@ -276,8 +284,59 @@ namespace Roguelike.Combat
                 return;
             }
 
-            // 撞到实心墙体
-            if (!other.isTrigger) Destroy(gameObject);
+            // 撞到实心墙体：弹跳泪滴会反弹，其它眼泪直接消失
+            if (!other.isTrigger)
+            {
+                if (TryBounce(other)) return;
+                Destroy(gameObject);
+            }
+        }
+
+        /// <summary>弹跳泪滴：按墙体最近的表面反弹，并略微降低速度。</summary>
+        private bool TryBounce(Collider2D wall)
+        {
+            if (_remainingBounces <= 0 || _rb == null) return false;
+
+            Vector2 velocity = _rb.linearVelocity;
+            if (velocity.sqrMagnitude < 0.0001f) return false;
+
+            Vector2 position = _rb.position;
+            Vector2 closest = wall.ClosestPoint(position);
+            Vector2 delta = position - closest;
+
+            Vector2 normal;
+            if (delta.sqrMagnitude > 0.0001f)
+            {
+                normal = delta.normalized;
+            }
+            else
+            {
+                // 圆心已经进入墙内，用包围盒最近的一面作为反弹法线。
+                Bounds bounds = wall.bounds;
+                float left = Mathf.Abs(position.x - bounds.min.x);
+                float right = Mathf.Abs(position.x - bounds.max.x);
+                float bottom = Mathf.Abs(position.y - bounds.min.y);
+                float top = Mathf.Abs(position.y - bounds.max.y);
+                float nearest = Mathf.Min(Mathf.Min(left, right), Mathf.Min(bottom, top));
+
+                if (nearest == left) normal = Vector2.left;
+                else if (nearest == right) normal = Vector2.right;
+                else if (nearest == bottom) normal = Vector2.down;
+                else normal = Vector2.up;
+            }
+
+            _remainingBounces--;
+
+            Vector2 reflected = Vector2.Reflect(velocity.normalized, normal)
+                * velocity.magnitude
+                * _bounceSpeedScale;
+
+            _rb.position = position + normal * 0.12f;
+            _rb.linearVelocity = reflected;
+            transform.position = new Vector3(_rb.position.x, _rb.position.y, transform.position.z);
+
+            AudioService.Play("metalClick", 0.2f);
+            return true;
         }
 
         /// <summary>裂体寄生虫：首次命中后分裂成数颗较弱的小眼泪。</summary>
@@ -310,6 +369,7 @@ namespace Roguelike.Combat
                 modifiers.splitCount = 0;
                 modifiers.auraDamage = 0f;
                 modifiers.auraRadius = 0f;
+                modifiers.bounceCount = 0;
 
                 child.Initialize(
                     direction,

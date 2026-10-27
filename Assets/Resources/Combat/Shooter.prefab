@@ -172,6 +172,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Roguelike.Combat.ShooterEnemy
   maxHealth: 2
   moveSpeed: 2.4
+  healthMultiplier: 1
+  speedMultiplier: 1
   contactDamage: 1
   contactCooldown: 0.8
   combatContactGrace: 0.5
@@ -191,6 +193,10 @@ MonoBehaviour:
   windupTime: 0.55
   projectileSpeed: 6
   projectileLifetime: 4
+  projectileCount: 1
+  spreadAngle: 0
+  projectileTint: {r: 1, g: 1, b: 1, a: 1}
+  stationary: 0
 --- !u!114 &7006126213750111081
 MonoBehaviour:
   m_ObjectHideFlags: 0

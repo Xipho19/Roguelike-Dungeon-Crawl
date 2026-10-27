@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 809a1a0b1f10ffa4baec5a645412a5d9, type: 3}
+  m_Name: Item_CollectorHeart
+  m_EditorClassIdentifier: Assembly-CSharp::Roguelike.Items.ItemDefinition
+  itemName: "\u6536\u85CF\u5BB6\u4E4B\u5FC3"
+  description: "\u88AB\u52A8\uFF1A\u6BCF\u6301\u6709 5 \u4EF6\u9053\u5177\uFF0C\u4F24\u5BB3
+    +0.5\uFF08\u6700\u591A +3\uFF09\u3002"
+  rarity: 2
+  icon: {fileID: 21300000, guid: 2d6983a645fedb84dbd3fe9498bcad44, type: 3}
+  color: {r: 0.84, g: 0.64, b: 0.28, a: 1}
+  modifiers: []
+  coinBonus: 0
+  healAmount: 0
+  effectPower: 3
+  effectRadius: 0
+  triggerCount: 5
+  synergy: 17
+  shopPrice: 15

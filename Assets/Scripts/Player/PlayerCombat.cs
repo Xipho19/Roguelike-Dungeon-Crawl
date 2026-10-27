@@ -29,6 +29,9 @@ namespace Roguelike.Player
         [Tooltip("用于金币加伤类道具；留空时自动查找")]
         [SerializeField] private PlayerWallet wallet;
 
+        [Tooltip("用于低血量增伤类道具；留空时自动查找")]
+        [SerializeField] private PlayerHealth health;
+
         [Tooltip("没有 PlayerStats 时的回退值")]
         [SerializeField] private float fireInterval = 0.24f;
 
@@ -45,6 +48,7 @@ namespace Roguelike.Player
         private Camera _camera;
         private PlayerStats _stats;
         private float _nextFireTime;
+        private int _shotCounter;
 
         private void Awake()
         {
@@ -53,6 +57,7 @@ namespace Roguelike.Player
             if (inventory == null) inventory = GetComponent<PlayerInventory>();
             if (tracker == null) tracker = GetComponent<PlayerRoomTracker>();
             if (wallet == null) wallet = GetComponent<PlayerWallet>();
+            if (health == null) health = GetComponent<PlayerHealth>();
         }
 
         private void Start()
@@ -103,12 +108,55 @@ namespace Roguelike.Player
             ItemDefinition coinDamage = inventory != null
                 ? inventory.FindSynergyItem(ItemSynergy.CoinDamage)
                 : null;
+            ItemDefinition bloodRage = inventory != null
+                ? inventory.FindSynergyItem(ItemSynergy.BloodRage)
+                : null;
+            ItemDefinition collector = inventory != null
+                ? inventory.FindSynergyItem(ItemSynergy.ItemCountDamage)
+                : null;
+            ItemDefinition rhythm = inventory != null
+                ? inventory.FindSynergyItem(ItemSynergy.EveryNthShot)
+                : null;
+            ItemDefinition bounce = inventory != null
+                ? inventory.FindSynergyItem(ItemSynergy.BounceTears)
+                : null;
 
             if (coinDamage != null && wallet != null)
             {
                 float step = coinDamage.effectRadius >= 1f ? coinDamage.effectRadius : 10f;
                 float maxBonus = coinDamage.effectPower > 0f ? coinDamage.effectPower : 2f;
                 damage += Mathf.Min(maxBonus, Mathf.Floor(wallet.Coins / step) * 0.5f);
+            }
+
+            // 血怒：生命越低，伤害越高，最多 effectPower。
+            if (bloodRage != null && health != null && health.MaxHealth > 0)
+            {
+                float missing = 1f - Mathf.Clamp01((float)health.Health / health.MaxHealth);
+                damage += Mathf.Max(0f, bloodRage.effectPower) * missing;
+            }
+
+            // 收藏家之心：每持有 triggerCount 件道具，伤害 +0.5，最多 effectPower。
+            if (collector != null && inventory != null)
+            {
+                int step = Mathf.Max(1, collector.triggerCount);
+                float bonus = Mathf.Floor((float)inventory.Items.Count / step) * 0.5f;
+                damage += Mathf.Min(Mathf.Max(0f, collector.effectPower), bonus);
+            }
+
+            // 节拍器：每第 triggerCount 次射击额外发射 effectPower 发。
+            if (rhythm != null)
+            {
+                _shotCounter++;
+                int every = Mathf.Max(1, rhythm.triggerCount);
+                if (_shotCounter >= every)
+                {
+                    _shotCounter = 0;
+                    shots += Mathf.Max(1, Mathf.RoundToInt(rhythm.effectPower));
+                }
+            }
+            else
+            {
+                _shotCounter = 0;
             }
 
             var modifiers = new TearModifiers
@@ -127,6 +175,8 @@ namespace Roguelike.Player
                 auraDamage = aura != null ? aura.effectPower : 0f,
                 auraRadius = aura != null ? aura.effectRadius : 0f,
                 auraInterval = 0.3f,
+                bounceCount = bounce != null ? Mathf.Max(0, bounce.triggerCount) : 0,
+                bounceSpeedScale = bounce != null ? Mathf.Clamp(bounce.effectPower, 0.1f, 1f) : 1f,
             };
 
             _nextFireTime = Time.time + interval;

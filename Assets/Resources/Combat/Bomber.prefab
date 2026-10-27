@@ -172,6 +172,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Roguelike.Combat.BomberEnemy
   maxHealth: 2
   moveSpeed: 2.4
+  healthMultiplier: 1
+  speedMultiplier: 1
   contactDamage: 1
   contactCooldown: 0.8
   combatContactGrace: 0.5

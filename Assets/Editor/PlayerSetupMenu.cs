@@ -52,7 +52,8 @@ namespace Roguelike.EditorTools
                 AssetDatabase.LoadAssetAtPath<BomberEnemy>(CombatPrefabFactory.BomberPath) == null ||
                 AssetDatabase.LoadAssetAtPath<NecromancerEnemy>(CombatPrefabFactory.NecromancerPath) == null ||
                 AssetDatabase.LoadAssetAtPath<SplitterEnemy>(CombatPrefabFactory.SplitterPath) == null ||
-                AssetDatabase.LoadAssetAtPath<TearProjectile>(CombatPrefabFactory.TearPath) == null)
+                AssetDatabase.LoadAssetAtPath<TearProjectile>(CombatPrefabFactory.TearPath) == null ||
+                !CombatPrefabFactory.RosterPrefabsExist())
                 CombatPrefabFactory.Rebuild();
 
             ItemAssetFactory.EnsureItems();
@@ -108,6 +109,7 @@ namespace Roguelike.EditorTools
             if (tearPrefab != null)
                 combatObject.FindProperty("tearPrefab").objectReferenceValue = tearPrefab;
             combatObject.FindProperty("inventory").objectReferenceValue = inventory;
+            combatObject.FindProperty("health").objectReferenceValue = health;
             combatObject.ApplyModifiedPropertiesWithoutUndo();
 
             // 触发型被动
@@ -231,6 +233,7 @@ namespace Roguelike.EditorTools
             var effectsObject = new SerializedObject(itemEffects);
             effectsObject.FindProperty("inventory").objectReferenceValue = inventory;
             effectsObject.FindProperty("health").objectReferenceValue = health;
+            effectsObject.FindProperty("controller").objectReferenceValue = player.GetComponent<PlayerController>();
             effectsObject.FindProperty("tracker").objectReferenceValue = tracker;
             effectsObject.FindProperty("flow").objectReferenceValue = flow;
             effectsObject.FindProperty("runManager").objectReferenceValue = runManager;

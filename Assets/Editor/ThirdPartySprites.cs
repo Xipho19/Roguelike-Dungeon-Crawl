@@ -49,6 +49,47 @@ namespace Roguelike.EditorTools
         public static Sprite[] SplitterRun => LoadFrames("frames/anim/splitter_run", 4);
         public static Sprite[] TinyZombieIdle => LoadFrames("frames/anim/tiny_zombie_idle", 4);
         public static Sprite[] TinyZombieRun => LoadFrames("frames/anim/tiny_zombie_run", 4);
+
+        // 0x72 完整包新增怪物：三层各自的小怪池
+        public static Sprite[] GoblinIdle => LoadFrames("frames/anim/goblin_idle", 4);
+        public static Sprite[] GoblinRun => LoadFrames("frames/anim/goblin_run", 4);
+        public static Sprite[] OrcWarriorIdle => LoadFrames("frames/anim/orc_warrior_idle", 4);
+        public static Sprite[] OrcWarriorRun => LoadFrames("frames/anim/orc_warrior_run", 4);
+        public static Sprite[] OrcShamanIdle => LoadFrames("frames/anim/orc_shaman_idle", 4);
+        public static Sprite[] OrcShamanRun => LoadFrames("frames/anim/orc_shaman_run", 4);
+        public static Sprite[] ImpIdle => LoadFrames("frames/anim/imp_idle", 4);
+        public static Sprite[] ImpRun => LoadFrames("frames/anim/imp_run", 4);
+        public static Sprite[] ChortIdle => LoadFrames("frames/anim/chort_idle", 4);
+        public static Sprite[] ChortRun => LoadFrames("frames/anim/chort_run", 4);
+        public static Sprite[] MaskedOrcIdle => LoadFrames("frames/anim/masked_orc_idle", 4);
+        public static Sprite[] MaskedOrcRun => LoadFrames("frames/anim/masked_orc_run", 4);
+        public static Sprite[] MuddyIdle => LoadFrames("frames/anim/muddy_idle", 4);
+        public static Sprite[] MuddyRun => LoadFrames("frames/anim/muddy_run", 4);
+        public static Sprite[] SwampyIdle => LoadFrames("frames/anim/swampy_idle", 4);
+        public static Sprite[] SwampyRun => LoadFrames("frames/anim/swampy_run", 4);
+        public static Sprite[] WogolIdle => LoadFrames("frames/anim/wogol_idle", 4);
+        public static Sprite[] WogolRun => LoadFrames("frames/anim/wogol_run", 4);
+        public static Sprite[] ZombieIdle => LoadFrames("frames/anim/zombie_idle", 4);
+        public static Sprite[] ZombieRun => LoadFrames("frames/anim/zombie_run", 4);
+        public static Sprite[] IceZombieIdle => LoadFrames("frames/anim/ice_zombie_idle", 4);
+        public static Sprite[] IceZombieRun => LoadFrames("frames/anim/ice_zombie_run", 4);
+        public static Sprite[] SkeletIdle => LoadFrames("frames/anim/skelet_idle", 4);
+        public static Sprite[] SkeletRun => LoadFrames("frames/anim/skelet_run", 4);
+
+        public static Sprite Goblin => Load("frames/anim/goblin_idle_0.png");
+        public static Sprite OrcWarrior => Load("frames/anim/orc_warrior_idle_0.png");
+        public static Sprite OrcShaman => Load("frames/anim/orc_shaman_idle_0.png");
+        public static Sprite Imp => Load("frames/anim/imp_idle_0.png");
+        public static Sprite Chort => Load("frames/anim/chort_idle_0.png");
+        public static Sprite MaskedOrc => Load("frames/anim/masked_orc_idle_0.png");
+        public static Sprite Muddy => Load("frames/anim/muddy_idle_0.png");
+        public static Sprite Swampy => Load("frames/anim/swampy_idle_0.png");
+        public static Sprite Wogol => Load("frames/anim/wogol_idle_0.png");
+        public static Sprite Zombie => Load("frames/anim/zombie_idle_0.png");
+        public static Sprite IceZombie => Load("frames/anim/ice_zombie_idle_0.png");
+        public static Sprite Skelet => Load("frames/anim/skelet_idle_0.png");
+        public static Sprite Hazard => Load("frames/hazard.png");
+
         public static Sprite Bomber => Load("frames/anim/bomber_idle_0.png");
         public static Sprite Necromancer => Load("frames/anim/necromancer_idle_0.png");
         public static Sprite Skeleton => Load("frames/anim/skeleton_idle_0.png");
@@ -106,6 +147,12 @@ namespace Roguelike.EditorTools
         public static Sprite GhostPrismIcon => Load("frames/icons/icon_ghost_prism.png");
         public static Sprite WindFeatherIcon => Load("frames/icons/icon_wind_feather.png");
         public static Sprite BloodPactIcon => Load("frames/icons/icon_blood_pact.png");
+        public static Sprite BounceTearIcon => Load("frames/icons/icon_bounce_tear.png");
+        public static Sprite BloodRageIcon => Load("frames/icons/icon_blood_rage.png");
+        public static Sprite CollectorHeartIcon => Load("frames/icons/icon_collector_heart.png");
+        public static Sprite MetronomeIcon => Load("frames/icons/icon_metronome.png");
+        public static Sprite HunterBootsIcon => Load("frames/icons/icon_hunter_boots.png");
+        public static Sprite KillEmberIcon => Load("frames/icons/icon_kill_ember.png");
         public static Sprite Floor => Load("dungeon-floor/floor_1.png");
         public static Sprite Wall => Load("dungeon-walls/wall_mid.png");
         public static Sprite Door => Load("dungeon-doors/doors_leaf_closed.png");

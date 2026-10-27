@@ -20,6 +20,7 @@ namespace Roguelike.Player
     {
         [SerializeField] private PlayerInventory inventory;
         [SerializeField] private PlayerHealth health;
+        [SerializeField] private PlayerController controller;
         [SerializeField] private PlayerRoomTracker tracker;
         [SerializeField] private DungeonFlowController flow;
         [SerializeField] private RunManager runManager;
@@ -29,12 +30,14 @@ namespace Roguelike.Player
         [SerializeField] private Sprite explosionSprite;
 
         private int _killCount;
+        private int _killShieldCount;
         private bool _deathExplosionActive;
 
         private void Awake()
         {
             if (inventory == null) inventory = GetComponent<PlayerInventory>();
             if (health == null) health = GetComponent<PlayerHealth>();
+            if (controller == null) controller = GetComponent<PlayerController>();
             if (tracker == null) tracker = GetComponent<PlayerRoomTracker>();
             if (flow == null) flow = FindFirstObjectByType<DungeonFlowController>();
             if (runManager == null) runManager = FindFirstObjectByType<RunManager>();
@@ -74,13 +77,22 @@ namespace Roguelike.Player
             if (inventory == null || health == null || health.IsDead) return;
 
             HandleKillHeal();
+            HandleKillShield();
+            HandleKillHaste();
             HandleDeathExplosion(enemy);
         }
 
-        /// <summary>余烬圣餐：每清空一个房间回复生命。</summary>
+        /// <summary>清空房间时结算回复生命类道具。</summary>
         private void HandleRoomCleared(RoomView room)
         {
             if (inventory == null || health == null || health.IsDead) return;
+
+            HandleRoomClearHeal();
+        }
+
+        /// <summary>余烬圣餐：每清空一个房间回复生命。</summary>
+        private void HandleRoomClearHeal()
+        {
             if (health.Health >= health.MaxHealth) return;
 
             ItemDefinition meal = inventory.FindSynergyItem(ItemSynergy.RoomClearHeal);
@@ -122,6 +134,37 @@ namespace Roguelike.Player
             health.Heal(amount);
 
             if (hud != null) hud.ShowToast($"{fang.itemName}：回复 {amount} 点生命", 1.8f);
+        }
+
+        /// <summary>杀戮余烬：每击杀若干个敌人，获得短暂无敌。</summary>
+        private void HandleKillShield()
+        {
+            ItemDefinition ember = inventory.FindSynergyItem(ItemSynergy.KillShield);
+            if (ember == null)
+            {
+                _killShieldCount = 0;
+                return;
+            }
+
+            _killShieldCount++;
+            if (_killShieldCount < Mathf.Max(1, ember.triggerCount)) return;
+
+            _killShieldCount = 0;
+
+            float duration = Mathf.Max(0.1f, ember.effectPower);
+            health.GrantInvulnerability(duration);
+
+            if (hud != null)
+                hud.ShowToast($"{ember.itemName}：无敌 {duration:0.0} 秒", 1.2f);
+        }
+
+        /// <summary>猎手之靴：击杀敌人后获得短暂移动加速。</summary>
+        private void HandleKillHaste()
+        {
+            ItemDefinition boots = inventory.FindSynergyItem(ItemSynergy.KillHaste);
+            if (boots == null || controller == null) return;
+
+            controller.ApplySpeedBoost(1.3f, Mathf.Max(0.1f, boots.effectPower));
         }
 
         private void HandleDeathExplosion(Enemy killed)
@@ -193,6 +236,7 @@ namespace Roguelike.Player
         public void ResetKillCount()
         {
             _killCount = 0;
+            _killShieldCount = 0;
         }
     }
 }
