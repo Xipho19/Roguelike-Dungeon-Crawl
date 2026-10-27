@@ -43,15 +43,39 @@ namespace Roguelike.Items
         private PlayerInventory _playerInventory;
         private PlayerHealth _playerHealth;
         private PlayerWallet _playerWallet;
+        private PlayerInventory _priceInventory;
 
         private bool _dialogVisible;
         private bool _dismissed;
         private bool _pausedByDialog;
 
         public ItemDefinition Item => item;
-        public int Price => price;
         public bool IsDialogVisible => _dialogVisible;
-        public bool CanAfford => _playerWallet != null && _playerWallet.Coins >= price;
+        public bool CanAfford => _playerWallet != null && _playerWallet.Coins >= Price;
+
+        /// <summary>
+        /// 实时价格：基础价 + 楼层加价已经写入 price；
+        /// 折扣券在显示/购买时再结算，保证在商店里买到折扣券后其它商品立刻半价。
+        /// </summary>
+        public int Price
+        {
+            get
+            {
+                if (price <= 0) return 0;
+
+                PlayerInventory inventory = _playerInventory != null ? _playerInventory : _priceInventory;
+                if (inventory == null)
+                {
+                    inventory = FindFirstObjectByType<PlayerInventory>();
+                    _priceInventory = inventory;
+                }
+
+                if (inventory != null && inventory.HasSynergy(ItemSynergy.ShopDiscount))
+                    return Mathf.Max(1, Mathf.CeilToInt(price * 0.5f));
+
+                return price;
+            }
+        }
 
         public void Setup(ItemDefinition definition, RoomView room, int cost = 0)
         {
@@ -170,8 +194,10 @@ namespace Roguelike.Items
         public void Buy()
         {
             if (!_dialogVisible || item == null) return;
-            if (_playerWallet == null || _playerWallet.Coins < price) return;
-            if (!_playerWallet.TrySpend(price)) return;
+
+            int cost = Price;
+            if (_playerWallet == null || _playerWallet.Coins < cost) return;
+            if (!_playerWallet.TrySpend(cost)) return;
 
             var inventory = _playerInventory;
             var health = _playerHealth;
@@ -246,7 +272,7 @@ namespace Roguelike.Items
 
             float priceX = priceScreen.x;
             float priceY = Screen.height - priceScreen.y;
-            GUI.Box(new Rect(priceX - 46f, priceY - 11f, 92f, 22f), price + " 金币", _priceStyle);
+            GUI.Box(new Rect(priceX - 46f, priceY - 11f, 92f, 22f), Price + " 金币", _priceStyle);
         }
 
         private void DrawDialog()
@@ -314,7 +340,7 @@ namespace Roguelike.Items
             int coins = _playerWallet != null ? _playerWallet.Coins : 0;
             GUI.Label(
                 new Rect(panel.x + 28f, panel.y + 202f, panel.width - 56f, 28f),
-                $"价格 {price} 金币    持有 {coins}",
+                $"价格 {Price} 金币    持有 {coins}",
                 _dialogPriceStyle);
 
             bool canAfford = CanAfford;

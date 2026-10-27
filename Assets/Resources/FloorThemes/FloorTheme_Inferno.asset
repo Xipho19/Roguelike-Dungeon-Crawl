@@ -17,3 +17,4 @@ MonoBehaviour:
   floorTint: {r: 1, g: 0.72, b: 0.58, a: 1}
   wallTint: {r: 1, g: 0.66, b: 0.52, a: 1}
   cameraBackground: {r: 0.09, g: 0.02, b: 0.015, a: 1}
+  bossVisual: 2

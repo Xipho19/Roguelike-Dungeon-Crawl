@@ -2,6 +2,13 @@ using UnityEngine;
 
 namespace Roguelike.Dungeon
 {
+    public enum FloorBossVisual
+    {
+        Ogre = 0,
+        BigZombie = 1,
+        BigDemon = 2,
+    }
+
     /// <summary>
     /// 一层地牢的视觉主题：名称、地板/墙体染色、相机背景。
     /// 资产放在 Resources/FloorThemes，由 RunManager 按 order 排序后循环使用。
@@ -24,5 +31,9 @@ namespace Roguelike.Dungeon
 
         [Tooltip("相机纯色背景")]
         public Color cameraBackground = new Color(0.055f, 0.05f, 0.075f, 1f);
+
+        [Header("Boss")]
+        [Tooltip("该主题楼层使用的 Boss 形象")]
+        public FloorBossVisual bossVisual = FloorBossVisual.BigDemon;
     }
 }

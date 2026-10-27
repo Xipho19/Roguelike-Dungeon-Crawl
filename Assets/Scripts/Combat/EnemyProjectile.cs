@@ -10,14 +10,21 @@ namespace Roguelike.Combat
     public sealed class EnemyProjectile : MonoBehaviour
     {
         private Rigidbody2D _rb;
+        private SpriteRenderer _renderer;
+        private Vector3 _baseScale = Vector3.one;
         private int _damage;
         private float _dieAt;
+        private Transform _homingTarget;
+        private float _homingTurnSpeed;
 
         private void Awake()
         {
             _rb = GetComponent<Rigidbody2D>();
             _rb.gravityScale = 0f;
             _rb.constraints = RigidbodyConstraints2D.FreezeRotation;
+
+            _renderer = GetComponentInChildren<SpriteRenderer>();
+            _baseScale = transform.localScale;
         }
 
         public void Initialize(Vector2 direction, float speed, int damage, float lifetime)
@@ -29,9 +36,54 @@ namespace Roguelike.Combat
             _rb.linearVelocity = direction.normalized * speed;
         }
 
+        /// <summary>按 Boss 类型给弹丸染色/缩放；只影响这一颗。</summary>
+        public void ConfigureVisual(Color tint, float scale = 1f)
+        {
+            if (_renderer == null) _renderer = GetComponentInChildren<SpriteRenderer>();
+            if (_renderer != null) _renderer.color = tint;
+
+            transform.localScale = _baseScale * Mathf.Max(0.1f, scale);
+        }
+
+        /// <summary>让弹丸缓慢转向目标（追踪火球）。</summary>
+        public void SetHoming(Transform target, float turnSpeedDegrees)
+        {
+            _homingTarget = target;
+            _homingTurnSpeed = Mathf.Max(0f, turnSpeedDegrees);
+        }
+
         private void Update()
         {
-            if (Time.time >= _dieAt) Destroy(gameObject);
+            if (Time.time >= _dieAt)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            if (_homingTarget == null || _homingTurnSpeed <= 0f || _rb == null) return;
+
+            Vector2 velocity = _rb.linearVelocity;
+            if (velocity.sqrMagnitude < 0.0001f) return;
+
+            Vector2 toTarget = (Vector2)_homingTarget.position - _rb.position;
+            if (toTarget.sqrMagnitude < 0.0001f) return;
+
+            float angle = Vector2.SignedAngle(velocity, toTarget);
+            float maxStep = _homingTurnSpeed * Time.deltaTime;
+            float step = Mathf.Clamp(angle, -maxStep, maxStep);
+
+            _rb.linearVelocity = Rotate(velocity.normalized, step) * velocity.magnitude;
+        }
+
+        private static Vector2 Rotate(Vector2 direction, float degrees)
+        {
+            float radians = degrees * Mathf.Deg2Rad;
+            float cos = Mathf.Cos(radians);
+            float sin = Mathf.Sin(radians);
+
+            return new Vector2(
+                direction.x * cos - direction.y * sin,
+                direction.x * sin + direction.y * cos);
         }
 
         private void OnTriggerEnter2D(Collider2D other)

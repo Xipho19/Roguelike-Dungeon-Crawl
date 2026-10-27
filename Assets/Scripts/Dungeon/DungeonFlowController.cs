@@ -361,13 +361,9 @@ namespace Roguelike.Dungeon
                 ? item.shopPrice
                 : 5 + (item.modifiers != null ? item.modifiers.Count * 2 : 0);
 
-            int price = Mathf.Max(1, basePrice + ShopPriceBonus);
-
-            // 折扣券：商店商品半价（向上取整，最低 1 金币）
-            if (_playerInventory != null && _playerInventory.HasSynergy(ItemSynergy.ShopDiscount))
-                price = Mathf.Max(1, Mathf.CeilToInt(price * 0.5f));
-
-            return price;
+            // 折扣券不在上架时结算：ItemPickup 会按当前背包实时计算半价，
+            // 这样在商店里买到折扣券后，货架上其它商品也会立刻降价。
+            return Mathf.Max(1, basePrice + ShopPriceBonus);
         }
 
         /// <summary>宝箱房首次进入时生成一个随机道具，领取后不再刷新。</summary>
@@ -644,7 +640,10 @@ namespace Roguelike.Dungeon
                     playSpawnAnimation);
 
                 if (isBoss && enemy is BossEnemy boss)
+                {
                     boss.ApplyFloorScaling(_floor);
+                    boss.SetVisual(_floorTheme != null ? _floorTheme.bossVisual : FloorBossVisual.BigDemon);
+                }
 
                 RegisterEnemy(enemy, room);
 

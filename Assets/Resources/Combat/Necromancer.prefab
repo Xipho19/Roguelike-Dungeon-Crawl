@@ -174,12 +174,16 @@ MonoBehaviour:
   moveSpeed: 2.4
   contactDamage: 1
   contactCooldown: 0.8
+  combatContactGrace: 0.5
   separationRadius: 0.95
   separationStrength: 2.2
   avoidanceLookAhead: 0.35
-  avoidanceAngleStep: 25
+  avoidanceAngleStep: 15
   stuckCheckInterval: 0.6
   spawnDuration: 0.22
+  wanderSpeedFactor: 0.35
+  wanderIntervalMin: 1.5
+  wanderIntervalMax: 3.5
   body: {fileID: 0}
   minionPrefab: {fileID: 2063620471487963039, guid: 57d86c622dbf3f143a5212d23edbb883, type: 3}
   preferredDistance: 5

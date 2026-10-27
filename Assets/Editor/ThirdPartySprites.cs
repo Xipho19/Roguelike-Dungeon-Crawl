@@ -33,6 +33,10 @@ namespace Roguelike.EditorTools
         public static Sprite[] EnemyChargerRun => LoadFrames("frames/anim/enemy_charger_run", 4);
         public static Sprite[] BossIdle => LoadFrames("frames/anim/boss_idle", 4);
         public static Sprite[] BossRun => LoadFrames("frames/anim/boss_run", 4);
+        public static Sprite[] OgreIdle => LoadFrames("frames/anim/ogre_idle", 4);
+        public static Sprite[] OgreRun => LoadFrames("frames/anim/ogre_run", 4);
+        public static Sprite[] BigZombieIdle => LoadFrames("frames/anim/big_zombie_idle", 4);
+        public static Sprite[] BigZombieRun => LoadFrames("frames/anim/big_zombie_run", 4);
 
         // 新敌人：自爆史莱姆 / 亡灵法师 / 分裂僵尸及其召唤物
         public static Sprite[] BomberIdle => LoadFrames("frames/anim/bomber_idle", 4);

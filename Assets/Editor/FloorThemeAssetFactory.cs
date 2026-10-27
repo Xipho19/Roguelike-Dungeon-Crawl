@@ -46,7 +46,8 @@ namespace Roguelike.EditorTools
                 0,
                 Color.white,
                 Color.white,
-                DungeonBackground);
+                DungeonBackground,
+                FloorBossVisual.Ogre);
 
             CreateOrUpdate(
                 CryptPath,
@@ -54,7 +55,8 @@ namespace Roguelike.EditorTools
                 1,
                 CryptFloorTint,
                 CryptWallTint,
-                CryptBackground);
+                CryptBackground,
+                FloorBossVisual.BigZombie);
 
             CreateOrUpdate(
                 InfernoPath,
@@ -62,7 +64,8 @@ namespace Roguelike.EditorTools
                 2,
                 InfernoFloorTint,
                 InfernoWallTint,
-                InfernoBackground);
+                InfernoBackground,
+                FloorBossVisual.BigDemon);
 
             AssetDatabase.SaveAssets();
             Debug.Log("[FloorTheme] 已生成 3 套楼层主题");
@@ -79,7 +82,8 @@ namespace Roguelike.EditorTools
                 0,
                 Color.white,
                 Color.white,
-                DungeonBackground);
+                DungeonBackground,
+                FloorBossVisual.Ogre);
 
             Ensure(
                 CryptPath,
@@ -87,7 +91,8 @@ namespace Roguelike.EditorTools
                 1,
                 CryptFloorTint,
                 CryptWallTint,
-                CryptBackground);
+                CryptBackground,
+                FloorBossVisual.BigZombie);
 
             Ensure(
                 InfernoPath,
@@ -95,7 +100,8 @@ namespace Roguelike.EditorTools
                 2,
                 InfernoFloorTint,
                 InfernoWallTint,
-                InfernoBackground);
+                InfernoBackground,
+                FloorBossVisual.BigDemon);
 
             AssetDatabase.SaveAssets();
         }
@@ -106,7 +112,8 @@ namespace Roguelike.EditorTools
             int order,
             Color floorTint,
             Color wallTint,
-            Color cameraBackground)
+            Color cameraBackground,
+            FloorBossVisual bossVisual)
         {
             FloorTheme theme = AssetDatabase.LoadAssetAtPath<FloorTheme>(path);
             if (theme == null)
@@ -120,6 +127,7 @@ namespace Roguelike.EditorTools
             theme.floorTint = floorTint;
             theme.wallTint = wallTint;
             theme.cameraBackground = cameraBackground;
+            theme.bossVisual = bossVisual;
 
             EditorUtility.SetDirty(theme);
         }
@@ -130,11 +138,23 @@ namespace Roguelike.EditorTools
             int order,
             Color floorTint,
             Color wallTint,
-            Color cameraBackground)
+            Color cameraBackground,
+            FloorBossVisual bossVisual)
         {
-            if (AssetDatabase.LoadAssetAtPath<FloorTheme>(path) != null) return;
+            FloorTheme existing = AssetDatabase.LoadAssetAtPath<FloorTheme>(path);
+            if (existing != null)
+            {
+                // 旧资产可能没有 bossVisual 序列化字段，补齐但不改配色
+                if (existing.bossVisual != bossVisual)
+                {
+                    existing.bossVisual = bossVisual;
+                    EditorUtility.SetDirty(existing);
+                }
 
-            CreateOrUpdate(path, displayName, order, floorTint, wallTint, cameraBackground);
+                return;
+            }
+
+            CreateOrUpdate(path, displayName, order, floorTint, wallTint, cameraBackground, bossVisual);
         }
 
         private static void EnsureFolder(string path)

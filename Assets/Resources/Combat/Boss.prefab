@@ -174,12 +174,16 @@ MonoBehaviour:
   moveSpeed: 2.4
   contactDamage: 1
   contactCooldown: 0.8
+  combatContactGrace: 0.5
   separationRadius: 0.95
   separationStrength: 2.2
   avoidanceLookAhead: 0.35
-  avoidanceAngleStep: 25
+  avoidanceAngleStep: 15
   stuckCheckInterval: 0.6
   spawnDuration: 0.22
+  wanderSpeedFactor: 0.35
+  wanderIntervalMin: 1.5
+  wanderIntervalMax: 3.5
   body: {fileID: 0}
   projectilePrefab: {fileID: 0}
   chaseDuration: 2
@@ -187,10 +191,68 @@ MonoBehaviour:
   chargeWindup: 0.6
   chargeDuration: 0.5
   chargeSpeed: 11
-  radialBullets: 8
   projectileSpeed: 5
   projectileLifetime: 4
+  ogreChargeCount: 3
+  ogreChargePause: 0.18
+  slamWindup: 0.8
+  slamRadius: 2.8
+  slamDamage: 2
+  slamSprite: {fileID: 21300000, guid: dd6fd90a06ee5174d8ea4ccef3cca25b, type: 3}
+  minionPrefab: {fileID: 2063620471487963039, guid: 57d86c622dbf3f143a5212d23edbb883, type: 3}
+  summonCount: 2
+  maxSummons: 4
+  summonWindup: 0.7
+  volleyCount: 5
+  volleySpread: 50
+  volleySpeed: 4.5
+  zombieProjectileTint: {r: 0.55, g: 1, b: 0.55, a: 1}
+  spiralWaves: 3
+  spiralBullets: 10
+  spiralStep: 15
+  spiralWaveInterval: 0.22
+  homingCount: 3
+  homingSpeed: 3.2
+  homingTurnSpeed: 140
+  homingLifetime: 4
+  demonProjectileTint: {r: 1, g: 0.55, b: 0.25, a: 1}
   phase2Threshold: 0.5
+  extraBulletEveryFloors: 2
+  maxExtraBullets: 2
+  projectileSpeedGrowthPerFloor: 0.04
+  maxProjectileSpeedBonus: 0.15
+  chargeSpeedGrowthPerFloor: 0.03
+  maxChargeSpeedBonus: 0.12
+  ogreIdleFrames:
+  - {fileID: 21300000, guid: ea0120cdb75ebe2428a5ca61dab2055f, type: 3}
+  - {fileID: 21300000, guid: 8c8c0884ea51cab47a1c8f6d07dc287d, type: 3}
+  - {fileID: 21300000, guid: 28494d102cc4a4e42b6875aacc15cd35, type: 3}
+  - {fileID: 21300000, guid: 176d5f82d10faff4295aedab9c007ab0, type: 3}
+  ogreRunFrames:
+  - {fileID: 21300000, guid: c166152048345d447821b017e273cc68, type: 3}
+  - {fileID: 21300000, guid: d50f0b94d6bbf224aaf1634a8f0c62d0, type: 3}
+  - {fileID: 21300000, guid: 803d217f2257c4542ba6a8d2a7b7fa78, type: 3}
+  - {fileID: 21300000, guid: 85eade65b3b0a46449398c06549ab1d7, type: 3}
+  bigZombieIdleFrames:
+  - {fileID: 21300000, guid: d6756fab3ce9ee644b1dab707d7e288b, type: 3}
+  - {fileID: 21300000, guid: 253888185e9176f4cbaf78a58a56a9d3, type: 3}
+  - {fileID: 21300000, guid: ebdcccd2d8571c6439f4a9df5ede7678, type: 3}
+  - {fileID: 21300000, guid: 7edc77ab6b7ccb148b92d3a37b565180, type: 3}
+  bigZombieRunFrames:
+  - {fileID: 21300000, guid: 91ca00e10dcc14345817be0e15e3960b, type: 3}
+  - {fileID: 21300000, guid: ca34b3ee51d335548a6ec42ecc6c9a31, type: 3}
+  - {fileID: 21300000, guid: d63ca7e84e876c84f9d000b2c96c21a8, type: 3}
+  - {fileID: 21300000, guid: a241fc4d1e4ed144cb3fa7e6349df89e, type: 3}
+  bigDemonIdleFrames:
+  - {fileID: 21300000, guid: 49f44af08ba5c8d47ae0a63f4d546dbc, type: 3}
+  - {fileID: 21300000, guid: 74beef849c282b14ba07507c429e7d3a, type: 3}
+  - {fileID: 21300000, guid: 7eb23693a6a3f2647ab5fe7a4acc392a, type: 3}
+  - {fileID: 21300000, guid: 87e7f105dfffb6f488e28a97fb762d43, type: 3}
+  bigDemonRunFrames:
+  - {fileID: 21300000, guid: 2092f6d54ff23e94e920d209f14b4a3f, type: 3}
+  - {fileID: 21300000, guid: d04d14c1e89e8fb43be8e9ceb40d3cf0, type: 3}
+  - {fileID: 21300000, guid: 22a09d6fe6d467d45ac50361d057605a, type: 3}
+  - {fileID: 21300000, guid: 1dd92c41e91dd0d438f179aefe3ba7bd, type: 3}
 --- !u!114 &1939414500628490215
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -59,7 +59,7 @@ namespace Roguelike.EditorTools
             BuildBomber(sprite);
             BuildNecromancer(sprite, skeleton);
             BuildSplitter(sprite, tinyZombie);
-            BuildBoss(sprite);
+            BuildBoss(sprite, skeleton);
             BuildTear(sprite);
             BuildEnemyProjectile(sprite);
             BuildCoin(sprite);
@@ -292,7 +292,7 @@ namespace Roguelike.EditorTools
             Object.DestroyImmediate(root);
         }
 
-        private static void BuildBoss(Sprite sprite)
+        private static void BuildBoss(Sprite sprite, Enemy minionPrefab)
         {
             var root = new GameObject("Boss");
 
@@ -311,7 +311,19 @@ namespace Roguelike.EditorTools
             var collider = root.AddComponent<CircleCollider2D>();
             collider.radius = 0.9f;
 
-            root.AddComponent<BossEnemy>();
+            var boss = root.AddComponent<BossEnemy>();
+            var bossSerialized = new SerializedObject(boss);
+            if (minionPrefab != null)
+                bossSerialized.FindProperty("minionPrefab").objectReferenceValue = minionPrefab;
+            bossSerialized.FindProperty("slamSprite").objectReferenceValue = ThirdPartySprites.Explosion;
+            SetSpriteArray(bossSerialized, "ogreIdleFrames", ThirdPartySprites.OgreIdle);
+            SetSpriteArray(bossSerialized, "ogreRunFrames", ThirdPartySprites.OgreRun);
+            SetSpriteArray(bossSerialized, "bigZombieIdleFrames", ThirdPartySprites.BigZombieIdle);
+            SetSpriteArray(bossSerialized, "bigZombieRunFrames", ThirdPartySprites.BigZombieRun);
+            SetSpriteArray(bossSerialized, "bigDemonIdleFrames", ThirdPartySprites.BossIdle);
+            SetSpriteArray(bossSerialized, "bigDemonRunFrames", ThirdPartySprites.BossRun);
+            bossSerialized.ApplyModifiedPropertiesWithoutUndo();
+
             AttachAnimator(root, ThirdPartySprites.BossIdle, ThirdPartySprites.BossRun);
 
             PrefabUtility.SaveAsPrefabAsset(root, BossPath);
@@ -430,6 +442,18 @@ namespace Roguelike.EditorTools
 
             PrefabUtility.SaveAsPrefabAsset(root, HeartPath);
             Object.DestroyImmediate(root);
+        }
+
+        private static void SetSpriteArray(SerializedObject serialized, string propertyName, Sprite[] sprites)
+        {
+            SerializedProperty property = serialized.FindProperty(propertyName);
+            if (property == null) return;
+
+            int count = sprites != null ? sprites.Length : 0;
+            property.arraySize = count;
+
+            for (int i = 0; i < count; i++)
+                property.GetArrayElementAtIndex(i).objectReferenceValue = sprites[i];
         }
 
         /// <summary>挂上帧动画；没有美术帧时保持静态 Sprite。</summary>
