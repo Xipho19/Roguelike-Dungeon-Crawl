@@ -83,6 +83,11 @@ namespace Roguelike.EditorTools
         public static Sprite TridentIcon => Load("frames/icons/icon_trident.png");
         public static Sprite RapidTriggerIcon => Load("frames/icons/icon_rapid_trigger.png");
         public static Sprite PiercingPrismIcon => Load("frames/icons/icon_piercing_prism.png");
+        public static Sprite ShieldIcon => Load("frames/icons/icon_shield.png");
+        public static Sprite MapShopIcon => Load("frames/icons/icon_map_shop.png");
+        public static Sprite MapBossIcon => Load("frames/icons/icon_map_boss.png");
+        public static Sprite MapExploredIcon => Load("frames/icons/icon_map_explored.png");
+        public static Sprite MapUnexploredIcon => Load("frames/icons/icon_map_unexplored.png");
         public static Sprite VampireFangIcon => Load("frames/icons/icon_vampire_fang.png");
         public static Sprite BentSpoonIcon => Load("frames/icons/icon_bent_spoon.png");
         public static Sprite CorrosiveGlandIcon => Load("frames/icons/icon_corrosive_gland.png");

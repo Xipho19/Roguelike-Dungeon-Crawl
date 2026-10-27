@@ -187,7 +187,7 @@ namespace Roguelike.Dungeon
         /// </summary>
         private void RefreshDoorIndicators()
         {
-            bool danger = (roomType == RoomType.Combat || roomType == RoomType.Boss) && !_cleared;
+            bool danger = (roomType == RoomType.Combat || roomType == RoomType.Boss || roomType == RoomType.Challenge) && !_cleared;
 
             for (int i = 0; i < 4; i++)
             {

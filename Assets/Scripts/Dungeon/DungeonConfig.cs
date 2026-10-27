@@ -39,6 +39,8 @@ namespace Roguelike.Dungeon
 
         [Range(0, 4)] public int shopCount = 1;
 
+        [Range(0, 4)] public int challengeCount = 1;
+
         [Range(0, 4)] public int secretCount = 1;
 
         /// <summary>把互相冲突的参数夹到合法范围，保证生成器不会因为手填数据崩溃。</summary>
@@ -58,6 +60,7 @@ namespace Roguelike.Dungeon
 
             treasureCount = Mathf.Clamp(treasureCount, 0, 4);
             shopCount = Mathf.Clamp(shopCount, 0, 4);
+            challengeCount = Mathf.Clamp(challengeCount, 0, 4);
             secretCount = Mathf.Clamp(secretCount, 0, 4);
         }
 

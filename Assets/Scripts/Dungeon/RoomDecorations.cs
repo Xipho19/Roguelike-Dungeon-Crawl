@@ -69,7 +69,8 @@ namespace Roguelike.Dungeon
 
             // ---- 顶墙：旗帜 ----
             Sprite banner = PickBanner(type, rng);
-            int bannerCount = type == RoomType.Boss || type == RoomType.Treasure || type == RoomType.Shop ? 2 : 1;
+            int bannerCount = type == RoomType.Boss || type == RoomType.Treasure ||
+                type == RoomType.Shop || type == RoomType.Challenge ? 2 : 1;
             Add("Banner_0", banner, new Vector2(3.5f, wallTopY), 1, true);
             if (bannerCount > 1)
                 Add("Banner_1", banner, new Vector2(roomWidth - 3.5f, wallTopY), 1, true);
@@ -134,7 +135,7 @@ namespace Roguelike.Dungeon
                     break;
 
                 default:
-                    bool combat = type == RoomType.Combat;
+                    bool combat = type == RoomType.Combat || type == RoomType.Challenge;
                     int layout = combat ? rng.Next(3) : 0;
 
                     // 中央布局已经占用了空间时，少放一些边缘道具，避免房间过挤
@@ -239,6 +240,7 @@ namespace Roguelike.Dungeon
             switch (type)
             {
                 case RoomType.Boss:
+                case RoomType.Challenge:
                     return banners[Mathf.Min(2, banners.Length - 1)]; // 红
                 case RoomType.Treasure:
                     return banners[Mathf.Min(3, banners.Length - 1)]; // 黄

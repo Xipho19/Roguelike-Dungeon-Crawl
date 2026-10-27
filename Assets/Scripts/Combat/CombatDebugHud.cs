@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Roguelike.Core;
+using Roguelike.Dungeon;
 using Roguelike.Items;
 using Roguelike.Player;
 using UnityEngine;
@@ -19,24 +20,29 @@ namespace Roguelike.Combat
         [SerializeField] private PlayerWallet wallet;
         [SerializeField] private PlayerInventory inventory;
         [SerializeField] private RunManager runManager;
+        [SerializeField] private DungeonFlowController flow;
 
         [Header("状态栏图标")]
         [SerializeField] private Sprite floorIcon;
         [SerializeField] private Sprite heartIcon;
+        [SerializeField] private Sprite shieldIcon;
         [SerializeField] private Sprite coinIcon;
         [SerializeField] private Sprite backpackIcon;
 
         private const float BarHeight = 48f;
         private const float BackpackButtonSize = 34f;
-        private const float InventoryRowHeight = 100f;
+        private const int InventoryColumns = 6;
+        private const float InventoryCellHeight = 88f;
+        private const float InventoryCellGap = 8f;
 
         private GUIStyle _style;
         private GUIStyle _toastStyle;
         private GUIStyle _bossStyle;
         private GUIStyle _inventoryTitleStyle;
         private GUIStyle _inventoryCountStyle;
-        private GUIStyle _inventoryNameStyle;
-        private GUIStyle _inventoryDescStyle;
+        private GUIStyle _inventoryCellNameStyle;
+        private GUIStyle _inventoryTooltipNameStyle;
+        private GUIStyle _inventoryTooltipDescStyle;
         private GUIStyle _inventoryHintStyle;
         private GUIStyle _keyHintStyle;
         private GUIStyle _themeStyle;
@@ -53,6 +59,7 @@ namespace Roguelike.Combat
         private bool _inventoryOpen;
         private bool _pausedByInventory;
         private Vector2 _inventoryScroll;
+        private ItemDefinition _hoveredInventoryItem;
         private static bool _anyInventoryOpen;
 
         /// <summary>供地图等其它界面判断是否需要让位。</summary>
@@ -66,13 +73,24 @@ namespace Roguelike.Combat
             if (wallet == null) wallet = FindFirstObjectByType<PlayerWallet>();
             if (inventory == null) inventory = FindFirstObjectByType<PlayerInventory>();
             if (runManager == null) runManager = FindFirstObjectByType<RunManager>();
+            if (flow == null) flow = FindFirstObjectByType<DungeonFlowController>();
 
             if (inventory != null) inventory.ItemAdded += HandleItemAdded;
+            if (flow != null)
+            {
+                flow.ChallengeWaveStarted += HandleChallengeWaveStarted;
+                flow.ChallengeCompleted += HandleChallengeCompleted;
+            }
         }
 
         private void OnDestroy()
         {
             if (inventory != null) inventory.ItemAdded -= HandleItemAdded;
+            if (flow != null)
+            {
+                flow.ChallengeWaveStarted -= HandleChallengeWaveStarted;
+                flow.ChallengeCompleted -= HandleChallengeCompleted;
+            }
             if (_anyInventoryOpen) _anyInventoryOpen = false;
         }
 
@@ -86,6 +104,16 @@ namespace Roguelike.Combat
             if (item == null) return;
 
             ShowToast($"获得道具：{item.itemName}\n{item.description}", 3f);
+        }
+
+        private void HandleChallengeWaveStarted(int wave, int total)
+        {
+            ShowToast($"挑战房：第 {wave}/{total} 波", 2f);
+        }
+
+        private void HandleChallengeCompleted()
+        {
+            ShowToast("挑战完成！奖励已出现", 2.5f);
         }
 
         /// <summary>显示一条顶部提示（道具、事件等）。</summary>
@@ -246,20 +274,28 @@ namespace Roguelike.Combat
             };
             _inventoryCountStyle.normal.textColor = new Color(0.68f, 0.72f, 0.82f);
 
-            _inventoryNameStyle = new GUIStyle(GUI.skin.label)
+            _inventoryCellNameStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 18,
+                fontSize = 13,
+                alignment = TextAnchor.MiddleCenter,
+                clipping = TextClipping.Clip,
+            };
+            _inventoryCellNameStyle.normal.textColor = Color.white;
+
+            _inventoryTooltipNameStyle = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 17,
                 alignment = TextAnchor.MiddleLeft,
             };
-            _inventoryNameStyle.normal.textColor = Color.white;
+            _inventoryTooltipNameStyle.normal.textColor = Color.white;
 
-            _inventoryDescStyle = new GUIStyle(GUI.skin.label)
+            _inventoryTooltipDescStyle = new GUIStyle(GUI.skin.label)
             {
                 fontSize = 14,
                 alignment = TextAnchor.UpperLeft,
                 wordWrap = true,
             };
-            _inventoryDescStyle.normal.textColor = new Color(0.78f, 0.80f, 0.88f);
+            _inventoryTooltipDescStyle.normal.textColor = new Color(0.78f, 0.80f, 0.88f);
 
             _inventoryHintStyle = new GUIStyle(GUI.skin.label)
             {
@@ -321,6 +357,9 @@ namespace Roguelike.Combat
 
             x = DrawStat(x, y, iconSize, iconGap, heartIcon,
                 $"{health.Health}/{health.MaxHealth}", groupGap);
+
+            x = DrawStat(x, y, iconSize, iconGap, shieldIcon,
+                $"{health.Shield}/{health.MaxShield}", groupGap);
 
             DrawStat(x, y, iconSize, iconGap, coinIcon,
                 (wallet != null ? wallet.Coins : 0).ToString(), groupGap);
@@ -470,35 +509,70 @@ namespace Roguelike.Combat
             else
             {
                 IReadOnlyList<ItemDefinition> items = inventory.Items;
-                float contentHeight = Mathf.Max(listRect.height, items.Count * InventoryRowHeight + 4f);
+                int rows = Mathf.CeilToInt(items.Count / (float)InventoryColumns);
+                float contentHeight = Mathf.Max(listRect.height, rows * InventoryCellHeight + 4f);
                 var content = new Rect(0f, 0f, listRect.width - 18f, contentHeight);
 
+                _hoveredInventoryItem = null;
                 _inventoryScroll = GUI.BeginScrollView(listRect, _inventoryScroll, content);
 
+                float cellWidth = (content.width - InventoryCellGap * (InventoryColumns - 1)) / InventoryColumns;
+
                 for (int i = 0; i < items.Count; i++)
-                    DrawInventoryRow(items[i], content.width, i * InventoryRowHeight);
+                {
+                    int column = i % InventoryColumns;
+                    int row = i / InventoryColumns;
+                    var cell = new Rect(
+                        column * (cellWidth + InventoryCellGap),
+                        row * InventoryCellHeight,
+                        cellWidth,
+                        InventoryCellHeight - InventoryCellGap);
+
+                    DrawInventoryCell(items[i], cell);
+                }
 
                 GUI.EndScrollView();
+
+                if (_hoveredInventoryItem != null)
+                    DrawInventoryTooltip(_hoveredInventoryItem);
             }
 
             if (GUI.Button(new Rect(panel.center.x - 80f, panel.yMax - 52f, 160f, 38f), "关闭 (B)"))
                 CloseInventory();
         }
 
-        private void DrawInventoryRow(ItemDefinition item, float width, float y)
+        private void DrawInventoryCell(ItemDefinition item, Rect cell)
         {
-            var row = new Rect(0f, y, width, InventoryRowHeight - 10f);
+            bool hovered = Event.current.type == EventType.Repaint && cell.Contains(Event.current.mousePosition);
+            if (hovered) _hoveredInventoryItem = item;
 
             Color previous = GUI.color;
-            GUI.color = new Color(0.12f, 0.13f, 0.18f, 0.92f);
-            GUI.DrawTexture(row, Texture2D.whiteTexture);
+            GUI.color = hovered
+                ? new Color(0.17f, 0.19f, 0.27f, 0.96f)
+                : new Color(0.12f, 0.13f, 0.18f, 0.92f);
+            GUI.DrawTexture(cell, Texture2D.whiteTexture);
+
+            if (hovered)
+            {
+                GUI.color = new Color(0.42f, 0.70f, 1f, 0.95f);
+                GUI.DrawTexture(new Rect(cell.x, cell.y, cell.width, 1f), Texture2D.whiteTexture);
+                GUI.DrawTexture(new Rect(cell.x, cell.yMax - 1f, cell.width, 1f), Texture2D.whiteTexture);
+                GUI.DrawTexture(new Rect(cell.x, cell.y, 1f, cell.height), Texture2D.whiteTexture);
+                GUI.DrawTexture(new Rect(cell.xMax - 1f, cell.y, 1f, cell.height), Texture2D.whiteTexture);
+            }
 
             // 左侧稀有度色条
             GUI.color = RarityColor(item.rarity);
-            GUI.DrawTexture(new Rect(row.x, row.y, 4f, row.height), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(cell.x, cell.y, 4f, cell.height), Texture2D.whiteTexture);
             GUI.color = previous;
 
-            var iconRect = new Rect(row.x + 14f, row.y + 14f, 52f, 52f);
+            float iconSize = Mathf.Min(44f, cell.width - 16f);
+            var iconRect = new Rect(
+                cell.x + (cell.width - iconSize) * 0.5f,
+                cell.y + 8f,
+                iconSize,
+                iconSize);
+
             if (item.icon != null && item.icon.texture != null)
             {
                 GUI.DrawTexture(iconRect, item.icon.texture, ScaleMode.ScaleToFit, true);
@@ -512,17 +586,49 @@ namespace Roguelike.Combat
             }
 
             GUI.Label(
-                new Rect(row.x + 80f, row.y + 8f, row.width - 96f, 26f),
+                new Rect(cell.x + 6f, cell.y + 56f, cell.width - 12f, 22f),
                 item.itemName,
-                _inventoryNameStyle);
+                _inventoryCellNameStyle);
+        }
+
+        private void DrawInventoryTooltip(ItemDefinition item)
+        {
+            if (Event.current.type != EventType.Repaint) return;
+
+            const float width = 320f;
+            const float height = 124f;
+
+            Vector2 mouse = Event.current.mousePosition;
+            float x = mouse.x + 18f;
+            float y = mouse.y + 18f;
+
+            if (x + width > Screen.width - 8f) x = Screen.width - width - 8f;
+            if (y + height > Screen.height - 8f) y = Screen.height - height - 8f;
+            x = Mathf.Max(8f, x);
+            y = Mathf.Max(8f, y);
+
+            var rect = new Rect(x, y, width, height);
+
+            Color previous = GUI.color;
+            GUI.color = new Color(0.04f, 0.05f, 0.08f, 0.97f);
+            GUI.DrawTexture(rect, Texture2D.whiteTexture);
+
+            GUI.color = RarityColor(item.rarity);
+            GUI.DrawTexture(new Rect(rect.x, rect.y, rect.width, 3f), Texture2D.whiteTexture);
+            GUI.color = previous;
+
+            GUI.Label(
+                new Rect(rect.x + 14f, rect.y + 12f, rect.width - 28f, 26f),
+                item.itemName,
+                _inventoryTooltipNameStyle);
 
             string description = string.IsNullOrWhiteSpace(item.description)
                 ? "没有详细说明。"
                 : item.description;
             GUI.Label(
-                new Rect(row.x + 80f, row.y + 34f, row.width - 96f, row.height - 40f),
+                new Rect(rect.x + 14f, rect.y + 42f, rect.width - 28f, rect.height - 50f),
                 description,
-                _inventoryDescStyle);
+                _inventoryTooltipDescStyle);
         }
 
         private static Color RarityColor(ItemRarity rarity)

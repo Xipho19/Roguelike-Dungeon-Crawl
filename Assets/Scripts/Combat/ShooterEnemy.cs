@@ -108,7 +108,7 @@ namespace Roguelike.Combat
                 _rb.position + direction * 0.8f,
                 Quaternion.identity);
 
-            bullet.Initialize(direction, projectileSpeed, 1, projectileLifetime);
+            bullet.Initialize(direction, projectileSpeed, ScaleAttackDamage(1), projectileLifetime);
         }
 
         private void RestoreColor()

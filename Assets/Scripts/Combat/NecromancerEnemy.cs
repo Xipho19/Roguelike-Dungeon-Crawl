@@ -115,6 +115,7 @@ namespace Roguelike.Combat
             Enemy minion = Instantiate(minionPrefab, position, Quaternion.identity, transform.parent);
             minion.name = "Skeleton_Minion";
             minion.Initialize(minionHealth, minionSpeed, minionScale, Color.white, false, _flow);
+            if (_flow != null) minion.SetFloorDamageBonus(_flow.EnemyDamageBonus);
             minion.ActivateCombat();
 
             if (_flow != null) _flow.RegisterEnemy(minion);

@@ -187,6 +187,7 @@ namespace Roguelike.EditorTools
                 LegendItem(RoomType.Boss, "Boss");
                 LegendItem(RoomType.Treasure, "宝箱");
                 LegendItem(RoomType.Shop, "商店");
+                LegendItem(RoomType.Challenge, "挑战");
                 LegendItem(RoomType.Secret, "秘密");
                 GUILayout.FlexibleSpace();
             }
@@ -349,6 +350,7 @@ namespace Roguelike.EditorTools
                 case RoomType.Boss: return new Color(0.82f, 0.22f, 0.24f);
                 case RoomType.Treasure: return new Color(0.93f, 0.72f, 0.16f);
                 case RoomType.Shop: return new Color(0.20f, 0.60f, 0.85f);
+                case RoomType.Challenge: return new Color(0.92f, 0.45f, 0.18f);
                 case RoomType.Secret: return new Color(0.60f, 0.36f, 0.80f);
                 default: return new Color(0.33f, 0.35f, 0.41f);
             }
@@ -362,6 +364,7 @@ namespace Roguelike.EditorTools
                 case RoomType.Boss: return "王";
                 case RoomType.Treasure: return "宝";
                 case RoomType.Shop: return "商";
+                case RoomType.Challenge: return "挑";
                 case RoomType.Secret: return "秘";
                 default: return string.Empty;
             }
@@ -375,6 +378,7 @@ namespace Roguelike.EditorTools
                 case RoomType.Boss: return "Boss";
                 case RoomType.Treasure: return "宝箱";
                 case RoomType.Shop: return "商店";
+                case RoomType.Challenge: return "挑战";
                 case RoomType.Secret: return "秘密";
                 default: return "战斗";
             }

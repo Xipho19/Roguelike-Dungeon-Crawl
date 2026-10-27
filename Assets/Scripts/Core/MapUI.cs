@@ -9,14 +9,22 @@ using UnityEngine.InputSystem;
 namespace Roguelike.Core
 {
     /// <summary>
-    /// Tab 地图：显示已探索房间、房间类型、邻接关系与当前位置。
-    /// 按住 Tab 显示，松开隐藏。未探索的房间不会出现在地图上。
+    /// Tab 地图：显示已探索房间、相邻未探索房间、房间类型、邻接关系与当前位置。
+    /// 按住 Tab 显示，松开隐藏。完全未接触的远处房间不会出现在地图上。
     /// </summary>
     public sealed class MapUI : MonoBehaviour
     {
         [SerializeField] private DungeonBuilder builder;
         [SerializeField] private PlayerRoomTracker tracker;
         [SerializeField] private RunManager runManager;
+
+        [Header("地图图标")]
+        [SerializeField] private Sprite shopIcon;
+        [SerializeField] private Sprite treasureIcon;
+        [SerializeField] private Sprite bossIcon;
+        [SerializeField] private Sprite exploredIcon;
+        [SerializeField] private Sprite unexploredIcon;
+        [SerializeField] private Sprite startIcon;
 
         [Tooltip("调试用：强制显示地图（Tab 之外）")]
         public bool ForceVisible;
@@ -57,7 +65,7 @@ namespace Roguelike.Core
             for (int i = 0; i < rooms.Count; i++)
             {
                 RoomView room = rooms[i];
-                if (!room.IsVisited) continue;
+                if (!IsVisible(room)) continue;
 
                 any = true;
                 minX = Mathf.Min(minX, room.GridPosition.x);
@@ -92,25 +100,20 @@ namespace Roguelike.Core
             for (int i = 0; i < rooms.Count; i++)
             {
                 RoomView room = rooms[i];
-                if (!room.IsVisited) continue;
+                if (!IsVisible(room)) continue;
 
                 Rect cell = CellRect(room, panel, minX, maxY);
 
-                GUI.color = RoomTypePalette.Accent(room.RoomType);
+                GUI.color = room.IsVisited
+                    ? RoomTypePalette.Accent(room.RoomType)
+                    : new Color(0.08f, 0.09f, 0.12f, 0.95f);
                 GUI.DrawTexture(cell, Texture2D.whiteTexture);
                 GUI.color = previous;
 
                 if (tracker != null && tracker.CurrentRoom == room)
                     DrawOutline(cell, Color.white, 2f);
 
-                // Boss / 商店等特殊房间加一个中心点
-                if (room.RoomType != RoomType.Combat)
-                {
-                    GUI.color = Color.white;
-                    float dot = 6f;
-                    GUI.DrawTexture(new Rect(cell.center.x - dot * 0.5f, cell.center.y - dot * 0.5f, dot, dot), Texture2D.whiteTexture);
-                    GUI.color = previous;
-                }
+                DrawRoomIcon(room, cell);
             }
 
             GUI.Label(new Rect(panel.x, panel.yMax - 24f, panel.width, 20f), "松开 Tab 关闭", _hintStyle);
@@ -123,7 +126,7 @@ namespace Roguelike.Core
             for (int i = 0; i < rooms.Count; i++)
             {
                 RoomView room = rooms[i];
-                if (!room.IsVisited) continue;
+                if (!IsVisible(room)) continue;
 
                 RoomNode node = builder.Data.GetRoom(room.GridPosition);
                 if (node == null) continue;
@@ -139,11 +142,13 @@ namespace Roguelike.Core
                     if (neighborGrid.x == room.GridPosition.x && neighborGrid.y < room.GridPosition.y) continue;
 
                     RoomView other = builder.GetRoom(neighborGrid);
-                    if (other == null || !other.IsVisited) continue;
+                    if (other == null || !IsVisible(other)) continue;
 
                     Rect b = CellRect(other, panel, minX, maxY);
 
-                    GUI.color = new Color(0.55f, 0.57f, 0.65f, 0.9f);
+                    GUI.color = room.IsVisited && other.IsVisited
+                        ? new Color(0.55f, 0.57f, 0.65f, 0.9f)
+                        : new Color(0.34f, 0.36f, 0.44f, 0.5f);
 
                     if (neighborGrid.x > room.GridPosition.x)
                     {
@@ -156,6 +161,60 @@ namespace Roguelike.Core
 
                     GUI.color = Color.white;
                 }
+            }
+        }
+
+        /// <summary>已探索房间和与已探索房间相邻的未探索房间会显示在地图上。</summary>
+        private bool IsVisible(RoomView room)
+        {
+            if (room == null) return false;
+            if (room.IsVisited) return true;
+            if (builder == null || builder.Data == null) return false;
+
+            RoomNode node = builder.Data.GetRoom(room.GridPosition);
+            if (node == null) return false;
+
+            for (int i = 0; i < node.Neighbors.Count; i++)
+            {
+                RoomView neighbor = builder.GetRoom(node.Neighbors[i].Grid);
+                if (neighbor != null && neighbor.IsVisited) return true;
+            }
+
+            return false;
+        }
+
+        private void DrawRoomIcon(RoomView room, Rect cell)
+        {
+            Sprite icon = room.IsVisited ? GetRoomIcon(room) : unexploredIcon;
+            if (icon == null || icon.texture == null) return;
+
+            float size = CellSize - 8f;
+            var iconRect = new Rect(
+                cell.center.x - size * 0.5f,
+                cell.center.y - size * 0.5f,
+                size,
+                size);
+
+            Color previous = GUI.color;
+            GUI.color = Color.white;
+            GUI.DrawTexture(iconRect, icon.texture, ScaleMode.ScaleToFit, true);
+            GUI.color = previous;
+        }
+
+        private Sprite GetRoomIcon(RoomView room)
+        {
+            switch (room.RoomType)
+            {
+                case RoomType.Start:
+                    return startIcon != null ? startIcon : exploredIcon;
+                case RoomType.Shop:
+                    return shopIcon != null ? shopIcon : exploredIcon;
+                case RoomType.Treasure:
+                    return treasureIcon != null ? treasureIcon : exploredIcon;
+                case RoomType.Boss:
+                    return bossIcon != null ? bossIcon : exploredIcon;
+                default:
+                    return exploredIcon;
             }
         }
 

@@ -14,7 +14,7 @@ namespace Roguelike.Combat
         [SerializeField] private float triggerRange = 2.4f;
         [SerializeField] private float fuseTime = 0.85f;
         [SerializeField] private float explosionRadius = 2.3f;
-        [SerializeField] private int explosionDamage = 1;
+        [SerializeField] private int explosionDamage = 2;
         [SerializeField] private Sprite explosionSprite;
 
         private SpriteRenderer _renderer;
@@ -120,7 +120,7 @@ namespace Roguelike.Combat
                 var health = hits[i].GetComponentInParent<PlayerHealth>();
                 if (health == null) continue;
 
-                health.TryDamage(explosionDamage);
+                health.TryDamage(ScaleAttackDamage(explosionDamage));
                 break;
             }
         }

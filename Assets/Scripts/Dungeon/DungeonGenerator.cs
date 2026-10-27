@@ -12,7 +12,7 @@ namespace Roguelike.Dungeon
     ///   2. 随机游走生成"起点 → Boss"的主路径（带方向惯性，走廊更直）
     ///   3. 从主路径上随机生长若干分支，天然形成死胡同
     ///   4. BFS 计算每个房间到起点的步数
-    ///   5. 按"死胡同优先、距离更远优先"分配宝箱 / 商店 / 秘密房
+    ///   5. 按"死胡同优先、距离更远优先"分配宝箱 / 商店 / 挑战房 / 秘密房
     ///   6. 由相邻关系推导每扇门的方向
     ///
     /// 整个过程只操作纯数据，不触碰任何 GameObject，因此可直接在 EditMode 测试中调用。
@@ -351,6 +351,7 @@ namespace Roguelike.Dungeon
             int cursor = 0;
             cursor = Take(pool, cursor, cfg.treasureCount, RoomType.Treasure);
             cursor = Take(pool, cursor, cfg.shopCount, RoomType.Shop);
+            cursor = Take(pool, cursor, cfg.challengeCount, RoomType.Challenge);
             Take(pool, cursor, cfg.secretCount, RoomType.Secret);
         }
 

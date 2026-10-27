@@ -23,6 +23,7 @@ namespace Roguelike.Dungeon
                 case RoomType.Treasure: return new Color(0.93f, 0.72f, 0.16f);
                 case RoomType.Shop: return new Color(0.20f, 0.60f, 0.85f);
                 case RoomType.Secret: return new Color(0.60f, 0.36f, 0.80f);
+                case RoomType.Challenge: return new Color(0.92f, 0.45f, 0.18f);
                 default: return new Color(0.45f, 0.47f, 0.55f);
             }
         }

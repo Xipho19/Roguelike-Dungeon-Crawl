@@ -194,7 +194,7 @@ namespace Roguelike.Dungeon
             if (Boss != null && Boss.Degree != 1)
                 issues.Add("[警告] Boss 房不是死胡同，玩家可能绕过它");
 
-            int treasure = 0, shop = 0, secret = 0;
+            int treasure = 0, shop = 0, secret = 0, challenge = 0;
             for (int i = 0; i < _ordered.Count; i++)
             {
                 switch (_ordered[i].Type)
@@ -202,6 +202,7 @@ namespace Roguelike.Dungeon
                     case RoomType.Treasure: treasure++; break;
                     case RoomType.Shop: shop++; break;
                     case RoomType.Secret: secret++; break;
+                    case RoomType.Challenge: challenge++; break;
                 }
             }
 
@@ -209,6 +210,8 @@ namespace Roguelike.Dungeon
                 issues.Add($"[警告] 宝箱房数量不足：{treasure}/{Config.treasureCount}");
             if (Config.shopCount > 0 && shop < Config.shopCount)
                 issues.Add($"[警告] 商店数量不足：{shop}/{Config.shopCount}");
+            if (Config.challengeCount > 0 && challenge < Config.challengeCount)
+                issues.Add($"[警告] 挑战房数量不足：{challenge}/{Config.challengeCount}");
             if (Config.secretCount > 0 && secret < Config.secretCount)
                 issues.Add($"[警告] 秘密房数量不足：{secret}/{Config.secretCount}");
 
@@ -361,6 +364,7 @@ namespace Roguelike.Dungeon
                 case RoomType.Treasure: return 'T';
                 case RoomType.Shop: return '$';
                 case RoomType.Secret: return '?';
+                case RoomType.Challenge: return '!';
                 default: return 'c';
             }
         }

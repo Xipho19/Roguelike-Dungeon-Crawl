@@ -46,6 +46,14 @@ namespace Roguelike.Combat
         [SerializeField] private float projectileSpeed = 5f;
         [SerializeField] private float projectileLifetime = 4f;
 
+        [Header("Boss 伤害")]
+        [Tooltip("第 1 层所有直接攻击的伤害；之后每层 +1")]
+        [SerializeField] private int baseFloorDamage = 3;
+
+        private int _attackDamage = 3;
+
+        public int CurrentAttackDamage => _attackDamage;
+
         [Header("Ogre：蛮力冲锋")]
         [Tooltip("一次技能连续冲锋的次数")]
         [SerializeField] private int ogreChargeCount = 3;
@@ -55,7 +63,6 @@ namespace Roguelike.Combat
 
         [SerializeField] private float slamWindup = 0.8f;
         [SerializeField] private float slamRadius = 2.8f;
-        [SerializeField] private int slamDamage = 2;
         [SerializeField] private Sprite slamSprite;
 
         [Header("Big Zombie：亡灵军团")]
@@ -130,6 +137,8 @@ namespace Roguelike.Combat
         public void ApplyFloorScaling(int floor)
         {
             _floorIndex = Mathf.Max(1, floor);
+            _attackDamage = Mathf.Max(1, baseFloorDamage + (_floorIndex - 1));
+            SetContactDamage(_attackDamage);
         }
 
         /// <summary>按楼层主题切换 Boss 的形象与攻击风格；行为由 _archetype 决定。</summary>
@@ -418,7 +427,7 @@ namespace Roguelike.Combat
 
             PlayerHealth health = _target.GetComponentInParent<PlayerHealth>();
             if (health != null && Vector2.Distance(_rb.position, _target.position) <= radius)
-                health.TryDamage(slamDamage);
+                health.TryDamage(_attackDamage);
         }
 
         // ---------- Big Zombie：召唤骷髅 + 腐蚀弹幕 ----------
@@ -520,7 +529,7 @@ namespace Roguelike.Combat
                 bullet.Initialize(
                     direction,
                     volleySpeed * FloorProjectileSpeedScale,
-                    1,
+                    _attackDamage,
                     projectileLifetime);
 
                 bullet.ConfigureVisual(zombieProjectileTint, 1.15f);
@@ -595,7 +604,7 @@ namespace Roguelike.Combat
                 bullet.Initialize(
                     direction,
                     projectileSpeed * FloorProjectileSpeedScale,
-                    1,
+                    _attackDamage,
                     projectileLifetime);
 
                 bullet.ConfigureVisual(demonProjectileTint, 1f);
@@ -625,7 +634,7 @@ namespace Roguelike.Combat
                 bullet.Initialize(
                     direction,
                     homingSpeed * FloorProjectileSpeedScale,
-                    1,
+                    _attackDamage,
                     homingLifetime);
 
                 bullet.ConfigureVisual(demonProjectileTint, 1.3f);

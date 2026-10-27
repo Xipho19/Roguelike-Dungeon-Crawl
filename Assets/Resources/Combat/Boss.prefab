@@ -193,11 +193,11 @@ MonoBehaviour:
   chargeSpeed: 11
   projectileSpeed: 5
   projectileLifetime: 4
+  baseFloorDamage: 3
   ogreChargeCount: 3
   ogreChargePause: 0.18
   slamWindup: 0.8
   slamRadius: 2.8
-  slamDamage: 2
   slamSprite: {fileID: 21300000, guid: dd6fd90a06ee5174d8ea4ccef3cca25b, type: 3}
   minionPrefab: {fileID: 2063620471487963039, guid: 57d86c622dbf3f143a5212d23edbb883, type: 3}
   summonCount: 2

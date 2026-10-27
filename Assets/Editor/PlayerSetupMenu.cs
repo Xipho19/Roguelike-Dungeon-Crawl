@@ -195,8 +195,10 @@ namespace Roguelike.EditorTools
             hudObject.FindProperty("health").objectReferenceValue = health;
             hudObject.FindProperty("wallet").objectReferenceValue = player.GetComponent<PlayerWallet>();
             hudObject.FindProperty("inventory").objectReferenceValue = inventory;
+            hudObject.FindProperty("flow").objectReferenceValue = flow;
             hudObject.FindProperty("floorIcon").objectReferenceValue = ThirdPartySprites.FloorLadder;
             hudObject.FindProperty("heartIcon").objectReferenceValue = ThirdPartySprites.Heart;
+            hudObject.FindProperty("shieldIcon").objectReferenceValue = ThirdPartySprites.ShieldIcon;
             hudObject.FindProperty("coinIcon").objectReferenceValue = ThirdPartySprites.HudCoin;
             hudObject.FindProperty("backpackIcon").objectReferenceValue = ThirdPartySprites.BackpackIcon;
             hudObject.ApplyModifiedPropertiesWithoutUndo();
@@ -242,6 +244,12 @@ namespace Roguelike.EditorTools
             mapObject.FindProperty("builder").objectReferenceValue = builder;
             mapObject.FindProperty("tracker").objectReferenceValue = tracker;
             mapObject.FindProperty("runManager").objectReferenceValue = runManager;
+            mapObject.FindProperty("shopIcon").objectReferenceValue = ThirdPartySprites.MapShopIcon;
+            mapObject.FindProperty("treasureIcon").objectReferenceValue = ThirdPartySprites.Chest;
+            mapObject.FindProperty("bossIcon").objectReferenceValue = ThirdPartySprites.MapBossIcon;
+            mapObject.FindProperty("exploredIcon").objectReferenceValue = ThirdPartySprites.MapExploredIcon;
+            mapObject.FindProperty("unexploredIcon").objectReferenceValue = ThirdPartySprites.MapUnexploredIcon;
+            mapObject.FindProperty("startIcon").objectReferenceValue = ThirdPartySprites.FloorLadder;
             mapObject.ApplyModifiedPropertiesWithoutUndo();
 
             EditorSceneManager.MarkSceneDirty(player.scene);

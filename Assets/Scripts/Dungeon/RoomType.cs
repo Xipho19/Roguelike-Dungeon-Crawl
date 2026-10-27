@@ -12,6 +12,7 @@ namespace Roguelike.Dungeon
         Treasure, // 宝箱房
         Shop,     // 商店
         Secret,   // 秘密房
+        Challenge,// 挑战房：多波敌人，清空后给道具奖励
     }
 
     /// <summary>门的方向位掩码，一个房间可用按位或表示多扇门。</summary>

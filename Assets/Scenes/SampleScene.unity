@@ -73982,6 +73982,7 @@ MonoBehaviour:
     branchLengthMax: 3
     treasureCount: 1
     shopCount: 1
+    challengeCount: 1
     secretCount: 1
   seed: 62145689
   roomPrefab: {fileID: 875377910154720348, guid: e9f3c0497a0eea84284dbeff04f422ae, type: 3}
@@ -74044,12 +74045,16 @@ MonoBehaviour:
   bossPrefab: {fileID: 4479620899279227863, guid: 59d99495d50011349b79cef9f415dc3f, type: 3}
   combatEnemyCount: 4
   bossEnemyCount: 1
+  eliteChance: 0.15
+  eliteHealthMultiplier: 2
+  eliteDamageMultiplier: 1.2
   normalEnemyHealth: 2
   bossEnemyHealth: 40
-  enemyHealthGrowthPerFloor: 0.4
+  enemyHealthGrowthPerFloor: 1
+  enemyDamageGrowthPerFloor: 1
   enemySpeedGrowthPerFloor: 0.03
   enemySpeedMultiplierCap: 1.2
-  bossHealthGrowthPerFloor: 0.4
+  bossHealthGrowthPerFloor: 0.5
   bossSpeedGrowthPerFloor: 0.04
   bossSpeedMultiplierCap: 1.15
   extraEnemyEveryFloors: 2
@@ -74061,10 +74066,12 @@ MonoBehaviour:
   heartPrefab: {fileID: 8570815819627378105, guid: 34bd26b0b7450374a8d1be781094d3b3, type: 3}
   normalCoinDrop: 1
   bossCoinDrop: 5
+  coinDropChance: 0.5
   heartDropChance: 0.2
   itemPickupPrefab: {fileID: 2368532235304251302, guid: dcd4b1e61744e9c49b454d8b60e3c2ae, type: 3}
   itemPool: []
   secretAltarPrefab: {fileID: 3232262266722357732, guid: 832de84937afa16469ac944a5bdd893e, type: 3}
+  challengeWaveCount: 3
 --- !u!114 &429175103
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -74081,8 +74088,10 @@ MonoBehaviour:
   wallet: {fileID: 1235456014}
   inventory: {fileID: 1235456015}
   runManager: {fileID: 429175104}
+  flow: {fileID: 429175102}
   floorIcon: {fileID: 21300000, guid: 7c1ddf10ec5dc9d41ac75f089656abcb, type: 3}
   heartIcon: {fileID: 21300000, guid: 0790eecad50bdb3469b1cbbb2dd2c5a4, type: 3}
+  shieldIcon: {fileID: 21300000, guid: b6b35bb06fe0deb47a71933c616909e8, type: 3}
   coinIcon: {fileID: 21300000, guid: 351c354e0f553a74787c02a8ae4ac946, type: 3}
   backpackIcon: {fileID: 21300000, guid: 24c3a944d57a553418b24adcf92d8182, type: 3}
 --- !u!114 &429175104
@@ -74137,6 +74146,12 @@ MonoBehaviour:
   builder: {fileID: 429175100}
   tracker: {fileID: 1235456006}
   runManager: {fileID: 429175104}
+  shopIcon: {fileID: 21300000, guid: 93dc9931c9889064695fc23ebf7a882e, type: 3}
+  treasureIcon: {fileID: 21300000, guid: dedb2cee539092244a3157d18960ed03, type: 3}
+  bossIcon: {fileID: 21300000, guid: b0191e0e70d7fd34e9708b5ca0647f6c, type: 3}
+  exploredIcon: {fileID: 21300000, guid: b92043ad67a1eb14eaf20c8e8610e32d, type: 3}
+  unexploredIcon: {fileID: 21300000, guid: c8542b42e724c4b4a95d323de93ec515, type: 3}
+  startIcon: {fileID: 21300000, guid: 7c1ddf10ec5dc9d41ac75f089656abcb, type: 3}
   ForceVisible: 0
 --- !u!1 &429369590
 GameObject:
@@ -216329,6 +216344,7 @@ MonoBehaviour:
   tearPrefab: {fileID: 4483389952319566503, guid: 0611972307dc0204e88552830ecb939c, type: 3}
   inventory: {fileID: 1235456015}
   tracker: {fileID: 0}
+  wallet: {fileID: 0}
   fireInterval: 0.24
   tearSpeed: 14
   tearDamage: 1
@@ -216349,6 +216365,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Roguelike.Player.PlayerHealth
   maxHealth: 6
   invulnerableDuration: 0.9
+  maxShield: 5
+  shieldRegenDelay: 5
+  shieldRegenInterval: 1
 --- !u!114 &1235456014
 MonoBehaviour:
   m_ObjectHideFlags: 0

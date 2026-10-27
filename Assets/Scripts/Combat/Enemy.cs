@@ -96,8 +96,43 @@ namespace Roguelike.Combat
         public float MaxHealth => maxHealth;
         public bool IsDead => _health <= 0f;
         public bool IsBoss { get; private set; }
+        public bool IsElite { get; private set; }
         public bool CombatActive { get; private set; }
         public RoomView Room => _room;
+
+        /// <summary>精英怪的攻击倍率；普通敌人为 1。</summary>
+        protected float DamageMultiplier { get; private set; } = 1f;
+
+        private int _floorDamageBonus;
+
+        /// <summary>由生成方写入当前楼层的固定攻击加成。</summary>
+        public void SetFloorDamageBonus(int bonus)
+        {
+            _floorDamageBonus = Mathf.Max(0, bonus);
+        }
+
+        /// <summary>直接设置接触伤害的基础值（Boss 按楼层伤害使用）。</summary>
+        public void SetContactDamage(int value)
+        {
+            contactDamage = Mathf.Max(0, value);
+        }
+
+        /// <summary>标记为精英：攻击力翻倍，并挂上描边/光效。</summary>
+        public void MakeElite(float damageMultiplier = 1.2f)
+        {
+            if (IsElite || IsBoss) return;
+
+            IsElite = true;
+            DamageMultiplier = Mathf.Max(1f, damageMultiplier);
+            EliteVisual.Attach(this);
+        }
+
+        /// <summary>基础伤害 + 楼层加成，再按精英倍率放大。</summary>
+        protected int ScaleAttackDamage(int baseDamage)
+        {
+            int damage = Mathf.Max(1, baseDamage + _floorDamageBonus);
+            return Mathf.Max(1, Mathf.CeilToInt(damage * DamageMultiplier));
+        }
 
         private void Awake()
         {
@@ -643,7 +678,7 @@ namespace Roguelike.Combat
             var health = collision.collider.GetComponentInParent<PlayerHealth>();
             if (health == null) return;
 
-            if (health.TryDamage(contactDamage))
+            if (health.TryDamage(ScaleAttackDamage(contactDamage)))
                 _nextContactTime = Time.time + contactCooldown;
         }
     }

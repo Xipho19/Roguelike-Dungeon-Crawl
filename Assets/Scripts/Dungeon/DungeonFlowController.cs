@@ -40,20 +40,33 @@ namespace Roguelike.Dungeon
         [Tooltip("Boss 房生成的敌人数")]
         [SerializeField] private int bossEnemyCount = 1;
 
+        [Header("精英怪")]
+        [Tooltip("普通敌人变成精英的概率；Boss 不会精英化")]
+        [SerializeField, Range(0f, 1f)] private float eliteChance = 0.15f;
+
+        [Tooltip("精英怪血量倍率")]
+        [SerializeField] private float eliteHealthMultiplier = 2f;
+
+        [Tooltip("精英怪攻击倍率（最终伤害向上取整）")]
+        [SerializeField] private float eliteDamageMultiplier = 1.2f;
+
         [SerializeField] private float normalEnemyHealth = 2f;
         [SerializeField] private float bossEnemyHealth = 40f;
 
         [Header("楼层难度成长")]
-        [Tooltip("每层普通敌人血量成长比例")]
-        [SerializeField] private float enemyHealthGrowthPerFloor = 0.40f;
+        [Tooltip("普通敌人血量成长比例（最终血量 = 基础血量 × (1 + 该值 × 当前层数)）")]
+        [SerializeField] private float enemyHealthGrowthPerFloor = 1f;
+
+        [Tooltip("普通敌人每层攻击力成长（第 1 层用基础值，之后每层增加该值）")]
+        [SerializeField] private int enemyDamageGrowthPerFloor = 1;
 
         [Tooltip("每层普通敌人移速成长比例")]
         [SerializeField] private float enemySpeedGrowthPerFloor = 0.03f;
 
         [SerializeField] private float enemySpeedMultiplierCap = 1.20f;
 
-        [Tooltip("每层 Boss 血量成长比例")]
-        [SerializeField] private float bossHealthGrowthPerFloor = 0.40f;
+        [Tooltip("Boss 血量成长比例（最终血量 = 40 × (1 + 该值 × 当前层数)）")]
+        [SerializeField] private float bossHealthGrowthPerFloor = 0.50f;
 
         [Tooltip("每层 Boss 移速成长比例")]
         [SerializeField] private float bossSpeedGrowthPerFloor = 0.04f;
@@ -100,7 +113,12 @@ namespace Roguelike.Dungeon
         [Tooltip("留空时从 Resources/Items 自动加载")]
         [SerializeField] private SecretAltar secretAltarPrefab;
 
+        [Header("挑战房")]
+        [Tooltip("挑战房的波数")]
+        [SerializeField, Range(1, 5)] private int challengeWaveCount = 3;
+
         private readonly Dictionary<RoomView, List<Enemy>> _roomEnemies = new Dictionary<RoomView, List<Enemy>>();
+        private readonly Dictionary<RoomView, int> _challengeWaves = new Dictionary<RoomView, int>();
         private readonly List<ItemDefinition> _availableItems = new List<ItemDefinition>();
         private RoomView _activeRoom;
         private PlayerStats _playerStats;
@@ -160,8 +178,11 @@ namespace Roguelike.Dungeon
 
         private int FloorOffset => Mathf.Max(0, _floor - 1);
 
+        /// <summary>当前楼层普通敌人的攻击力加成；召唤物也使用这个值。</summary>
+        public int EnemyDamageBonus => Mathf.Max(0, enemyDamageGrowthPerFloor * FloorOffset);
+
         private float EnemyHealthMultiplier =>
-            1f + Mathf.Max(0f, enemyHealthGrowthPerFloor) * FloorOffset;
+            1f + Mathf.Max(0f, enemyHealthGrowthPerFloor) * Mathf.Max(1, _floor);
 
         private float EnemySpeedMultiplier =>
             Mathf.Min(
@@ -169,7 +190,7 @@ namespace Roguelike.Dungeon
                 1f + Mathf.Max(0f, enemySpeedGrowthPerFloor) * FloorOffset);
 
         private float BossHealthMultiplier =>
-            1f + Mathf.Max(0f, bossHealthGrowthPerFloor) * FloorOffset;
+            1f + Mathf.Max(0f, bossHealthGrowthPerFloor) * Mathf.Max(1, _floor);
 
         private float BossSpeedMultiplier =>
             Mathf.Min(
@@ -194,6 +215,12 @@ namespace Roguelike.Dungeon
 
         /// <summary>房间首次被清空时触发（清房奖励类道具的入口）。</summary>
         public event System.Action<RoomView> RoomCleared;
+
+        /// <summary>挑战房开始新一波时触发（波数, 总波数）。</summary>
+        public event System.Action<int, int> ChallengeWaveStarted;
+
+        /// <summary>挑战房最后一波清空时触发。</summary>
+        public event System.Action ChallengeCompleted;
 
         private void Awake()
         {
@@ -266,8 +293,15 @@ namespace Roguelike.Dungeon
                 RoomView room = rooms[i];
                 if (room == null || room.IsCleared) continue;
 
-                if (room.RoomType == RoomType.Combat || room.RoomType == RoomType.Boss)
+                if (room.RoomType == RoomType.Combat ||
+                    room.RoomType == RoomType.Boss ||
+                    room.RoomType == RoomType.Challenge)
+                {
                     SpawnRoomEncounter(room, false, false);
+
+                    if (room.RoomType == RoomType.Challenge)
+                        _challengeWaves[room] = 1;
+                }
             }
 
             Debug.Log($"[Flow] 已为 {rooms.Count} 个房间预生成敌人");
@@ -287,17 +321,35 @@ namespace Roguelike.Dungeon
             // 换房时不销毁其它房间预生成的敌人，它们会继续留在自己的房间里游荡
             _activeRoom = room;
 
-            bool isCombatRoom = room.RoomType == RoomType.Combat || room.RoomType == RoomType.Boss;
+            bool isCombatRoom = room.RoomType == RoomType.Combat ||
+                room.RoomType == RoomType.Boss ||
+                room.RoomType == RoomType.Challenge;
 
             if (isCombatRoom && !room.IsCleared)
             {
                 room.SetDoorsLocked(true, false);
 
-                // 兜底：预生成失败时再补一次
-                if (!HasLivingEnemies(room))
-                    SpawnRoomEncounter(room, true, true);
+                if (room.RoomType == RoomType.Challenge)
+                {
+                    if (!_challengeWaves.ContainsKey(room))
+                        _challengeWaves[room] = 1;
+
+                    // 兜底：预生成失败时再补一次
+                    if (!HasLivingEnemies(room))
+                        SpawnRoomEncounter(room, true, true);
+                    else
+                        ActivateRoomEnemies(room);
+
+                    ChallengeWaveStarted?.Invoke(_challengeWaves[room], challengeWaveCount);
+                }
                 else
-                    ActivateRoomEnemies(room);
+                {
+                    // 兜底：预生成失败时再补一次
+                    if (!HasLivingEnemies(room))
+                        SpawnRoomEncounter(room, true, true);
+                    else
+                        ActivateRoomEnemies(room);
+                }
 
                 Debug.Log($"[Flow] 房间 {room.GridPosition} 上锁（{room.RoomType}）");
             }
@@ -469,6 +521,10 @@ namespace Roguelike.Dungeon
 
             if (room == null || room.IsCleared || HasLivingEnemies(room)) return;
 
+            // 挑战房：一波清空后继续下一波，最后一波才进入正常清房流程
+            if (room.RoomType == RoomType.Challenge && TryAdvanceChallenge(room))
+                return;
+
             if (room == _activeRoom)
             {
                 ClearCurrentRoom();
@@ -486,18 +542,85 @@ namespace Roguelike.Dungeon
             }
         }
 
+        /// <summary>
+        /// 挑战房清空一波后推进到下一波；最后一波返回 false，让正常清房流程开门。
+        /// </summary>
+        private bool TryAdvanceChallenge(RoomView room)
+        {
+            if (!_challengeWaves.TryGetValue(room, out int wave)) return false;
+
+            if (wave >= challengeWaveCount)
+            {
+                _challengeWaves.Remove(room);
+                TrySpawnChallengeReward(room);
+                ChallengeCompleted?.Invoke();
+                return false;
+            }
+
+            int nextWave = wave + 1;
+            _challengeWaves[room] = nextWave;
+            SpawnRoomEncounter(room, true, true);
+
+            if (!HasLivingEnemies(room))
+            {
+                _challengeWaves.Remove(room);
+                Debug.LogWarning($"[Flow] 挑战房 {room.GridPosition} 第 {nextWave} 波生成失败");
+                return false;
+            }
+
+            ChallengeWaveStarted?.Invoke(nextWave, challengeWaveCount);
+            return true;
+        }
+
+        /// <summary>挑战房通关奖励：一件未持有的道具，免费领取。</summary>
+        private void TrySpawnChallengeReward(RoomView room)
+        {
+            if (room == null || room.RewardClaimed || room.RewardSpawned) return;
+            if (itemPickupPrefab == null || itemPool == null || itemPool.Length == 0) return;
+
+            List<ItemDefinition> available = BuildAvailableItems();
+            if (available.Count == 0)
+            {
+                room.RewardSpawned = true;
+                Debug.Log($"[Flow] 挑战房 {room.GridPosition} 无可生成奖励（玩家已持有全部道具）");
+                return;
+            }
+
+            ItemDefinition item = available[Random.Range(0, available.Count)];
+            if (item == null) return;
+
+            room.RewardSpawned = true;
+            Vector2 center = room.WorldCenter;
+            ItemPickup pickup = Instantiate(
+                itemPickupPrefab,
+                new Vector3(center.x, center.y, 0f),
+                Quaternion.identity,
+                room.transform);
+
+            pickup.Setup(item, room);
+            Debug.Log($"[Flow] 挑战房 {room.GridPosition} 通关，奖励：{item.itemName}");
+        }
+
         /// <summary>按敌人类型掉落金币 / 回血，掉落物挂在敌人所属的房间里。</summary>
         private void SpawnDrops(Enemy enemy, RoomView room)
         {
             Vector3 origin = enemy.transform.position;
-            int bonus = _playerStats != null ? _playerStats.CoinBonus : 0;
-            int coins = (enemy.IsBoss ? bossCoinDrop : normalCoinDrop) + bonus + CoinsFromFloor;
-
-            bool dropCoins = enemy.IsBoss || Random.value < coinDropChance;
-            if (dropCoins)
+            // 精英怪固定掉落 1 金币，不受普通金币概率/数量加成影响
+            if (enemy.IsElite)
             {
-                for (int i = 0; i < coins; i++)
-                    SpawnPickup(coinPrefab, ScatterAround(origin, 0.7f, room), room);
+                SpawnPickup(coinPrefab, ScatterAround(origin, 0.7f, room), room);
+            }
+            else
+            {
+                int bonus = _playerStats != null ? _playerStats.CoinBonus : 0;
+                int coins = (enemy.IsBoss ? bossCoinDrop : normalCoinDrop) + bonus + CoinsFromFloor;
+
+                bool dropCoins = enemy.IsBoss || Random.value < coinDropChance;
+                if (dropCoins)
+                {
+                    for (int i = 0; i < coins; i++)
+                        SpawnPickup(coinPrefab, ScatterAround(origin, 0.7f, room), room);
+                }
             }
 
             float heartChance = heartDropChance;
@@ -627,11 +750,16 @@ namespace Roguelike.Dungeon
                 if (prefab == null) prefab = enemyPrefab;
 
                 Enemy enemy = Instantiate(prefab, spawnPosition, Quaternion.identity, room.transform);
-                enemy.name = isBoss ? "Boss" : $"{prefab.GetType().Name}_{i}";
+                bool elite = !isBoss && Random.value < eliteChance;
+                enemy.name = isBoss
+                    ? "Boss"
+                    : (elite ? $"Elite_{prefab.GetType().Name}_{i}" : $"{prefab.GetType().Name}_{i}");
 
                 float health = isBoss
                     ? bossEnemyHealth * BossHealthMultiplier
                     : HealthFor(prefab) * EnemyHealthMultiplier;
+
+                if (elite) health *= Mathf.Max(1f, eliteHealthMultiplier);
 
                 float speed = isBoss
                     ? 1.7f * BossSpeedMultiplier
@@ -645,6 +773,9 @@ namespace Roguelike.Dungeon
                     isBoss,
                     this,
                     playSpawnAnimation);
+
+                if (!isBoss) enemy.SetFloorDamageBonus(EnemyDamageBonus);
+                if (elite) enemy.MakeElite(eliteDamageMultiplier);
 
                 if (isBoss && enemy is BossEnemy boss)
                 {
@@ -807,6 +938,7 @@ namespace Roguelike.Dungeon
             }
 
             _roomEnemies.Clear();
+            _challengeWaves.Clear();
             _activeRoom = null;
         }
 

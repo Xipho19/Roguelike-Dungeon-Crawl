@@ -18,8 +18,21 @@ namespace Roguelike.Player
 
         [SerializeField] private float invulnerableDuration = 0.9f;
 
+        [Header("护盾")]
+        [Tooltip("护盾上限；开局和重开时充满")]
+        [SerializeField, Min(0)] private int maxShield = 5;
+
+        [Tooltip("最后一次受伤后，等待多少秒开始恢复护盾")]
+        [SerializeField, Min(0f)] private float shieldRegenDelay = 5f;
+
+        [Tooltip("恢复护盾的间隔（秒）")]
+        [SerializeField, Min(0.1f)] private float shieldRegenInterval = 1f;
+
         private int _health;
         private int _maxHealth;
+        private int _shield;
+        private float _lastDamageTime = -999f;
+        private float _nextShieldRegenTime;
         private float _invulnerableUntil;
         private Rigidbody2D _rb;
         private PlayerStats _stats;
@@ -30,6 +43,8 @@ namespace Roguelike.Player
 
         public int Health => _health;
         public int MaxHealth => _maxHealth;
+        public int Shield => _shield;
+        public int MaxShield => maxShield;
         public bool IsInvulnerable => Time.time < _invulnerableUntil;
         public bool IsDead => _health <= 0;
 
@@ -48,6 +63,7 @@ namespace Roguelike.Player
 
             _maxHealth = _stats != null ? _stats.MaxHealth : maxHealth;
             _health = _maxHealth;
+            _shield = Mathf.Max(0, maxShield);
 
             if (_renderer != null) _baseColor = _renderer.color;
             if (_stats != null) _stats.StatsChanged += HandleStatsChanged;
@@ -60,6 +76,8 @@ namespace Roguelike.Player
 
         private void Update()
         {
+            UpdateShieldRegen();
+
             if (_renderer == null) return;
 
             if (IsInvulnerable && !IsDead)
@@ -72,6 +90,17 @@ namespace Roguelike.Player
             {
                 _renderer.color = _baseColor;
             }
+        }
+
+        /// <summary>脱战 5 秒后，每秒恢复 1 点护盾，直到上限。</summary>
+        private void UpdateShieldRegen()
+        {
+            if (IsDead || _shield >= maxShield) return;
+            if (Time.time - _lastDamageTime < shieldRegenDelay) return;
+            if (Time.time < _nextShieldRegenTime) return;
+
+            _shield++;
+            _nextShieldRegenTime = Time.time + shieldRegenInterval;
         }
 
         /// <summary>生命上限变化时：新增的容器直接补满，减少时夹紧当前血量。</summary>
@@ -93,16 +122,35 @@ namespace Roguelike.Player
         {
             if (amount <= 0 || IsDead || IsInvulnerable) return false;
 
-            _health -= amount;
+            // 先扣护盾，护盾耗尽后再扣血
+            int healthDamage = amount;
+            if (_shield > 0)
+            {
+                int absorbed = Mathf.Min(_shield, healthDamage);
+                _shield -= absorbed;
+                healthDamage -= absorbed;
+            }
+
+            _lastDamageTime = Time.time;
+            _nextShieldRegenTime = Time.time + shieldRegenDelay;
             _invulnerableUntil = Time.time + invulnerableDuration;
 
             Damaged?.Invoke();
-            AudioService.Play("chop", 0.75f);
 
-            if (_health <= 0)
+            if (healthDamage > 0)
             {
-                _health = 0;
-                Die();
+                _health -= healthDamage;
+                AudioService.Play("chop", 0.75f);
+
+                if (_health <= 0)
+                {
+                    _health = 0;
+                    Die();
+                }
+            }
+            else
+            {
+                AudioService.Play("metalClick", 0.65f);
             }
 
             return true;
@@ -150,6 +198,9 @@ namespace Roguelike.Player
         {
             _maxHealth = _stats != null ? _stats.MaxHealth : maxHealth;
             _health = _maxHealth;
+            _shield = Mathf.Max(0, maxShield);
+            _lastDamageTime = -999f;
+            _nextShieldRegenTime = 0f;
             _invulnerableUntil = Time.time + 1f;
 
             if (_controller != null) _controller.enabled = true;
