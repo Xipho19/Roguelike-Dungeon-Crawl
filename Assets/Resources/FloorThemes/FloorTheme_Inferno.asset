@@ -18,3 +18,5 @@ MonoBehaviour:
   wallTint: {r: 1, g: 0.66, b: 0.52, a: 1}
   cameraBackground: {r: 0.09, g: 0.02, b: 0.015, a: 1}
   bossVisual: 2
+  bgm: {fileID: 8300000, guid: 56fcacf957e3caf4c8848caea9b34885, type: 3}
+  bgmVolume: 0.5

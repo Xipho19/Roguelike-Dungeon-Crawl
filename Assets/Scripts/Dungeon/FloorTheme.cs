@@ -35,5 +35,13 @@ namespace Roguelike.Dungeon
         [Header("Boss")]
         [Tooltip("该主题楼层使用的 Boss 形象")]
         public FloorBossVisual bossVisual = FloorBossVisual.BigDemon;
+
+        [Header("BGM")]
+        [Tooltip("该楼层循环播放的背景音乐；留空则不播放")]
+        public AudioClip bgm;
+
+        [Range(0f, 1f)]
+        [Tooltip("背景音乐音量")]
+        public float bgmVolume = 0.5f;
     }
 }

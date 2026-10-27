@@ -15,7 +15,7 @@ MonoBehaviour:
   itemName: "\u5FEB\u901F\u89E6\u53D1\u5668"
   description: "\u5C04\u901F\u63D0\u5347 25%\u3002"
   rarity: 0
-  icon: {fileID: 21300000, guid: 215e7393c26d27d449a2ea31e69d69e1, type: 3}
+  icon: {fileID: 21300000, guid: d43ace2af76da374187139bb9de607a6, type: 3}
   color: {r: 0.4, g: 0.85, b: 1, a: 1}
   modifiers:
   - stat: 2

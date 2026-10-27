@@ -35,6 +35,23 @@ namespace Roguelike.Dungeon
         [SerializeField] private int roomWidth = RoomGeometry.FootprintWidth;
         [SerializeField] private int roomHeight = RoomGeometry.FootprintHeight;
 
+        private readonly List<SpriteRenderer> _wallTinted = new List<SpriteRenderer>();
+        private Color _wallTint = Color.white;
+        private bool _hasWallTint;
+
+        /// <summary>
+        /// 墙面装饰的底图自带砖墙颜色，必须和主题墙体一起染色，
+        /// 否则墓穴/熔岩层的墙会出现一块块原始棕色。
+        /// </summary>
+        public void SetWallTint(Color color)
+        {
+            _wallTint = color;
+            _hasWallTint = true;
+
+            for (int i = 0; i < _wallTinted.Count; i++)
+                if (_wallTinted[i] != null) _wallTinted[i].color = color;
+        }
+
         public void Apply(RoomType type, DoorDirections doors, int seed)
         {
             if (container == null) container = transform;
@@ -53,16 +70,16 @@ namespace Roguelike.Dungeon
             // ---- 顶墙：旗帜 ----
             Sprite banner = PickBanner(type, rng);
             int bannerCount = type == RoomType.Boss || type == RoomType.Treasure || type == RoomType.Shop ? 2 : 1;
-            Add("Banner_0", banner, new Vector2(3.5f, wallTopY), 1);
+            Add("Banner_0", banner, new Vector2(3.5f, wallTopY), 1, true);
             if (bannerCount > 1)
-                Add("Banner_1", banner, new Vector2(roomWidth - 3.5f, wallTopY), 1);
+                Add("Banner_1", banner, new Vector2(roomWidth - 3.5f, wallTopY), 1, true);
 
             // ---- 顶墙：破洞 / 苔藓（约三分之一房间） ----
             if (rng.NextDouble() < 0.35)
             {
                 Sprite grime = rng.NextDouble() < 0.5 ? wallHole : wallGoo;
                 float grimeX = upDoor ? centerX - 2.5f : centerX;
-                Add("WallGrime", grime, new Vector2(grimeX, wallTopY), 1);
+                Add("WallGrime", grime, new Vector2(grimeX, wallTopY), 1, true);
             }
 
             // ---- 特殊房：立柱 ----
@@ -236,16 +253,21 @@ namespace Roguelike.Dungeon
         /// <summary>底座 + 柱身 + 柱头，自下而上叠成一根 3 格高的立柱。</summary>
         private void BuildColumn(Vector2 basePosition, float colliderHeight = 2.7f)
         {
-            Add("Column_Base", columnBase, basePosition, 1);
-            Add("Column_Mid", columnMid, basePosition + Vector2.up, 1);
-            Add("Column_Top", columnTop, basePosition + Vector2.up * 2f, 1);
+            Add("Column_Base", columnBase, basePosition, 1, true);
+            Add("Column_Mid", columnMid, basePosition + Vector2.up, 1, true);
+            Add("Column_Top", columnTop, basePosition + Vector2.up * 2f, 1, true);
 
             // 三段拼成的整体用一个方形碰撞体挡住；Boss 房略矮，留出穿行缝隙
             AddBoxCollider("Column_Obstacle", basePosition + Vector2.up, new Vector2(0.75f, colliderHeight));
         }
 
         /// <summary>创建纯视觉 Sprite；返回对象以便需要时追加碰撞体。</summary>
-        private GameObject Add(string objectName, Sprite sprite, Vector2 localPosition, int sortingOrder)
+        private GameObject Add(
+            string objectName,
+            Sprite sprite,
+            Vector2 localPosition,
+            int sortingOrder,
+            bool tintWithWall = false)
         {
             if (sprite == null) return null;
 
@@ -256,6 +278,12 @@ namespace Roguelike.Dungeon
             var renderer = go.AddComponent<SpriteRenderer>();
             renderer.sprite = sprite;
             renderer.sortingOrder = sortingOrder;
+
+            if (tintWithWall)
+            {
+                _wallTinted.Add(renderer);
+                if (_hasWallTint) renderer.color = _wallTint;
+            }
 
             return go;
         }
@@ -309,6 +337,8 @@ namespace Roguelike.Dungeon
 
         private void Clear()
         {
+            _wallTinted.Clear();
+
             for (int i = container.childCount - 1; i >= 0; i--)
             {
                 GameObject child = container.GetChild(i).gameObject;

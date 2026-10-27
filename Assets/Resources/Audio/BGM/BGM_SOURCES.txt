@@ -1,0 +1,14 @@
+背景音乐来源与许可
+==================
+
+曲目来源：OpenGameArt - "12 Music Loops" by SubspaceAudio
+来源页面：https://opengameart.org/content/12-music-loops
+许可：CC0 1.0 Universal（公共领域，可商用，无需署名）
+
+文件对应关系：
+- BGM_Dungeon.ogg <- 215_super_action_chiptunes_bgm_stage_6.ogg
+- BGM_Crypt.ogg   <- 216_super_action_chiptunes_bgm_stage_7.ogg
+- BGM_Inferno.ogg <- 218_super_action_chiptunes_bgm_stage_9.ogg
+
+如需更换曲目，可直接在 Resources/FloorThemes 下的三个楼层主题资产中
+修改 Bgm 引用和 Bgm Volume。

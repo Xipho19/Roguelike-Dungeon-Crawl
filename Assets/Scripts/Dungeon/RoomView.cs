@@ -278,6 +278,9 @@ namespace Roguelike.Dungeon
             if (roomFloor != null) roomFloor.SetTint(_floorThemeTint);
             else if (floorRenderer != null) floorRenderer.color = _floorThemeTint;
 
+            // 墙面装饰（旗帜、破洞/苔藓、立柱）自带砖墙底图，要和墙体一起染色
+            if (decorations != null) decorations.SetWallTint(theme.wallTint);
+
             if (walls == null) return;
 
             for (int i = 0; i < walls.Length; i++)

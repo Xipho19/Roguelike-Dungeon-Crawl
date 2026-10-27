@@ -133,6 +133,11 @@ namespace Roguelike.Core
             if (flow != null) flow.SetFloor(currentFloor, _currentTheme);
             if (roomCamera != null && _currentTheme != null)
                 roomCamera.SetBackgroundColor(_currentTheme.cameraBackground);
+
+            if (_currentTheme != null)
+                AudioService.PlayMusic(_currentTheme.bgm, _currentTheme.bgmVolume);
+            else
+                AudioService.StopMusic();
         }
 
         private void EnterVictory(string reason)
@@ -145,6 +150,7 @@ namespace Roguelike.Core
 
             _state = RunState.Victory;
             Time.timeScale = 0f;
+            AudioService.StopMusic();
             AudioService.Play("bookOpen", 0.9f);
             Debug.Log($"[Run] 通关：{reason}");
         }
@@ -167,6 +173,7 @@ namespace Roguelike.Core
 
             _state = RunState.GameOver;
             Time.timeScale = 0f;
+            AudioService.StopMusic();
             AudioService.Play("Get_Out_Loser", 1f, 0f);
             Debug.Log("[Run] 玩家死亡，本局结束");
         }

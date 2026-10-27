@@ -81,6 +81,8 @@ namespace Roguelike.EditorTools
         public static Sprite SlingshotIcon => Load("frames/icons/icon_slingshot.png");
         public static Sprite GlassCannonIcon => Load("frames/icons/icon_glasscannon.png");
         public static Sprite TridentIcon => Load("frames/icons/icon_trident.png");
+        public static Sprite RapidTriggerIcon => Load("frames/icons/icon_rapid_trigger.png");
+        public static Sprite PiercingPrismIcon => Load("frames/icons/icon_piercing_prism.png");
         public static Sprite VampireFangIcon => Load("frames/icons/icon_vampire_fang.png");
         public static Sprite BentSpoonIcon => Load("frames/icons/icon_bent_spoon.png");
         public static Sprite CorrosiveGlandIcon => Load("frames/icons/icon_corrosive_gland.png");

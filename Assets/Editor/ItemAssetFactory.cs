@@ -25,7 +25,7 @@ namespace Roguelike.EditorTools
             EnsureFolder(ItemFolder);
 
             Create("Item_RapidTrigger", "快速触发器", "射速提升 25%。",
-                new Color(0.40f, 0.85f, 1f), ThirdPartySprites.Weapon("weapon_regular_sword"), 0, 0,
+                new Color(0.40f, 0.85f, 1f), ThirdPartySprites.RapidTriggerIcon, 0, 0,
                 Mod(StatType.FireInterval, StatOp.Multiply, 0.75f));
 
             Create("Item_HeavyTear", "重型弹丸", "伤害 +1，射速降低 15%。",
@@ -42,7 +42,7 @@ namespace Roguelike.EditorTools
                 Mod(StatType.MaxHealth, StatOp.Add, 2f));
 
             Create("Item_PiercingPrism", "穿透棱镜", "眼泪可以额外穿透 1 个敌人。",
-                new Color(0.65f, 0.45f, 0.95f), ThirdPartySprites.Weapon("weapon_red_gem_sword"), 0, 0,
+                new Color(0.65f, 0.45f, 0.95f), ThirdPartySprites.PiercingPrismIcon, 0, 0,
                 Mod(StatType.Pierce, StatOp.Add, 1f));
 
             Create("Item_TripleShot", "三叉弹", "一次发射 3 发，射速降低 25%。",

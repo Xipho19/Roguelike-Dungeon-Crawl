@@ -84,6 +84,9 @@ namespace Roguelike.Dungeon
         [Tooltip("Boss 掉落的金币数")]
         [SerializeField] private int bossCoinDrop = 5;
 
+        [Tooltip("普通敌人每次击杀掉落金币的概率；Boss 仍然必定掉落")]
+        [SerializeField, Range(0f, 1f)] private float coinDropChance = 0.5f;
+
         [Tooltip("普通敌人掉落回血的概率")]
         [SerializeField, Range(0f, 1f)] private float heartDropChance = 0.2f;
 
@@ -490,8 +493,12 @@ namespace Roguelike.Dungeon
             int bonus = _playerStats != null ? _playerStats.CoinBonus : 0;
             int coins = (enemy.IsBoss ? bossCoinDrop : normalCoinDrop) + bonus + CoinsFromFloor;
 
-            for (int i = 0; i < coins; i++)
-                SpawnPickup(coinPrefab, ScatterAround(origin, 0.7f, room), room);
+            bool dropCoins = enemy.IsBoss || Random.value < coinDropChance;
+            if (dropCoins)
+            {
+                for (int i = 0; i < coins; i++)
+                    SpawnPickup(coinPrefab, ScatterAround(origin, 0.7f, room), room);
+            }
 
             float heartChance = heartDropChance;
             if (_playerInventory != null)

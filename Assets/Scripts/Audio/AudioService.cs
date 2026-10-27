@@ -19,6 +19,7 @@ namespace Roguelike.Audio
 
         private static readonly Dictionary<string, AudioClip> Clips = new Dictionary<string, AudioClip>();
         private static readonly List<AudioSource> Sources = new List<AudioSource>();
+        private static AudioSource _musicSource;
         private static int _next;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -44,7 +45,42 @@ namespace Roguelike.Audio
                 source.spatialBlend = 0f;
                 Sources.Add(source);
             }
+
+            // 单独的循环音乐源，不与一次性音效抢占通道
+            _musicSource = root.AddComponent<AudioSource>();
+            _musicSource.playOnAwake = false;
+            _musicSource.spatialBlend = 0f;
+            _musicSource.loop = true;
         }
+
+        /// <summary>循环播放楼层 BGM；传入 null 或换层时自动切换。</summary>
+        public static void PlayMusic(AudioClip clip, float volume = 0.5f)
+        {
+            if (clip == null)
+            {
+                StopMusic();
+                return;
+            }
+
+            if (_musicSource == null) return;
+            if (_musicSource.clip == clip && _musicSource.isPlaying) return;
+
+            _musicSource.clip = clip;
+            _musicSource.loop = true;
+            _musicSource.volume = Mathf.Clamp01(volume);
+            _musicSource.Play();
+        }
+
+        public static void StopMusic()
+        {
+            if (_musicSource == null) return;
+
+            _musicSource.Stop();
+            _musicSource.clip = null;
+        }
+
+        public static AudioClip CurrentMusic => _musicSource != null ? _musicSource.clip : null;
+        public static bool IsMusicPlaying => _musicSource != null && _musicSource.isPlaying;
 
         /// <param name="pitchJitter">音高随机浮动；语音类音效传 0 保持原调。</param>
         public static void Play(string clipName, float volume = 1f, float pitchJitter = 0.05f)
