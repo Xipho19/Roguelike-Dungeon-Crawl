@@ -1,0 +1,5 @@
+Shield hit sound source:
+"光厂音效_5182_Impact~清脆盾牌撞击声.mp3"
+
+Provided by the project owner for use in this project.
+The clip was trimmed, normalized, and converted to WAV for runtime playback.

@@ -30,7 +30,8 @@ namespace Roguelike.Dungeon
         [Tooltip("门洞所在的那一段；有门时隐藏，无门时保留")]
         [SerializeField] private GameObject doorSegment;
 
-        private SpriteRenderer[] _tintRenderers;
+        private SpriteRenderer[] _renderers;
+        private Sprite[] _defaultSprites;
 
         public WallSide Side => side;
 
@@ -56,17 +57,41 @@ namespace Roguelike.Dungeon
                 doorSegment.SetActive(!hasDoor);
         }
 
+        /// <summary>替换整面墙的砖块贴图；传 null 恢复 Prefab 默认贴图。</summary>
+        public void SetSprite(Sprite sprite)
+        {
+            CacheRenderers();
+
+            for (int i = 0; i < _renderers.Length; i++)
+            {
+                if (_renderers[i] == null) continue;
+
+                Sprite target = sprite != null ? sprite : _defaultSprites[i];
+                if (target != null) _renderers[i].sprite = target;
+            }
+        }
+
         /// <summary>按楼层主题染色；包括当前隐藏的门段，避免开门后颜色不一致。</summary>
         public void SetTint(Color color)
         {
-            if (_tintRenderers == null)
-                _tintRenderers = GetComponentsInChildren<SpriteRenderer>(true);
+            CacheRenderers();
 
-            for (int i = 0; i < _tintRenderers.Length; i++)
+            for (int i = 0; i < _renderers.Length; i++)
             {
-                if (_tintRenderers[i] != null)
-                    _tintRenderers[i].color = color;
+                if (_renderers[i] != null)
+                    _renderers[i].color = color;
             }
+        }
+
+        private void CacheRenderers()
+        {
+            if (_renderers != null) return;
+
+            _renderers = GetComponentsInChildren<SpriteRenderer>(true);
+            _defaultSprites = new Sprite[_renderers.Length];
+
+            for (int i = 0; i < _renderers.Length; i++)
+                _defaultSprites[i] = _renderers[i] != null ? _renderers[i].sprite : null;
         }
     }
 }

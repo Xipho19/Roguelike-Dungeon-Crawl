@@ -189,7 +189,10 @@ namespace Roguelike.Player
                 Vector2 shotDirection = Rotate(direction, startAngle + i * spreadStep);
                 Vector2 spawnPosition = (Vector2)transform.position + shotDirection * spawnOffset;
 
-                TearProjectile tear = Instantiate(tearPrefab, spawnPosition, Quaternion.identity);
+                TearProjectile tear = ProjectilePool.Spawn(
+                    tearPrefab,
+                    new Vector3(spawnPosition.x, spawnPosition.y, 0f),
+                    Quaternion.identity);
                 tear.Initialize(
                     shotDirection,
                     speed,

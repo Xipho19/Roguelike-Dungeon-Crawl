@@ -43,7 +43,31 @@ namespace Roguelike.EditorTools
         public const string MaskedOrcPath = Folder + "/MaskedOrc.prefab";
         public const string OrcShamanPath = Folder + "/OrcShaman.prefab";
         public const string SwampyPath = Folder + "/Swampy.prefab";
+        public const string KnightPath = Folder + "/Knight.prefab";
+        public const string WizardPath = Folder + "/Wizard.prefab";
+        public const string KnightFemalePath = Folder + "/KnightFemale.prefab";
+        public const string WizardFemalePath = Folder + "/WizardFemale.prefab";
+        public const string ElfPath = Folder + "/Elf.prefab";
+        public const string ElfFemalePath = Folder + "/ElfFemale.prefab";
+        public const string SkeletonWarriorPath = Folder + "/SkeletonWarrior.prefab";
+        public const string TinyZombieRaiderPath = Folder + "/TinyZombieRaider.prefab";
         public const string TinyZombieCloudPath = Folder + "/TinyZombieCloud.prefab";
+
+        // Danaida 16×16 风格测试怪物
+        public const string DanaidaRedImpPath = Folder + "/DanaidaRedImp.prefab";
+        public const string DanaidaGreenSlimePath = Folder + "/DanaidaGreenSlime.prefab";
+        public const string DanaidaPurpleGhostPath = Folder + "/DanaidaPurpleGhost.prefab";
+        public const string DanaidaTealSpiderPath = Folder + "/DanaidaTealSpider.prefab";
+        public const string DanaidaBrownCyclopsPath = Folder + "/DanaidaBrownCyclops.prefab";
+        public const string DanaidaPurpleDemonPath = Folder + "/DanaidaPurpleDemon.prefab";
+
+        // 16x16 Fantasy RPG Trash Mobs 测试怪物
+        public const string TrashGreenSlimePath = Folder + "/TrashGreenSlime.prefab";
+        public const string TrashSnakePath = Folder + "/TrashSnake.prefab";
+        public const string TrashBlueBatPath = Folder + "/TrashBlueBat.prefab";
+        public const string TrashMushroomPath = Folder + "/TrashMushroom.prefab";
+        public const string TrashBeePath = Folder + "/TrashBee.prefab";
+        public const string TrashFlowerPath = Folder + "/TrashFlower.prefab";
         public const string FireTotemPath = Folder + "/FireTotem.prefab";
         public const string EnemyHazardPath = Folder + "/EnemyHazard.prefab";
 
@@ -94,6 +118,16 @@ namespace Roguelike.EditorTools
             BuildMaskedOrc(sprite);
             BuildOrcShaman(sprite, fireTotem);
             BuildSwampy(sprite, hazard);
+            BuildKnight(sprite);
+            BuildWizard(sprite);
+            BuildKnightFemale(sprite);
+            BuildWizardFemale(sprite);
+            BuildElf(sprite);
+            BuildElfFemale(sprite);
+            BuildSkeletonWarrior(sprite);
+            BuildTinyZombieRaider(sprite);
+            BuildDanaidaMonsters(sprite);
+            BuildTrashMobs(sprite, hazard);
             BuildTinyZombieCloud(sprite, hazard);
 
             BuildTear(sprite);
@@ -103,7 +137,7 @@ namespace Roguelike.EditorTools
             BuildPortal(sprite);
             AssetDatabase.SaveAssets();
 
-            Debug.Log("[Combat] 战斗 Prefab 已生成：基础六种 + 三层小怪 + Boss / Tear / EnemyProjectile / Coin / Heart / NextFloorPortal");
+            Debug.Log("[Combat] 战斗 Prefab 已生成：基础六种 + 六层小怪 + Boss / Tear / EnemyProjectile / Coin / Heart / NextFloorPortal");
         }
 
         private static Sprite ArtOr(Sprite art, Sprite fallback) => art != null ? art : fallback;
@@ -332,7 +366,12 @@ namespace Roguelike.EditorTools
         {
             var root = new GameObject("Boss");
 
-            var renderer = root.AddComponent<SpriteRenderer>();
+            // 16×16 的 4-6 层 Boss 需要放大到和 32×32 Boss 相近的体型；
+            // 把渲染器放在子对象上，避免缩放根对象时连带放大碰撞体。
+            var visual = new GameObject("Visual");
+            visual.transform.SetParent(root.transform, false);
+
+            var renderer = visual.AddComponent<SpriteRenderer>();
             renderer.sprite = ArtOr(ThirdPartySprites.Boss, sprite);
             renderer.color = Color.white;
             renderer.sortingOrder = 8;
@@ -358,6 +397,12 @@ namespace Roguelike.EditorTools
             SetSpriteArray(bossSerialized, "bigZombieRunFrames", ThirdPartySprites.BigZombieRun);
             SetSpriteArray(bossSerialized, "bigDemonIdleFrames", ThirdPartySprites.BossIdle);
             SetSpriteArray(bossSerialized, "bigDemonRunFrames", ThirdPartySprites.BossRun);
+            SetSpriteArray(bossSerialized, "sewerTrollIdleFrames", ThirdPartySprites.ForestTrollIdle);
+            SetSpriteArray(bossSerialized, "sewerTrollRunFrames", ThirdPartySprites.ForestTrollRun);
+            SetSpriteArray(bossSerialized, "ruinsGolemIdleFrames", ThirdPartySprites.StoneGolemIdle);
+            SetSpriteArray(bossSerialized, "ruinsGolemRunFrames", ThirdPartySprites.StoneGolemRun);
+            SetSpriteArray(bossSerialized, "obsidianKingIdleFrames", ThirdPartySprites.UndeadKingIdle);
+            SetSpriteArray(bossSerialized, "obsidianKingRunFrames", ThirdPartySprites.UndeadKingRun);
             bossSerialized.ApplyModifiedPropertiesWithoutUndo();
 
             AttachAnimator(root, ThirdPartySprites.BossIdle, ThirdPartySprites.BossRun);
@@ -372,7 +417,13 @@ namespace Roguelike.EditorTools
             {
                 GoblinPath, OrcWarriorPath, MuddyPath, SkeletPath, ZombiePath,
                 IceZombiePath, WogolPath, ImpPath, ChortPath, MaskedOrcPath,
-                OrcShamanPath, FireTotemPath, TinyZombieCloudPath,
+                OrcShamanPath, FireTotemPath, SwampyPath, KnightPath, WizardPath,
+                KnightFemalePath, WizardFemalePath, ElfPath, ElfFemalePath,
+                SkeletonWarriorPath, TinyZombieRaiderPath, TinyZombieCloudPath,
+                DanaidaRedImpPath, DanaidaGreenSlimePath, DanaidaPurpleGhostPath,
+                DanaidaTealSpiderPath, DanaidaBrownCyclopsPath, DanaidaPurpleDemonPath,
+                TrashGreenSlimePath, TrashSnakePath, TrashBlueBatPath,
+                TrashMushroomPath, TrashBeePath, TrashFlowerPath,
             };
 
             for (int i = 0; i < paths.Length; i++)
@@ -758,6 +809,542 @@ namespace Roguelike.EditorTools
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             return SaveMonster<Enemy>(root, SwampyPath);
+        }
+
+        private static Enemy BuildKnight(Sprite fallback)
+        {
+            GameObject root = CreateMonsterRoot(
+                "Knight",
+                ThirdPartySprites.Knight,
+                fallback,
+                ThirdPartySprites.KnightIdle,
+                ThirdPartySprites.KnightRun,
+                1f,
+                0.4f);
+
+            var enemy = root.AddComponent<CleaveEnemy>();
+            var serialized = ConfigureMonster(enemy, 1.8f, 0.9f, 1);
+            SetFloat(serialized, "triggerRange", 1.7f);
+            SetFloat(serialized, "windupTime", 0.5f);
+            SetInt(serialized, "damage", 2);
+            SetFloat(serialized, "radius", 1.6f);
+            SetFloat(serialized, "halfAngle", 75f);
+            SetFloat(serialized, "recoverTime", 0.6f);
+            SetFloat(serialized, "attackCooldown", 2.1f);
+            SetBool(serialized, "secondStrike", true);
+            SetFloat(serialized, "secondDelay", 0.25f);
+            SetColor(serialized, "windupTint", new Color(1f, 0.8f, 0.35f, 1f));
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, KnightPath);
+        }
+
+        private static Enemy BuildWizard(Sprite fallback)
+        {
+            GameObject root = CreateMonsterRoot(
+                "Wizard",
+                ThirdPartySprites.Wizard,
+                fallback,
+                ThirdPartySprites.WizardIdle,
+                ThirdPartySprites.WizardRun,
+                1f,
+                0.4f);
+
+            var enemy = root.AddComponent<BlinkShooterEnemy>();
+            var serialized = ConfigureMonster(enemy, 1.15f, 1f, 1);
+            SetFloat(serialized, "preferredDistance", 4.5f);
+            SetFloat(serialized, "blinkInterval", 5f);
+            SetFloat(serialized, "blinkWindup", 0.4f);
+            SetFloat(serialized, "blinkDistance", 3.2f);
+            SetInt(serialized, "projectileCount", 3);
+            SetFloat(serialized, "spreadAngle", 36f);
+            SetFloat(serialized, "projectileSpeed", 4.8f);
+            SetFloat(serialized, "projectileLifetime", 4f);
+            SetFloat(serialized, "shootWindup", 0.4f);
+            SetFloat(serialized, "recoverTime", 0.5f);
+            SetColor(serialized, "projectileTint", new Color(0.72f, 0.58f, 1f, 1f));
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, WizardPath);
+        }
+
+        private static Enemy BuildKnightFemale(Sprite fallback)
+        {
+            GameObject root = CreateMonsterRoot(
+                "KnightFemale",
+                ThirdPartySprites.KnightFemale,
+                fallback,
+                ThirdPartySprites.KnightFemaleIdle,
+                ThirdPartySprites.KnightFemaleRun,
+                1f,
+                0.4f);
+
+            var enemy = root.AddComponent<ChargerEnemy>();
+            var serialized = ConfigureMonster(enemy, 1.6f, 1f, 1);
+            SetFloat(serialized, "triggerRange", 5.5f);
+            SetFloat(serialized, "windupTime", 0.45f);
+            SetFloat(serialized, "chargeSpeed", 11f);
+            SetFloat(serialized, "chargeDuration", 0.4f);
+            SetFloat(serialized, "recoverTime", 0.7f);
+            SetInt(serialized, "chargeCount", 1);
+            SetFloat(serialized, "chargePause", 0.25f);
+            SetColor(serialized, "windupTint", new Color(0.55f, 0.85f, 1f, 1f));
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, KnightFemalePath);
+        }
+
+        private static Enemy BuildWizardFemale(Sprite fallback)
+        {
+            GameObject root = CreateMonsterRoot(
+                "WizardFemale",
+                ThirdPartySprites.WizardFemale,
+                fallback,
+                ThirdPartySprites.WizardFemaleIdle,
+                ThirdPartySprites.WizardFemaleRun,
+                1f,
+                0.4f);
+
+            var enemy = root.AddComponent<ShooterEnemy>();
+            var serialized = ConfigureMonster(enemy, 1.2f, 1f, 1);
+            SetFloat(serialized, "preferredDistance", 5f);
+            SetFloat(serialized, "shootInterval", 1.9f);
+            SetFloat(serialized, "windupTime", 0.45f);
+            SetFloat(serialized, "projectileSpeed", 5.5f);
+            SetFloat(serialized, "projectileLifetime", 4f);
+            SetInt(serialized, "projectileCount", 2);
+            SetFloat(serialized, "spreadAngle", 18f);
+            SetColor(serialized, "projectileTint", new Color(0.65f, 0.55f, 1f, 1f));
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, WizardFemalePath);
+        }
+
+        private static Enemy BuildElf(Sprite fallback)
+        {
+            GameObject root = CreateMonsterRoot(
+                "Elf",
+                ThirdPartySprites.Elf,
+                fallback,
+                ThirdPartySprites.ElfIdle,
+                ThirdPartySprites.ElfRun,
+                1f,
+                0.4f);
+
+            var enemy = root.AddComponent<ShooterEnemy>();
+            var serialized = ConfigureMonster(enemy, 1f, 1.15f, 1);
+            SetFloat(serialized, "preferredDistance", 5.5f);
+            SetFloat(serialized, "shootInterval", 1.4f);
+            SetFloat(serialized, "windupTime", 0.3f);
+            SetFloat(serialized, "projectileSpeed", 6.5f);
+            SetFloat(serialized, "projectileLifetime", 4.5f);
+            SetInt(serialized, "projectileCount", 1);
+            SetFloat(serialized, "spreadAngle", 0f);
+            SetColor(serialized, "projectileTint", new Color(0.55f, 1f, 0.65f, 1f));
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, ElfPath);
+        }
+
+        private static Enemy BuildElfFemale(Sprite fallback)
+        {
+            GameObject root = CreateMonsterRoot(
+                "ElfFemale",
+                ThirdPartySprites.ElfFemale,
+                fallback,
+                ThirdPartySprites.ElfFemaleIdle,
+                ThirdPartySprites.ElfFemaleRun,
+                1f,
+                0.4f);
+
+            var enemy = root.AddComponent<BlinkShooterEnemy>();
+            var serialized = ConfigureMonster(enemy, 1.1f, 1.1f, 1);
+            SetFloat(serialized, "preferredDistance", 4.6f);
+            SetFloat(serialized, "blinkInterval", 4.5f);
+            SetFloat(serialized, "blinkWindup", 0.35f);
+            SetFloat(serialized, "blinkDistance", 3.4f);
+            SetInt(serialized, "projectileCount", 4);
+            SetFloat(serialized, "spreadAngle", 48f);
+            SetFloat(serialized, "projectileSpeed", 5f);
+            SetFloat(serialized, "projectileLifetime", 4f);
+            SetFloat(serialized, "shootWindup", 0.35f);
+            SetFloat(serialized, "recoverTime", 0.45f);
+            SetColor(serialized, "projectileTint", new Color(0.55f, 1f, 0.75f, 1f));
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, ElfFemalePath);
+        }
+
+        private static Enemy BuildSkeletonWarrior(Sprite fallback)
+        {
+            GameObject root = CreateMonsterRoot(
+                "SkeletonWarrior",
+                ThirdPartySprites.Skeleton,
+                fallback,
+                ThirdPartySprites.SkeletonIdle,
+                ThirdPartySprites.SkeletonRun,
+                1f,
+                0.32f);
+
+            var enemy = root.AddComponent<CleaveEnemy>();
+            var serialized = ConfigureMonster(enemy, 1.2f, 1.1f, 1);
+            SetFloat(serialized, "triggerRange", 1.4f);
+            SetFloat(serialized, "windupTime", 0.35f);
+            SetInt(serialized, "damage", 1);
+            SetFloat(serialized, "radius", 1.25f);
+            SetFloat(serialized, "halfAngle", 60f);
+            SetFloat(serialized, "recoverTime", 0.45f);
+            SetFloat(serialized, "attackCooldown", 1.6f);
+            SetBool(serialized, "secondStrike", false);
+            SetColor(serialized, "windupTint", new Color(0.6f, 0.9f, 1f, 1f));
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, SkeletonWarriorPath);
+        }
+
+        private static Enemy BuildTinyZombieRaider(Sprite fallback)
+        {
+            GameObject root = CreateMonsterRoot(
+                "TinyZombieRaider",
+                ThirdPartySprites.TinyZombie,
+                fallback,
+                ThirdPartySprites.TinyZombieIdle,
+                ThirdPartySprites.TinyZombieRun,
+                1f,
+                0.28f);
+
+            var enemy = root.AddComponent<LungeEnemy>();
+            var serialized = ConfigureMonster(enemy, 0.8f, 1.25f, 1);
+            SetFloat(serialized, "triggerRange", 2.4f);
+            SetFloat(serialized, "windupTime", 0.25f);
+            SetFloat(serialized, "lungeSpeed", 7.5f);
+            SetFloat(serialized, "lungeDuration", 0.18f);
+            SetFloat(serialized, "recoverTime", 0.4f);
+            SetFloat(serialized, "lungeCooldown", 1.8f);
+            SetColor(serialized, "windupTint", new Color(0.6f, 1f, 0.5f, 1f));
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, TinyZombieRaiderPath);
+        }
+
+        private static void BuildDanaidaMonsters(Sprite fallback)
+        {
+            BuildDanaidaRedImp(fallback);
+            BuildDanaidaGreenSlime(fallback);
+            BuildDanaidaPurpleGhost(fallback);
+            BuildDanaidaTealSpider(fallback);
+            BuildDanaidaBrownCyclops(fallback);
+            BuildDanaidaPurpleDemon(fallback);
+        }
+
+        private static Enemy BuildDanaidaRedImp(Sprite fallback)
+        {
+            GameObject root = CreateMonsterRoot(
+                "DanaidaRedImp",
+                DanaidaSprites.RedImp,
+                fallback,
+                DanaidaSprites.RedImpFrames,
+                DanaidaSprites.RedImpFrames,
+                1f,
+                0.4f);
+
+            var enemy = root.AddComponent<LungeEnemy>();
+            var serialized = ConfigureMonster(enemy, 1f, 1.1f, 1);
+            SetFloat(serialized, "triggerRange", 2.6f);
+            SetFloat(serialized, "windupTime", 0.3f);
+            SetFloat(serialized, "lungeSpeed", 8f);
+            SetFloat(serialized, "lungeDuration", 0.2f);
+            SetFloat(serialized, "recoverTime", 0.45f);
+            SetFloat(serialized, "lungeCooldown", 2f);
+            SetColor(serialized, "windupTint", new Color(1f, 0.7f, 0.4f, 1f));
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, DanaidaRedImpPath);
+        }
+
+        private static Enemy BuildDanaidaGreenSlime(Sprite fallback)
+        {
+            GameObject root = CreateMonsterRoot(
+                "DanaidaGreenSlime",
+                DanaidaSprites.GreenSlime,
+                fallback,
+                DanaidaSprites.GreenSlimeFrames,
+                DanaidaSprites.GreenSlimeFrames,
+                1f,
+                0.4f);
+
+            var enemy = root.AddComponent<Enemy>();
+            ConfigureMonster(enemy, 1f, 0.65f, 1).ApplyModifiedPropertiesWithoutUndo();
+            return SaveMonster<Enemy>(root, DanaidaGreenSlimePath);
+        }
+
+        private static Enemy BuildDanaidaPurpleGhost(Sprite fallback)
+        {
+            GameObject root = CreateMonsterRoot(
+                "DanaidaPurpleGhost",
+                DanaidaSprites.PurpleGhost,
+                fallback,
+                DanaidaSprites.PurpleGhostFrames,
+                DanaidaSprites.PurpleGhostFrames,
+                1f,
+                0.4f);
+
+            var enemy = root.AddComponent<BlinkShooterEnemy>();
+            var serialized = ConfigureMonster(enemy, 0.9f, 0.9f, 1);
+            SetFloat(serialized, "preferredDistance", 4.5f);
+            SetFloat(serialized, "blinkInterval", 4.5f);
+            SetFloat(serialized, "blinkWindup", 0.4f);
+            SetFloat(serialized, "blinkDistance", 3f);
+            SetInt(serialized, "projectileCount", 1);
+            SetFloat(serialized, "spreadAngle", 0f);
+            SetFloat(serialized, "projectileSpeed", 4.5f);
+            SetFloat(serialized, "projectileLifetime", 4f);
+            SetFloat(serialized, "shootWindup", 0.35f);
+            SetFloat(serialized, "recoverTime", 0.5f);
+            SetColor(serialized, "projectileTint", new Color(0.78f, 0.55f, 1f, 1f));
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, DanaidaPurpleGhostPath);
+        }
+
+        private static Enemy BuildDanaidaTealSpider(Sprite fallback)
+        {
+            GameObject root = CreateMonsterRoot(
+                "DanaidaTealSpider",
+                DanaidaSprites.TealSpider,
+                fallback,
+                DanaidaSprites.TealSpiderFrames,
+                DanaidaSprites.TealSpiderFrames,
+                1f,
+                0.4f);
+
+            var enemy = root.AddComponent<LungeEnemy>();
+            var serialized = ConfigureMonster(enemy, 0.8f, 1.3f, 1);
+            SetFloat(serialized, "triggerRange", 2.2f);
+            SetFloat(serialized, "windupTime", 0.2f);
+            SetFloat(serialized, "lungeSpeed", 8.5f);
+            SetFloat(serialized, "lungeDuration", 0.18f);
+            SetFloat(serialized, "recoverTime", 0.35f);
+            SetFloat(serialized, "lungeCooldown", 1.6f);
+            SetColor(serialized, "windupTint", new Color(0.55f, 1f, 0.85f, 1f));
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, DanaidaTealSpiderPath);
+        }
+
+        private static Enemy BuildDanaidaBrownCyclops(Sprite fallback)
+        {
+            GameObject root = CreateMonsterRoot(
+                "DanaidaBrownCyclops",
+                DanaidaSprites.BrownCyclops,
+                fallback,
+                DanaidaSprites.BrownCyclopsFrames,
+                DanaidaSprites.BrownCyclopsFrames,
+                1f,
+                0.45f);
+
+            var enemy = root.AddComponent<CleaveEnemy>();
+            var serialized = ConfigureMonster(enemy, 2.2f, 0.7f, 1);
+            SetFloat(serialized, "triggerRange", 1.8f);
+            SetFloat(serialized, "windupTime", 0.65f);
+            SetInt(serialized, "damage", 2);
+            SetFloat(serialized, "radius", 1.7f);
+            SetFloat(serialized, "halfAngle", 80f);
+            SetFloat(serialized, "recoverTime", 0.7f);
+            SetFloat(serialized, "attackCooldown", 2.6f);
+            SetBool(serialized, "secondStrike", false);
+            SetColor(serialized, "windupTint", new Color(1f, 0.55f, 0.35f, 1f));
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, DanaidaBrownCyclopsPath);
+        }
+
+        private static Enemy BuildDanaidaPurpleDemon(Sprite fallback)
+        {
+            GameObject root = CreateMonsterRoot(
+                "DanaidaPurpleDemon",
+                DanaidaSprites.PurpleDemon,
+                fallback,
+                DanaidaSprites.PurpleDemonFrames,
+                DanaidaSprites.PurpleDemonFrames,
+                1f,
+                0.4f);
+
+            var enemy = root.AddComponent<ShooterEnemy>();
+            var serialized = ConfigureMonster(enemy, 1.5f, 0.95f, 1);
+            SetFloat(serialized, "preferredDistance", 5f);
+            SetFloat(serialized, "shootInterval", 2.2f);
+            SetFloat(serialized, "windupTime", 0.5f);
+            SetFloat(serialized, "projectileSpeed", 5.2f);
+            SetFloat(serialized, "projectileLifetime", 4f);
+            SetInt(serialized, "projectileCount", 3);
+            SetFloat(serialized, "spreadAngle", 24f);
+            SetColor(serialized, "projectileTint", new Color(0.8f, 0.45f, 1f, 1f));
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, DanaidaPurpleDemonPath);
+        }
+
+        private static void BuildTrashMobs(Sprite fallback, EnemyHazard hazard)
+        {
+            BuildTrashGreenSlime(fallback);
+            BuildTrashSnake(fallback);
+            BuildTrashBlueBat(fallback);
+            BuildTrashMushroom(fallback, hazard);
+            BuildTrashBee(fallback);
+            BuildTrashFlower(fallback);
+        }
+
+        private static Enemy BuildTrashGreenSlime(Sprite fallback)
+        {
+            GameObject root = CreateMonsterRoot(
+                "TrashGreenSlime",
+                TrashMobSprites.GreenSlime,
+                fallback,
+                TrashMobSprites.GreenSlimeFrames,
+                TrashMobSprites.GreenSlimeFrames,
+                1f,
+                0.4f);
+
+            var enemy = root.AddComponent<Enemy>();
+            ConfigureMonster(enemy, 1f, 0.65f, 1).ApplyModifiedPropertiesWithoutUndo();
+            return SaveMonster<Enemy>(root, TrashGreenSlimePath);
+        }
+
+        private static Enemy BuildTrashSnake(Sprite fallback)
+        {
+            GameObject root = CreateMonsterRoot(
+                "TrashSnake",
+                TrashMobSprites.Snake,
+                fallback,
+                TrashMobSprites.SnakeFrames,
+                TrashMobSprites.SnakeFrames,
+                1f,
+                0.4f);
+
+            var enemy = root.AddComponent<LungeEnemy>();
+            var serialized = ConfigureMonster(enemy, 0.9f, 1.1f, 1);
+            SetFloat(serialized, "triggerRange", 2.4f);
+            SetFloat(serialized, "windupTime", 0.25f);
+            SetFloat(serialized, "lungeSpeed", 7.5f);
+            SetFloat(serialized, "lungeDuration", 0.2f);
+            SetFloat(serialized, "recoverTime", 0.4f);
+            SetFloat(serialized, "lungeCooldown", 1.8f);
+            SetColor(serialized, "windupTint", new Color(0.75f, 1f, 0.5f, 1f));
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, TrashSnakePath);
+        }
+
+        private static Enemy BuildTrashBlueBat(Sprite fallback)
+        {
+            GameObject root = CreateMonsterRoot(
+                "TrashBlueBat",
+                TrashMobSprites.BlueBat,
+                fallback,
+                TrashMobSprites.BlueBatFrames,
+                TrashMobSprites.BlueBatFrames,
+                1f,
+                0.4f);
+
+            var enemy = root.AddComponent<BlinkShooterEnemy>();
+            var serialized = ConfigureMonster(enemy, 0.8f, 1.1f, 1);
+            SetFloat(serialized, "preferredDistance", 4f);
+            SetFloat(serialized, "blinkInterval", 4f);
+            SetFloat(serialized, "blinkWindup", 0.35f);
+            SetFloat(serialized, "blinkDistance", 3f);
+            SetInt(serialized, "projectileCount", 1);
+            SetFloat(serialized, "spreadAngle", 0f);
+            SetFloat(serialized, "projectileSpeed", 5f);
+            SetFloat(serialized, "projectileLifetime", 4f);
+            SetFloat(serialized, "shootWindup", 0.35f);
+            SetFloat(serialized, "recoverTime", 0.45f);
+            SetColor(serialized, "projectileTint", new Color(0.55f, 0.75f, 1f, 1f));
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, TrashBlueBatPath);
+        }
+
+        private static Enemy BuildTrashMushroom(Sprite fallback, EnemyHazard hazard)
+        {
+            GameObject root = CreateMonsterRoot(
+                "TrashMushroom",
+                TrashMobSprites.Mushroom,
+                fallback,
+                TrashMobSprites.MushroomFrames,
+                TrashMobSprites.MushroomFrames,
+                1f,
+                0.45f);
+
+            var enemy = root.AddComponent<TrapperEnemy>();
+            var serialized = ConfigureMonster(enemy, 1.1f, 0.6f, 1);
+            SetObject(serialized, "hazardPrefab", hazard);
+            SetFloat(serialized, "triggerRange", 2.8f);
+            SetFloat(serialized, "dropInterval", 3.2f);
+            SetFloat(serialized, "dropWindup", 0.5f);
+            SetInt(serialized, "hazardDamage", 1);
+            SetFloat(serialized, "hazardTickInterval", 0.9f);
+            SetFloat(serialized, "hazardLifetime", 2.4f);
+            SetFloat(serialized, "hazardRadius", 1.2f);
+            SetFloat(serialized, "slowFactor", 0.7f);
+            SetFloat(serialized, "slowDuration", 0.5f);
+            SetColor(serialized, "hazardTint", new Color(0.9f, 0.4f, 0.55f, 0.55f));
+            SetColor(serialized, "windupTint", new Color(1f, 0.55f, 0.65f, 1f));
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, TrashMushroomPath);
+        }
+
+        private static Enemy BuildTrashBee(Sprite fallback)
+        {
+            GameObject root = CreateMonsterRoot(
+                "TrashBee",
+                TrashMobSprites.Bee,
+                fallback,
+                TrashMobSprites.BeeFrames,
+                TrashMobSprites.BeeFrames,
+                1f,
+                0.38f);
+
+            var enemy = root.AddComponent<LungeEnemy>();
+            var serialized = ConfigureMonster(enemy, 0.7f, 1.3f, 1);
+            SetFloat(serialized, "triggerRange", 2.8f);
+            SetFloat(serialized, "windupTime", 0.2f);
+            SetFloat(serialized, "lungeSpeed", 8.5f);
+            SetFloat(serialized, "lungeDuration", 0.18f);
+            SetFloat(serialized, "recoverTime", 0.35f);
+            SetFloat(serialized, "lungeCooldown", 1.6f);
+            SetColor(serialized, "windupTint", new Color(1f, 0.9f, 0.5f, 1f));
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, TrashBeePath);
+        }
+
+        private static Enemy BuildTrashFlower(Sprite fallback)
+        {
+            GameObject root = CreateMonsterRoot(
+                "TrashFlower",
+                TrashMobSprites.Flower,
+                fallback,
+                TrashMobSprites.FlowerFrames,
+                TrashMobSprites.FlowerFrames,
+                1f,
+                0.4f);
+
+            var enemy = root.AddComponent<ShooterEnemy>();
+            var serialized = ConfigureMonster(enemy, 1.1f, 0.75f, 1);
+            SetBool(serialized, "stationary", true);
+            SetFloat(serialized, "preferredDistance", 5f);
+            SetFloat(serialized, "shootInterval", 1.9f);
+            SetFloat(serialized, "windupTime", 0.45f);
+            SetFloat(serialized, "projectileSpeed", 5f);
+            SetFloat(serialized, "projectileLifetime", 4f);
+            SetInt(serialized, "projectileCount", 2);
+            SetFloat(serialized, "spreadAngle", 20f);
+            SetColor(serialized, "projectileTint", new Color(0.85f, 0.45f, 1f, 1f));
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            return SaveMonster<Enemy>(root, TrashFlowerPath);
         }
 
         private static Enemy BuildTinyZombieCloud(Sprite fallback, EnemyHazard hazard)

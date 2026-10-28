@@ -17,6 +17,8 @@ MonoBehaviour:
   floorTint: {r: 0.68, g: 0.92, b: 0.95, a: 1}
   wallTint: {r: 0.7, g: 0.88, b: 0.92, a: 1}
   cameraBackground: {r: 0.015, g: 0.04, b: 0.055, a: 1}
+  floorVariants: []
+  wallSprite: {fileID: 0}
   bossVisual: 1
   commonEnemies:
   - {fileID: 5048551713628059921, guid: 822456a88da57ca44846c0d745161706, type: 3}

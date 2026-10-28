@@ -8,10 +8,15 @@ namespace Roguelike.Dungeon
         Ogre = 0,
         BigZombie = 1,
         BigDemon = 2,
+
+        // 第 4-6 层专属 Boss；只追加，不能重排上面的序列化值
+        SewerTroll = 3,
+        RuinsGolem = 4,
+        ObsidianKing = 5,
     }
 
     /// <summary>
-    /// 一层地牢的视觉主题：名称、地板/墙体染色、相机背景。
+    /// 一层地牢的视觉主题：名称、地板/墙体贴图与染色、相机背景。
     /// 资产放在 Resources/FloorThemes，由 RunManager 按 order 排序后循环使用。
     /// </summary>
     [CreateAssetMenu(menuName = "Roguelike/Floor Theme", fileName = "FloorTheme_New")]
@@ -27,11 +32,18 @@ namespace Roguelike.Dungeon
         [Tooltip("与地板贴图相乘的染色")]
         public Color floorTint = Color.white;
 
-        [Tooltip("与墙体贴图相乘的染色")]
+        [Tooltip("与墙体贴图相乘的染色；同时用于墙面装饰")]
         public Color wallTint = Color.white;
 
         [Tooltip("相机纯色背景")]
         public Color cameraBackground = new Color(0.055f, 0.05f, 0.075f, 1f);
+
+        [Header("楼层贴图")]
+        [Tooltip("该楼层使用的地板变体；留空时沿用房间 Prefab 的默认 0x72 地砖")]
+        public Sprite[] floorVariants = new Sprite[0];
+
+        [Tooltip("该楼层使用的墙体贴图；留空时沿用房间 Prefab 的默认墙砖")]
+        public Sprite wallSprite;
 
         [Header("Boss")]
         [Tooltip("该主题楼层使用的 Boss 形象")]

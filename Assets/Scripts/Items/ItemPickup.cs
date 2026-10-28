@@ -35,8 +35,10 @@ namespace Roguelike.Items
         private static GUIStyle _dialogPriceStyle;
         private static GUIStyle _warningStyle;
         private static ItemPickup _activeDialog;
+        private static float _dialogsSuppressedUntil;
 
         private Vector3 _basePosition;
+        private bool _baseInitialized;
         private float _phase;
         private Camera _camera;
 
@@ -51,7 +53,18 @@ namespace Roguelike.Items
 
         public ItemDefinition Item => item;
         public bool IsDialogVisible => _dialogVisible;
+        public bool IsPurchased { get; private set; }
         public bool CanAfford => _playerWallet != null && _playerWallet.Coins >= Price;
+        public Vector3 BasePosition => _baseInitialized ? _basePosition : transform.position;
+        public static bool HasActiveDialog => _activeDialog != null;
+
+        /// <summary>商店刷新后短暂禁止自动弹窗，避免玩家站在货架位置时立刻重新暂停。</summary>
+        public static void SuppressNewDialogs(float seconds)
+        {
+            _dialogsSuppressedUntil = Mathf.Max(
+                _dialogsSuppressedUntil,
+                Time.unscaledTime + Mathf.Max(0f, seconds));
+        }
 
         /// <summary>
         /// 实时价格：基础价 + 楼层加价已经写入 price；
@@ -120,6 +133,7 @@ namespace Roguelike.Items
         private void Start()
         {
             _basePosition = transform.position;
+            _baseInitialized = true;
             _phase = Random.value * Mathf.PI * 2f;
             _camera = Camera.main;
         }
@@ -139,6 +153,7 @@ namespace Roguelike.Items
 
             if (price > 0)
             {
+                if (Time.unscaledTime < _dialogsSuppressedUntil) return;
                 if (_dismissed || _dialogVisible || _activeDialog != null) return;
                 OpenDialog(inventory, wallet, health);
                 return;
@@ -211,6 +226,7 @@ namespace Roguelike.Items
         {
             if (item == null) return;
 
+            IsPurchased = true;
             ItemGrant.Apply(item, inventory, health, wallet);
 
             if (rewardRoom != null) rewardRoom.RewardClaimed = true;

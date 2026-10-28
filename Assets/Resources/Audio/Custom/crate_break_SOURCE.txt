@@ -1,0 +1,5 @@
+Crate break sound source:
+"光厂音效_100379_木板破碎摧毁.mp3"
+
+Provided by the project owner for use in this project.
+The clip was trimmed, normalized, and converted to WAV for runtime playback.

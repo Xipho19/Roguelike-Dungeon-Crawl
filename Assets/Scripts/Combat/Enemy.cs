@@ -109,6 +109,32 @@ namespace Roguelike.Combat
         public bool CombatActive { get; private set; }
         public RoomView Room => _room;
 
+        /// <summary>给运行时生成的敌人（召唤物、分裂体）补上所属房间。</summary>
+        public void SetRoom(RoomView room)
+        {
+            if (room != null) _room = room;
+        }
+
+        /// <summary>把点限制在房间内部，避免召唤物生成在墙里或墙外。</summary>
+        public Vector2 ClampPointToRoom(Vector2 point, float padding = 0.5f)
+        {
+            if (_room == null) return point;
+
+            Rect interior = _room.InteriorRect;
+            float pad = Mathf.Max(0.05f, padding);
+            float minX = interior.xMin + pad;
+            float maxX = interior.xMax - pad;
+            float minY = interior.yMin + pad;
+            float maxY = interior.yMax - pad;
+
+            if (minX > maxX) minX = maxX = interior.center.x;
+            if (minY > maxY) minY = maxY = interior.center.y;
+
+            point.x = Mathf.Clamp(point.x, minX, maxX);
+            point.y = Mathf.Clamp(point.y, minY, maxY);
+            return point;
+        }
+
         /// <summary>精英怪的攻击倍率；普通敌人为 1。</summary>
         protected float DamageMultiplier { get; private set; } = 1f;
 
@@ -173,6 +199,36 @@ namespace Roguelike.Combat
             if (Time.time < _nextPoisonTick) return;
 
             TickPoison();
+        }
+
+        /// <summary>
+        /// 物理步结束后把敌人拉回房间内部。
+        /// 召唤物、冲锋和击退都可能把敌人挤进墙体或墙外，若不纠正会留下无法击杀的敌人，
+        /// 导致房间一直无法清空、门保持锁死。
+        /// </summary>
+        private void LateUpdate()
+        {
+            if (IsDead || _rb == null || _room == null) return;
+
+            Vector2 current = _rb.position;
+            Vector2 clamped = ClampPointToRoom(current, GetRoomClampPadding());
+            if ((clamped - current).sqrMagnitude <= 0.0001f) return;
+
+            _rb.position = clamped;
+
+            Vector3 position = transform.position;
+            position.x = clamped.x;
+            position.y = clamped.y;
+            transform.position = position;
+        }
+
+        private float GetRoomClampPadding()
+        {
+            Collider2D ownCollider = GetComponent<Collider2D>();
+            if (ownCollider == null) return 0.45f;
+
+            Vector3 extents = ownCollider.bounds.extents;
+            return Mathf.Max(0.35f, Mathf.Max(extents.x, extents.y) + 0.05f);
         }
 
         private void TickPoison()
@@ -687,7 +743,7 @@ namespace Roguelike.Combat
             var health = collision.collider.GetComponentInParent<PlayerHealth>();
             if (health == null) return;
 
-            if (health.TryDamage(ScaleAttackDamage(contactDamage)))
+            if (health.TryContactDamage(ScaleAttackDamage(contactDamage)))
                 _nextContactTime = Time.time + contactCooldown;
         }
     }

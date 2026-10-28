@@ -216345,6 +216345,7 @@ MonoBehaviour:
   inventory: {fileID: 1235456015}
   tracker: {fileID: 0}
   wallet: {fileID: 0}
+  health: {fileID: 0}
   fireInterval: 0.24
   tearSpeed: 14
   tearDamage: 1
@@ -216454,7 +216455,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Roguelike.Audio.PlayerMoveLoopAudio
   clip: {fileID: 0}
-  moveVolume: 0.4
+  moveVolume: 0.65
   moveThreshold: 0.2
   fadeSpeed: 6
 --- !u!114 &1235456019
@@ -216471,6 +216472,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Roguelike.Player.PlayerItemEffects
   inventory: {fileID: 1235456015}
   health: {fileID: 1235456013}
+  controller: {fileID: 0}
   tracker: {fileID: 1235456006}
   flow: {fileID: 429175102}
   runManager: {fileID: 429175104}

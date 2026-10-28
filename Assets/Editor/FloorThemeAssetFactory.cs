@@ -7,7 +7,7 @@ using UnityEngine;
 namespace Roguelike.EditorTools
 {
     /// <summary>
-    /// 生成三套楼层主题资产。
+    /// 生成六套楼层主题资产。
     /// 菜单：Tools / Roguelike / 生成楼层主题
     ///
     /// 资产放在 Resources/FloorThemes，RunManager 启动时自动加载。
@@ -20,6 +20,9 @@ namespace Roguelike.EditorTools
         public const string DungeonPath = ThemeFolder + "/FloorTheme_Dungeon.asset";
         public const string CryptPath = ThemeFolder + "/FloorTheme_Crypt.asset";
         public const string InfernoPath = ThemeFolder + "/FloorTheme_Inferno.asset";
+        public const string SewerPath = ThemeFolder + "/FloorTheme_Sewer.asset";
+        public const string OvergrownPath = ThemeFolder + "/FloorTheme_Overgrown.asset";
+        public const string ObsidianPath = ThemeFolder + "/FloorTheme_Obsidian.asset";
 
         private static readonly string[] DungeonRoster =
         {
@@ -51,6 +54,38 @@ namespace Roguelike.EditorTools
             CombatPrefabFactory.SplitterPath,
         };
 
+        // 第 4-6 层使用独立编成，避免完全复用前三层
+        private static readonly string[] SewerRoster =
+        {
+            CombatPrefabFactory.TrashGreenSlimePath,
+            CombatPrefabFactory.TrashSnakePath,
+            CombatPrefabFactory.TrashBlueBatPath,
+            CombatPrefabFactory.SwampyPath,
+            CombatPrefabFactory.TinyZombieRaiderPath,
+            CombatPrefabFactory.ChortPath,
+        };
+
+        // 骑士帧和玩家轮廓完全相同，暂时不放进敌人池；改用轮廓明显不同的法师/精灵/骷髅/Trash Mobs。
+        private static readonly string[] RuinsRoster =
+        {
+            CombatPrefabFactory.TrashMushroomPath,
+            CombatPrefabFactory.TrashBeePath,
+            CombatPrefabFactory.TrashFlowerPath,
+            CombatPrefabFactory.SkeletonWarriorPath,
+            CombatPrefabFactory.WizardPath,
+            CombatPrefabFactory.ElfPath,
+        };
+
+        private static readonly string[] ObsidianRoster =
+        {
+            CombatPrefabFactory.TrashMushroomPath,
+            CombatPrefabFactory.TrashBeePath,
+            CombatPrefabFactory.TrashFlowerPath,
+            CombatPrefabFactory.SkeletonWarriorPath,
+            CombatPrefabFactory.WizardPath,
+            CombatPrefabFactory.ImpPath,
+        };
+
         public const string BgmFolder = "Assets/Resources/Audio/BGM";
         public const string DungeonBgmPath = BgmFolder + "/BGM_Dungeon.ogg";
         public const string CryptBgmPath = BgmFolder + "/BGM_Crypt.ogg";
@@ -65,6 +100,19 @@ namespace Roguelike.EditorTools
         private static readonly Color InfernoFloorTint = new Color(1.00f, 0.72f, 0.58f, 1f);
         private static readonly Color InfernoWallTint = new Color(1.00f, 0.66f, 0.52f, 1f);
         private static readonly Color InfernoBackground = new Color(0.09f, 0.02f, 0.015f, 1f);
+
+        private static readonly Color SewerFloorTint = new Color(0.50f, 0.82f, 0.78f, 1f);
+        private static readonly Color SewerWallTint = new Color(0.38f, 0.64f, 0.60f, 1f);
+        private static readonly Color SewerBackground = new Color(0.012f, 0.045f, 0.045f, 1f);
+
+        private static readonly Color OvergrownFloorTint = new Color(0.66f, 0.84f, 0.52f, 1f);
+        private static readonly Color OvergrownWallTint = new Color(0.48f, 0.64f, 0.38f, 1f);
+        private static readonly Color OvergrownBackground = new Color(0.018f, 0.05f, 0.022f, 1f);
+
+        // 第 6 层走暗紫黑曜，和第三层的橙红炼狱拉开色相
+        private static readonly Color ObsidianFloorTint = new Color(0.56f, 0.30f, 0.82f, 1f);
+        private static readonly Color ObsidianWallTint = new Color(0.30f, 0.16f, 0.44f, 1f);
+        private static readonly Color ObsidianBackground = new Color(0.025f, 0.006f, 0.045f, 1f);
 
         [MenuItem("Tools/Roguelike/生成楼层主题")]
         public static void RebuildFromMenu()
@@ -103,7 +151,7 @@ namespace Roguelike.EditorTools
 
             CreateOrUpdate(
                 InfernoPath,
-                "熔岩",
+                "炼狱",
                 2,
                 InfernoFloorTint,
                 InfernoWallTint,
@@ -111,8 +159,44 @@ namespace Roguelike.EditorTools
                 FloorBossVisual.BigDemon,
                 infernoBgm);
 
+            CreateOrUpdate(
+                SewerPath,
+                "下水道",
+                3,
+                SewerFloorTint,
+                SewerWallTint,
+                SewerBackground,
+                FloorBossVisual.SewerTroll,
+                dungeonBgm,
+                ThirdPartySprites.SewerFloorVariants,
+                ThirdPartySprites.SewerWall);
+
+            CreateOrUpdate(
+                OvergrownPath,
+                "遗迹",
+                4,
+                OvergrownFloorTint,
+                OvergrownWallTint,
+                OvergrownBackground,
+                FloorBossVisual.RuinsGolem,
+                cryptBgm,
+                ThirdPartySprites.OvergrownFloorVariants,
+                ThirdPartySprites.OvergrownWall);
+
+            CreateOrUpdate(
+                ObsidianPath,
+                "黑曜",
+                5,
+                ObsidianFloorTint,
+                ObsidianWallTint,
+                ObsidianBackground,
+                FloorBossVisual.ObsidianKing,
+                infernoBgm,
+                ThirdPartySprites.ObsidianFloorVariants,
+                ThirdPartySprites.ObsidianWall);
+
             AssetDatabase.SaveAssets();
-            Debug.Log("[FloorTheme] 已生成 3 套楼层主题");
+            Debug.Log("[FloorTheme] 已生成 6 套楼层主题");
         }
 
         /// <summary>只补齐缺失的主题资产，不覆盖已有配色。</summary>
@@ -146,13 +230,49 @@ namespace Roguelike.EditorTools
 
             Ensure(
                 InfernoPath,
-                "熔岩",
+                "炼狱",
                 2,
                 InfernoFloorTint,
                 InfernoWallTint,
                 InfernoBackground,
                 FloorBossVisual.BigDemon,
                 infernoBgm);
+
+            Ensure(
+                SewerPath,
+                "下水道",
+                3,
+                SewerFloorTint,
+                SewerWallTint,
+                SewerBackground,
+                FloorBossVisual.SewerTroll,
+                dungeonBgm,
+                ThirdPartySprites.SewerFloorVariants,
+                ThirdPartySprites.SewerWall);
+
+            Ensure(
+                OvergrownPath,
+                "遗迹",
+                4,
+                OvergrownFloorTint,
+                OvergrownWallTint,
+                OvergrownBackground,
+                FloorBossVisual.RuinsGolem,
+                cryptBgm,
+                ThirdPartySprites.OvergrownFloorVariants,
+                ThirdPartySprites.OvergrownWall);
+
+            Ensure(
+                ObsidianPath,
+                "黑曜",
+                5,
+                ObsidianFloorTint,
+                ObsidianWallTint,
+                ObsidianBackground,
+                FloorBossVisual.ObsidianKing,
+                infernoBgm,
+                ThirdPartySprites.ObsidianFloorVariants,
+                ThirdPartySprites.ObsidianWall);
 
             AssetDatabase.SaveAssets();
         }
@@ -165,7 +285,9 @@ namespace Roguelike.EditorTools
             Color wallTint,
             Color cameraBackground,
             FloorBossVisual bossVisual,
-            AudioClip bgm)
+            AudioClip bgm,
+            Sprite[] floorVariants = null,
+            Sprite wallSprite = null)
         {
             FloorTheme theme = AssetDatabase.LoadAssetAtPath<FloorTheme>(path);
             if (theme == null)
@@ -181,6 +303,8 @@ namespace Roguelike.EditorTools
             theme.cameraBackground = cameraBackground;
             theme.bossVisual = bossVisual;
             if (bgm != null) theme.bgm = bgm;
+            theme.floorVariants = floorVariants ?? new Sprite[0];
+            theme.wallSprite = wallSprite;
             ApplyRoster(theme, path, true);
 
             EditorUtility.SetDirty(theme);
@@ -194,7 +318,9 @@ namespace Roguelike.EditorTools
             Color wallTint,
             Color cameraBackground,
             FloorBossVisual bossVisual,
-            AudioClip bgm)
+            AudioClip bgm,
+            Sprite[] floorVariants = null,
+            Sprite wallSprite = null)
         {
             FloorTheme existing = AssetDatabase.LoadAssetAtPath<FloorTheme>(path);
             if (existing != null)
@@ -220,11 +346,34 @@ namespace Roguelike.EditorTools
                     dirty = true;
                 }
 
+                if (floorVariants != null && floorVariants.Length > 0 &&
+                    (existing.floorVariants == null || existing.floorVariants.Length == 0))
+                {
+                    existing.floorVariants = floorVariants;
+                    dirty = true;
+                }
+
+                if (wallSprite != null && existing.wallSprite == null)
+                {
+                    existing.wallSprite = wallSprite;
+                    dirty = true;
+                }
+
                 if (dirty) EditorUtility.SetDirty(existing);
                 return;
             }
 
-            CreateOrUpdate(path, displayName, order, floorTint, wallTint, cameraBackground, bossVisual, bgm);
+            CreateOrUpdate(
+                path,
+                displayName,
+                order,
+                floorTint,
+                wallTint,
+                cameraBackground,
+                bossVisual,
+                bgm,
+                floorVariants,
+                wallSprite);
         }
 
         private static void ApplyRoster(FloorTheme theme, string path, bool force)
@@ -251,6 +400,9 @@ namespace Roguelike.EditorTools
             if (path == DungeonPath) return DungeonRoster;
             if (path == CryptPath) return CryptRoster;
             if (path == InfernoPath) return InfernoRoster;
+            if (path == SewerPath) return SewerRoster;
+            if (path == OvergrownPath) return RuinsRoster;
+            if (path == ObsidianPath) return ObsidianRoster;
             return null;
         }
 

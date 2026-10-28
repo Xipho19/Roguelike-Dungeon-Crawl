@@ -110,10 +110,12 @@ namespace Roguelike.Combat
             if (minionPrefab == null || _rb == null) return;
 
             Vector2 offset = Random.insideUnitCircle.normalized * 0.9f;
-            Vector2 position = _rb.position + offset;
+            Vector2 position = ClampPointToRoom(_rb.position + offset, 0.65f);
 
             Enemy minion = Instantiate(minionPrefab, position, Quaternion.identity, transform.parent);
             minion.name = "Skeleton_Minion";
+            if (minion.Room == null) minion.SetRoom(Room);
+
             minion.Initialize(minionHealth, minionSpeed, minionScale, Color.white, false, _flow);
             if (_flow != null) minion.SetFloorDamageBonus(_flow.EnemyDamageBonus);
             minion.ActivateCombat();

@@ -11,7 +11,8 @@ namespace Roguelike.Items
             ItemDefinition item,
             PlayerInventory inventory,
             PlayerHealth health,
-            PlayerWallet wallet)
+            PlayerWallet wallet,
+            bool playAudio = true)
         {
             if (item == null) return;
 
@@ -23,7 +24,7 @@ namespace Roguelike.Items
             if (item.coinBonus > 0 && wallet != null)
                 wallet.AddCoins(item.coinBonus);
 
-            AudioService.Play("bookFlip1", 0.7f);
+            if (playAudio) AudioService.Play("bookFlip1", 0.7f);
         }
     }
 }

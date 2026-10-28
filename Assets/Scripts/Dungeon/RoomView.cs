@@ -63,6 +63,9 @@ namespace Roguelike.Dungeon
 
         private bool _hasFloorTheme;
         private Color _floorThemeTint = Color.white;
+        private int _variationSeed;
+        private Sprite[] _themeFloorVariants;
+        private Sprite _themeWallSprite;
 
         public RoomType RoomType => roomType;
         public Vector2Int GridPosition => gridPosition;
@@ -263,20 +266,38 @@ namespace Roguelike.Dungeon
                 ^ (gridPosition.x * 73856093)
                 ^ (gridPosition.y * 19349663);
 
-            if (roomFloor != null) roomFloor.Apply(roomSeed);
+            _variationSeed = roomSeed;
+
+            if (roomFloor != null)
+            {
+                if (_themeFloorVariants != null && _themeFloorVariants.Length > 0)
+                    roomFloor.ApplyTheme(_themeFloorVariants, roomSeed);
+                else
+                    roomFloor.Apply(roomSeed);
+            }
+
             if (decorations != null) decorations.Apply(roomType, doors, roomSeed);
         }
 
-        /// <summary>应用楼层主题：地板与墙体染色。</summary>
+        /// <summary>应用楼层主题：地板与墙体的贴图和染色。</summary>
         public void ApplyFloorTheme(FloorTheme theme)
         {
             if (theme == null) return;
 
             _hasFloorTheme = true;
             _floorThemeTint = theme.floorTint;
+            _themeFloorVariants = theme.floorVariants;
+            _themeWallSprite = theme.wallSprite;
 
-            if (roomFloor != null) roomFloor.SetTint(_floorThemeTint);
-            else if (floorRenderer != null) floorRenderer.color = _floorThemeTint;
+            if (roomFloor != null)
+            {
+                roomFloor.ApplyTheme(_themeFloorVariants, _variationSeed);
+                roomFloor.SetTint(_floorThemeTint);
+            }
+            else if (floorRenderer != null)
+            {
+                floorRenderer.color = _floorThemeTint;
+            }
 
             // 墙面装饰（旗帜、破洞/苔藓、立柱）自带砖墙底图，要和墙体一起染色
             if (decorations != null) decorations.SetWallTint(theme.wallTint);
@@ -285,7 +306,10 @@ namespace Roguelike.Dungeon
 
             for (int i = 0; i < walls.Length; i++)
             {
-                if (walls[i] != null) walls[i].SetTint(theme.wallTint);
+                if (walls[i] == null) continue;
+
+                walls[i].SetSprite(_themeWallSprite);
+                walls[i].SetTint(theme.wallTint);
             }
         }
 

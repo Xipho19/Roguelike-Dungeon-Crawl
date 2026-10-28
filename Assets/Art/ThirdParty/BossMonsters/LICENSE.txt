@@ -1,0 +1,19 @@
+BossMonsters — 4-6 层 Boss 素材
+
+1) Forest Troll
+Author: Blind Harpy Gamedev
+Source: https://opengameart.org/content/forest-troll
+License: CC0 1.0
+
+2) Undead King
+Author: Reemax
+Source: https://opengameart.org/content/undead-king
+License: CC0 1.0
+
+3) Stone Golem
+Source: Dungeon Crawl 32x32 tiles
+By Dungeon Crawl Stone Soup tile artists (maintained by Chris Hamons)
+https://opengameart.org/content/dungeon-crawl-32x32-tiles
+License: CC0 1.0
+
+Frames were cropped from the original sprite sheets; no artwork was generated or modified beyond cropping.

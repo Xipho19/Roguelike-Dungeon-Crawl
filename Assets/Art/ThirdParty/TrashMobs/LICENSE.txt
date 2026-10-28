@@ -1,0 +1,8 @@
+16x16 Fantasy RPG Trash Mobs (animated)
+Author: Emcee Flesher
+Source: https://opengameart.org/content/16x16-fantasy-rpg-trash-mobs-animated
+License: OGA-BY 3.0 (attribution required)
+
+Selected 6 monsters (green slime, snake, blue bat, mushroom, bee, purple flower)
+extracted from the author's public sprite sheet for integration in this project.
+Credit: "16x16 Fantasy RPG Trash Mobs by Emcee Flesher, CC/OGA-BY 3.0".

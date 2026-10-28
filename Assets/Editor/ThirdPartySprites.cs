@@ -31,12 +31,65 @@ namespace Roguelike.EditorTools
         public static Sprite[] EnemyShooterRun => LoadFrames("frames/anim/enemy_shooter_run", 4);
         public static Sprite[] EnemyChargerIdle => LoadFrames("frames/anim/enemy_charger_idle", 4);
         public static Sprite[] EnemyChargerRun => LoadFrames("frames/anim/enemy_charger_run", 4);
+        // 第 4-6 层 Boss：CC0 外部 32x32/32x64 怪物帧
+        public const string BossMonsterRoot = "Assets/Art/ThirdParty/BossMonsters/";
+
+        public static Sprite LoadBossMonster(string name) =>
+            AssetDatabase.LoadAssetAtPath<Sprite>(BossMonsterRoot + name + ".png");
+
+        public static Sprite[] ForestTrollIdle =>
+            new[] { LoadBossMonster("forest_troll_0") };
+        public static Sprite[] ForestTrollRun =>
+            new[]
+            {
+                LoadBossMonster("forest_troll_0"),
+                LoadBossMonster("forest_troll_1"),
+                LoadBossMonster("forest_troll_2"),
+                LoadBossMonster("forest_troll_3"),
+            };
+
+        public static Sprite[] StoneGolemIdle =>
+            new[] { LoadBossMonster("stone_golem_0") };
+        public static Sprite[] StoneGolemRun =>
+            new[] { LoadBossMonster("stone_golem_0") };
+
+        public static Sprite[] UndeadKingIdle =>
+            new[] { LoadBossMonster("undead_king_0") };
+        public static Sprite[] UndeadKingRun =>
+            new[]
+            {
+                LoadBossMonster("undead_king_0"),
+                LoadBossMonster("undead_king_1"),
+                LoadBossMonster("undead_king_2"),
+            };
+
         public static Sprite[] BossIdle => LoadFrames("frames/anim/boss_idle", 4);
         public static Sprite[] BossRun => LoadFrames("frames/anim/boss_run", 4);
         public static Sprite[] OgreIdle => LoadFrames("frames/anim/ogre_idle", 4);
         public static Sprite[] OgreRun => LoadFrames("frames/anim/ogre_run", 4);
         public static Sprite[] BigZombieIdle => LoadFrames("frames/anim/big_zombie_idle", 4);
         public static Sprite[] BigZombieRun => LoadFrames("frames/anim/big_zombie_run", 4);
+
+        // 0x72 角色素材改造的人形怪：遗迹守卫 / 遗迹法师 / 遗迹游侠
+        public static Sprite[] KnightIdle => LoadFrames("frames/anim/knight_idle", 4);
+        public static Sprite[] KnightRun => LoadFrames("frames/anim/knight_run", 4);
+        public static Sprite[] WizardIdle => LoadFrames("frames/anim/wizard_idle", 4);
+        public static Sprite[] WizardRun => LoadFrames("frames/anim/wizard_run", 4);
+        public static Sprite Knight => Load("frames/anim/knight_idle_0.png");
+        public static Sprite Wizard => Load("frames/anim/wizard_idle_0.png");
+
+        public static Sprite[] KnightFemaleIdle => LoadFrames("frames/anim/knight_f_idle", 4);
+        public static Sprite[] KnightFemaleRun => LoadFrames("frames/anim/knight_f_run", 4);
+        public static Sprite[] WizardFemaleIdle => LoadFrames("frames/anim/wizard_f_idle", 4);
+        public static Sprite[] WizardFemaleRun => LoadFrames("frames/anim/wizard_f_run", 4);
+        public static Sprite[] ElfIdle => LoadFrames("frames/anim/elf_idle", 4);
+        public static Sprite[] ElfRun => LoadFrames("frames/anim/elf_run", 4);
+        public static Sprite[] ElfFemaleIdle => LoadFrames("frames/anim/elf_f_idle", 4);
+        public static Sprite[] ElfFemaleRun => LoadFrames("frames/anim/elf_f_run", 4);
+        public static Sprite KnightFemale => Load("frames/anim/knight_f_idle_0.png");
+        public static Sprite WizardFemale => Load("frames/anim/wizard_f_idle_0.png");
+        public static Sprite Elf => Load("frames/anim/elf_idle_0.png");
+        public static Sprite ElfFemale => Load("frames/anim/elf_f_idle_0.png");
 
         // 新敌人：自爆史莱姆 / 亡灵法师 / 分裂僵尸及其召唤物
         public static Sprite[] BomberIdle => LoadFrames("frames/anim/bomber_idle", 4);
@@ -162,17 +215,23 @@ namespace Roguelike.EditorTools
         public static Sprite DoorVertical => Load("frames/doors/door_vertical.png");
 
         // 地板 8 种变体（裂纹 / 碎石 / 苔藓），用于逐格随机平铺
-        public static Sprite[] FloorVariants => new[]
+        public static Sprite[] FloorVariants => LoadFloorVariants("dungeon-floor");
+
+        public static Sprite[] SewerFloorVariants => LoadFloorVariants("theme-variants/sewer");
+        public static Sprite[] OvergrownFloorVariants => LoadFloorVariants("theme-variants/overgrown");
+        public static Sprite[] ObsidianFloorVariants => LoadFloorVariants("theme-variants/obsidian");
+
+        public static Sprite SewerWall => Load("theme-variants/sewer/wall.png");
+        public static Sprite OvergrownWall => Load("theme-variants/overgrown/wall.png");
+        public static Sprite ObsidianWall => Load("theme-variants/obsidian/wall.png");
+
+        private static Sprite[] LoadFloorVariants(string folder)
         {
-            Load("dungeon-floor/floor_1.png"),
-            Load("dungeon-floor/floor_2.png"),
-            Load("dungeon-floor/floor_3.png"),
-            Load("dungeon-floor/floor_4.png"),
-            Load("dungeon-floor/floor_5.png"),
-            Load("dungeon-floor/floor_6.png"),
-            Load("dungeon-floor/floor_7.png"),
-            Load("dungeon-floor/floor_8.png"),
-        };
+            var variants = new Sprite[8];
+            for (int i = 0; i < variants.Length; i++)
+                variants[i] = Load($"{folder}/floor_{i + 1}.png");
+            return variants;
+        }
 
         // 房间装饰
         public static Sprite Crate => Load("dungeon-decor/crate.png");

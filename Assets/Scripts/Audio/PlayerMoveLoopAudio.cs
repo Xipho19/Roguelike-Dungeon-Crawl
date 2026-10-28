@@ -14,7 +14,7 @@ namespace Roguelike.Audio
         [Tooltip("留空时从 Resources/Audio/Custom/Sticky_Run 加载")]
         [SerializeField] private AudioClip clip;
 
-        [SerializeField, Range(0f, 1f)] private float moveVolume = 0.4f;
+        [SerializeField, Range(0f, 1f)] private float moveVolume = 0.65f;
 
         [Tooltip("刚体速度超过该值视为正在移动")]
         [SerializeField] private float moveThreshold = 0.2f;
@@ -47,7 +47,7 @@ namespace Roguelike.Audio
             _source.loop = true;
             _source.playOnAwake = false;
             _source.spatialBlend = 0f;
-            _source.volume = 0f;
+            _source.volume = 0.0001f;
             _source.Play(); // 一直在后台循环，靠音量控制有无
         }
 
@@ -55,13 +55,16 @@ namespace Roguelike.Audio
         {
             if (_source == null) return;
 
+            // Awake 阶段音频系统可能尚未完全就绪，若循环音源被停止则重新启动。
+            if (!_source.isPlaying) _source.Play();
+
             // 暂停/死亡时 timeScale 为 0，此时强制静音
             bool paused = Time.timeScale <= 0.001f;
             bool moving = !paused
                 && _body != null
                 && _body.linearVelocity.sqrMagnitude > moveThreshold * moveThreshold;
 
-            float target = moving ? moveVolume : 0f;
+            float target = moving ? moveVolume * AudioService.SfxVolume : 0f;
             _source.volume = Mathf.MoveTowards(
                 _source.volume,
                 target,

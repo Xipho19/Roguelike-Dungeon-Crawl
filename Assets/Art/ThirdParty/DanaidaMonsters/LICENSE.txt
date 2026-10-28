@@ -1,0 +1,13 @@
+Danaida - Free Pixel Animated Monsters Pack 16x16
+Source: https://danaida.itch.io/free-pixel-monsters-pack-16x16
+Author: Danaida
+
+License (as stated by the author):
+- Free for personal and commercial use.
+- Use and edit freely.
+- Do not redistribute or resell the assets as an asset pack.
+- Can be used in game development and other productions.
+
+The PNGs in this folder are 6 selected monsters, extracted from the public preview sheet
+for integration testing in this project. If the full pack is later downloaded, replace
+these frames with the original files from the pack.

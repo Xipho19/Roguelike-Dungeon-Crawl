@@ -26,7 +26,10 @@ namespace Roguelike.Combat
     ///
     /// 地牢 Ogre：三连冲锋 + 震地重击（近身压制）
     /// 墓穴 Big Zombie：召唤骷髅 + 腐蚀弹幕（人海与远程）
-    /// 熔岩 Big Demon：螺旋弹幕 + 追踪火球（高密度弹幕）
+    /// 炼狱 Big Demon：螺旋弹幕 + 追踪火球（高密度弹幕）
+    /// 下水道 Sewer Troll：额外冲锋 + 震地毒液环
+    /// 遗迹 Ruins Golem：震地重击 + 石弹扇形弹
+    /// 黑曜 Obsidian King：暗紫弹幕 + 额外追踪球
     ///
     /// 所有 Boss 共用：追击、接触伤害、50% 血量进入二阶段、楼层成长。
     /// </summary>
@@ -113,6 +116,14 @@ namespace Roguelike.Combat
         [SerializeField] private Sprite[] bigDemonIdleFrames;
         [SerializeField] private Sprite[] bigDemonRunFrames;
 
+        [Header("第 4-6 层 Boss 形象")]
+        [SerializeField] private Sprite[] sewerTrollIdleFrames;
+        [SerializeField] private Sprite[] sewerTrollRunFrames;
+        [SerializeField] private Sprite[] ruinsGolemIdleFrames;
+        [SerializeField] private Sprite[] ruinsGolemRunFrames;
+        [SerializeField] private Sprite[] obsidianKingIdleFrames;
+        [SerializeField] private Sprite[] obsidianKingRunFrames;
+
         private SpriteRenderer _body;
         private SpriteAnimator _animator;
         private readonly List<Enemy> _summons = new List<Enemy>();
@@ -146,11 +157,13 @@ namespace Roguelike.Combat
         {
             _archetype = visual;
 
+            if (_body == null) _body = GetComponentInChildren<SpriteRenderer>();
             if (_animator == null) _animator = GetComponent<SpriteAnimator>();
             if (_animator == null) return;
 
             Sprite[] idle;
             Sprite[] run;
+            float visualScale = 1f;
 
             switch (visual)
             {
@@ -162,11 +175,26 @@ namespace Roguelike.Combat
                     idle = bigZombieIdleFrames;
                     run = bigZombieRunFrames;
                     break;
+                case FloorBossVisual.SewerTroll:
+                    idle = sewerTrollIdleFrames;
+                    run = sewerTrollRunFrames;
+                    break;
+                case FloorBossVisual.RuinsGolem:
+                    idle = ruinsGolemIdleFrames;
+                    run = ruinsGolemRunFrames;
+                    break;
+                case FloorBossVisual.ObsidianKing:
+                    idle = obsidianKingIdleFrames;
+                    run = obsidianKingRunFrames;
+                    break;
                 default:
                     idle = bigDemonIdleFrames;
                     run = bigDemonRunFrames;
                     break;
             }
+
+            if (_body != null && _body.transform != transform)
+                _body.transform.localScale = new Vector3(visualScale, visualScale, 1f);
 
             if (idle == null || idle.Length == 0) return;
             _animator.Configure(idle, run);
@@ -357,10 +385,18 @@ namespace Roguelike.Combat
             switch (_archetype)
             {
                 case FloorBossVisual.Ogre:
+                case FloorBossVisual.SewerTroll:
                     ChooseOgreAttack();
                     break;
                 case FloorBossVisual.BigZombie:
                     ChooseZombieAttack();
+                    break;
+                case FloorBossVisual.RuinsGolem:
+                    ChooseGolemAttack();
+                    break;
+                case FloorBossVisual.BigDemon:
+                case FloorBossVisual.ObsidianKing:
+                    ChooseDemonAttack();
                     break;
                 default:
                     ChooseDemonAttack();
@@ -374,16 +410,21 @@ namespace Roguelike.Combat
         {
             if (_attackCounter % 2 == 1)
             {
-                _chargesLeft = Mathf.Max(1, ogreChargeCount + (_phase2 ? 1 : 0));
+                int extraCharges = _archetype == FloorBossVisual.SewerTroll ? 1 : 0;
+                _chargesLeft = Mathf.Max(1, ogreChargeCount + extraCharges + (_phase2 ? 1 : 0));
                 _state = BossState.ChargeWindup;
                 _timer = chargeWindup;
-                FlashColor(new Color(1f, 0.6f, 0.2f, 1f));
+                FlashColor(_archetype == FloorBossVisual.SewerTroll
+                    ? new Color(0.5f, 1f, 0.8f, 1f)
+                    : new Color(1f, 0.6f, 0.2f, 1f));
             }
             else
             {
                 _state = BossState.SlamWindup;
                 _timer = _phase2 ? slamWindup * 0.8f : slamWindup;
-                FlashColor(new Color(1f, 0.25f, 0.2f, 1f));
+                FlashColor(_archetype == FloorBossVisual.SewerTroll
+                    ? new Color(0.5f, 1f, 0.8f, 1f)
+                    : new Color(1f, 0.25f, 0.2f, 1f));
             }
         }
 
@@ -421,13 +462,43 @@ namespace Roguelike.Combat
             float radius = slamRadius + (_phase2 ? 0.6f : 0f);
             AudioService.Play("explosion", 0.8f);
             ExplosionFlash.Spawn(_rb.position, slamSprite, radius, 0.35f);
-            FlashColor(new Color(1f, 0.3f, 0.2f, 1f));
+            Color slamFlash = _archetype == FloorBossVisual.SewerTroll
+                ? new Color(0.5f, 1f, 0.8f, 1f)
+                : _archetype == FloorBossVisual.RuinsGolem
+                    ? new Color(0.72f, 0.8f, 1f, 1f)
+                    : new Color(1f, 0.3f, 0.2f, 1f);
+            FlashColor(slamFlash);
 
             if (_target == null) return;
 
             PlayerHealth health = _target.GetComponentInParent<PlayerHealth>();
             if (health != null && Vector2.Distance(_rb.position, _target.position) <= radius)
                 health.TryDamage(_attackDamage);
+
+            // 下水道巨魔的震地会向外喷出一圈毒液，和食人魔的纯近战震地区分开
+            if (_archetype == FloorBossVisual.SewerTroll)
+            {
+                FireRing(6 + FloorBulletBonus, 0f);
+                AudioService.Play("bookFlip2", 0.5f);
+            }
+        }
+
+        // ---------- Ruins Golem：震地重击 + 石弹 ----------
+
+        private void ChooseGolemAttack()
+        {
+            if (_attackCounter % 2 == 1)
+            {
+                _state = BossState.SlamWindup;
+                _timer = _phase2 ? slamWindup * 0.75f : slamWindup;
+                FlashColor(new Color(0.72f, 0.8f, 1f, 1f));
+            }
+            else
+            {
+                _state = BossState.VolleyWindup;
+                _timer = 0.45f;
+                FlashColor(new Color(0.82f, 0.86f, 0.72f, 1f));
+            }
         }
 
         // ---------- Big Zombie：召唤骷髅 + 腐蚀弹幕 ----------
@@ -438,13 +509,17 @@ namespace Roguelike.Combat
             {
                 _state = BossState.SummonWindup;
                 _timer = summonWindup;
-                FlashColor(new Color(0.55f, 1f, 0.55f, 1f));
+                FlashColor(_archetype == FloorBossVisual.RuinsGolem
+                    ? new Color(0.9f, 0.82f, 0.55f, 1f)
+                    : new Color(0.55f, 1f, 0.55f, 1f));
             }
             else
             {
                 _state = BossState.VolleyWindup;
                 _timer = 0.45f;
-                FlashColor(new Color(0.65f, 1f, 0.6f, 1f));
+                FlashColor(_archetype == FloorBossVisual.RuinsGolem
+                    ? new Color(0.95f, 0.86f, 0.55f, 1f)
+                    : new Color(0.65f, 1f, 0.6f, 1f));
             }
         }
 
@@ -484,7 +559,10 @@ namespace Roguelike.Combat
 
                 Enemy minion = Instantiate(minionPrefab, position, Quaternion.identity, transform.parent);
                 minion.name = "BossSummon";
-                minion.Initialize(1f, 2.4f, 0.9f, new Color(0.7f, 1f, 0.7f, 1f), false, _flow);
+                if (minion.Room == null) minion.SetRoom(Room);
+
+                Color summonTint = new Color(0.7f, 1f, 0.7f, 1f);
+                minion.Initialize(1f, 2.4f, 0.9f, summonTint, false, _flow);
                 minion.ActivateCombat();
 
                 if (_flow != null) _flow.RegisterEnemy(minion);
@@ -521,9 +599,9 @@ namespace Roguelike.Combat
             for (int i = 0; i < count; i++)
             {
                 Vector2 direction = RotateDirection(aim, start + step * i);
-                EnemyProjectile bullet = Instantiate(
+                EnemyProjectile bullet = ProjectilePool.Spawn(
                     projectilePrefab,
-                    _rb.position + direction * 0.9f,
+                    (Vector3)(_rb.position + direction * 0.9f),
                     Quaternion.identity);
 
                 bullet.Initialize(
@@ -532,7 +610,10 @@ namespace Roguelike.Combat
                     _attackDamage,
                     projectileLifetime);
 
-                bullet.ConfigureVisual(zombieProjectileTint, 1.15f);
+                Color volleyTint = _archetype == FloorBossVisual.RuinsGolem
+                    ? new Color(0.72f, 0.78f, 0.9f, 1f)
+                    : zombieProjectileTint;
+                bullet.ConfigureVisual(volleyTint, 1.15f);
             }
 
             AudioService.Play("bookFlip2", 0.4f);
@@ -546,13 +627,17 @@ namespace Roguelike.Combat
             {
                 _state = BossState.RadialWindup;
                 _timer = _phase2 ? radialWindup * 0.7f : radialWindup;
-                FlashColor(new Color(1f, 0.55f, 0.2f, 1f));
+                FlashColor(_archetype == FloorBossVisual.ObsidianKing
+                    ? new Color(0.72f, 0.4f, 1f, 1f)
+                    : new Color(1f, 0.55f, 0.2f, 1f));
             }
             else
             {
                 _state = BossState.HomingWindup;
                 _timer = 0.5f;
-                FlashColor(new Color(1f, 0.3f, 0.2f, 1f));
+                FlashColor(_archetype == FloorBossVisual.ObsidianKing
+                    ? new Color(0.8f, 0.4f, 1f, 1f)
+                    : new Color(1f, 0.3f, 0.2f, 1f));
             }
         }
 
@@ -596,9 +681,9 @@ namespace Roguelike.Combat
                 float angle = (i * step + offsetDegrees) * Mathf.Deg2Rad;
                 Vector2 direction = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
 
-                EnemyProjectile bullet = Instantiate(
+                EnemyProjectile bullet = ProjectilePool.Spawn(
                     projectilePrefab,
-                    _rb.position + direction * 0.9f,
+                    (Vector3)(_rb.position + direction * 0.9f),
                     Quaternion.identity);
 
                 bullet.Initialize(
@@ -607,7 +692,12 @@ namespace Roguelike.Combat
                     _attackDamage,
                     projectileLifetime);
 
-                bullet.ConfigureVisual(demonProjectileTint, 1f);
+                Color ringTint = _archetype == FloorBossVisual.SewerTroll
+                    ? new Color(0.55f, 1f, 0.78f, 1f)
+                    : _archetype == FloorBossVisual.ObsidianKing
+                        ? new Color(0.72f, 0.38f, 1f, 1f)
+                        : demonProjectileTint;
+                bullet.ConfigureVisual(ringTint, 1f);
             }
         }
 
@@ -615,7 +705,8 @@ namespace Roguelike.Combat
         {
             if (projectilePrefab == null || _target == null) return;
 
-            int count = Mathf.Max(1, homingCount + (_phase2 ? 2 : 0));
+            int archetypeBonus = _archetype == FloorBossVisual.ObsidianKing ? 1 : 0;
+            int count = Mathf.Max(1, homingCount + archetypeBonus + (_phase2 ? 2 : 0));
             Vector2 aim = ((Vector2)_target.position - _rb.position).normalized;
             if (aim.sqrMagnitude < 0.0001f) aim = Vector2.right;
 
@@ -626,9 +717,9 @@ namespace Roguelike.Combat
             for (int i = 0; i < count; i++)
             {
                 Vector2 direction = RotateDirection(aim, start + step * i);
-                EnemyProjectile bullet = Instantiate(
+                EnemyProjectile bullet = ProjectilePool.Spawn(
                     projectilePrefab,
-                    _rb.position + direction * 0.9f,
+                    (Vector3)(_rb.position + direction * 0.9f),
                     Quaternion.identity);
 
                 bullet.Initialize(
@@ -637,7 +728,10 @@ namespace Roguelike.Combat
                     _attackDamage,
                     homingLifetime);
 
-                bullet.ConfigureVisual(demonProjectileTint, 1.3f);
+                Color homingTint = _archetype == FloorBossVisual.ObsidianKing
+                    ? new Color(0.72f, 0.38f, 1f, 1f)
+                    : demonProjectileTint;
+                bullet.ConfigureVisual(homingTint, 1.3f);
                 bullet.SetHoming(_target, homingTurnSpeed + (_phase2 ? 40f : 0f));
             }
 

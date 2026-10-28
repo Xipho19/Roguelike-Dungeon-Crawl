@@ -53,6 +53,7 @@ namespace Roguelike.Player
             }
 
             if (health != null) health.Damaged += HandlePlayerDamaged;
+            if (health != null) health.EscapeModeStarted += HandleEscapeModeStarted;
             if (tracker != null) tracker.RoomChanged += HandleRoomChanged;
             if (inventory != null) inventory.Cleared += ResetKillCount;
             if (runManager != null) runManager.RunRestarted += ResetKillCount;
@@ -67,6 +68,7 @@ namespace Roguelike.Player
             }
 
             if (health != null) health.Damaged -= HandlePlayerDamaged;
+            if (health != null) health.EscapeModeStarted -= HandleEscapeModeStarted;
             if (tracker != null) tracker.RoomChanged -= HandleRoomChanged;
             if (inventory != null) inventory.Cleared -= ResetKillCount;
             if (runManager != null) runManager.RunRestarted -= ResetKillCount;
@@ -189,6 +191,12 @@ namespace Roguelike.Player
             {
                 _deathExplosionActive = false;
             }
+        }
+
+        private void HandleEscapeModeStarted()
+        {
+            if (hud != null)
+                hud.ShowToast("3 秒内连续撞击 3 次：进入无敌状态，可穿过敌人", 2.2f);
         }
 
         private void HandlePlayerDamaged()

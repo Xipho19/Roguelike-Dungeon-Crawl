@@ -2,10 +2,13 @@ using UnityEngine;
 
 namespace Roguelike.Combat
 {
-    /// <summary>自爆敌人的一次性爆炸闪光：快速放大并淡出。</summary>
+    /// <summary>一次性爆炸特效：播放拆帧后的爆炸序列，同时快速放大并淡出。</summary>
     public sealed class ExplosionFlash : MonoBehaviour
     {
+        private static Sprite[] _cachedFrames;
+
         private SpriteRenderer _renderer;
+        private Sprite[] _frames;
         private float _duration;
         private float _startScale;
         private float _endScale;
@@ -13,7 +16,8 @@ namespace Roguelike.Combat
 
         public static void Spawn(Vector2 position, Sprite sprite, float radius, float duration = 0.28f)
         {
-            if (sprite == null) return;
+            // 序列帧存在时，旧 Sprite 只作为缺失回退，不再要求调用方绑定它。
+            if (sprite == null && LoadFrames().Length == 0) return;
 
             var go = new GameObject("ExplosionFlash");
             go.transform.position = position;
@@ -25,7 +29,8 @@ namespace Roguelike.Combat
         private void Initialize(Sprite sprite, float radius, float duration)
         {
             _renderer = gameObject.AddComponent<SpriteRenderer>();
-            _renderer.sprite = sprite;
+            _frames = LoadFrames();
+            _renderer.sprite = _frames.Length > 0 ? _frames[0] : sprite;
             _renderer.sortingOrder = 9;
             _renderer.color = Color.white;
 
@@ -39,12 +44,38 @@ namespace Roguelike.Combat
             _elapsed = 0f;
         }
 
+        private static Sprite[] LoadFrames()
+        {
+            if (_cachedFrames != null) return _cachedFrames;
+
+            var frames = new Sprite[8];
+            int count = 0;
+
+            for (int i = 0; i < frames.Length; i++)
+            {
+                Sprite frame = Resources.Load<Sprite>($"Explosion/Explosion_{i}");
+                if (frame != null) frames[count++] = frame;
+            }
+
+            if (count != frames.Length)
+                System.Array.Resize(ref frames, count);
+
+            _cachedFrames = frames;
+            return _cachedFrames;
+        }
+
         private void Update()
         {
             _elapsed += Time.deltaTime;
 
             float k = Mathf.Clamp01(_elapsed / _duration);
             transform.localScale = Vector3.one * Mathf.Lerp(_startScale, _endScale, k);
+
+            if (_frames != null && _frames.Length > 0)
+            {
+                int frameIndex = Mathf.Min(_frames.Length - 1, Mathf.FloorToInt(k * _frames.Length));
+                _renderer.sprite = _frames[frameIndex];
+            }
 
             Color color = _renderer.color;
             color.a = 1f - k;

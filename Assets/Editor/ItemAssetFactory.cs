@@ -50,6 +50,7 @@ namespace Roguelike.EditorTools
                 new Color(0.95f, 0.60f, 0.20f), ThirdPartySprites.TridentIcon, 0, 0,
                 Mod(StatType.ShotCount, StatOp.Add, 2f),
                 Mod(StatType.FireInterval, StatOp.Multiply, 1.25f));
+            SetRarity("Item_TripleShot", ItemRarity.Legendary);
 
             Create("Item_Slingshot", "强力弹弓", "弹丸速度提升 30%。",
                 new Color(0.95f, 0.85f, 0.30f), ThirdPartySprites.SlingshotIcon, 0, 0,
@@ -74,7 +75,7 @@ namespace Roguelike.EditorTools
             CreateTriggered("Item_ExplosiveTears", "爆炸眼泪",
                 "被动：眼泪命中时在小范围内爆炸，造成 1 点伤害。",
                 new Color(0.55f, 0.78f, 1f), ThirdPartySprites.Tear,
-                ItemRarity.Rare, 1f, 1.8f, 1, ItemSynergy.ExplosiveTears, 12);
+                ItemRarity.Legendary, 1f, 1.8f, 1, ItemSynergy.ExplosiveTears, 12);
 
             CreateTriggered("Item_VampireFang", "吸血鬼獠牙",
                 "被动：每击杀 5 个敌人回复 1 点生命。",
@@ -101,7 +102,7 @@ namespace Roguelike.EditorTools
             CreateTriggered("Item_ThornHeart", "荆棘之心",
                 "被动：受到伤害时，对周围敌人造成 2 点伤害。",
                 new Color(0.86f, 0.24f, 0.34f), ThirdPartySprites.ThornHeartIcon,
-                ItemRarity.Rare, 2f, 2.8f, 1, ItemSynergy.Thorns, 13);
+                ItemRarity.Common, 2f, 2.8f, 1, ItemSynergy.Thorns, 13);
 
             CreateTriggered("Item_Coupon", "折扣券",
                 "被动：商店商品半价。",
@@ -157,7 +158,7 @@ namespace Roguelike.EditorTools
             CreateTriggered("Item_DivineGlimmer", "神性微光",
                 "被动：眼泪飞行时对周围 1.6 半径的敌人每 0.3 秒造成 0.25 点伤害。",
                 new Color(1f, 0.92f, 0.62f), ThirdPartySprites.DivineGlimmerIcon,
-                ItemRarity.Rare, 0.25f, 1.6f, 1, ItemSynergy.TearAura, 14);
+                ItemRarity.Common, 0.25f, 1.6f, 1, ItemSynergy.TearAura, 14);
 
             CreateTriggered("Item_GhostPrism", "幽灵棱镜",
                 "被动：穿透 +2，眼泪速度 +10%。",
@@ -388,6 +389,17 @@ namespace Roguelike.EditorTools
 
             if (created) AssetDatabase.CreateAsset(item, path);
             else EditorUtility.SetDirty(item);
+        }
+
+        /// <summary>Create 默认生成普通品质；少数数值型道具需要单独覆盖稀有度。</summary>
+        private static void SetRarity(string fileName, ItemRarity rarity)
+        {
+            string path = $"{ItemFolder}/{fileName}.asset";
+            var item = AssetDatabase.LoadAssetAtPath<ItemDefinition>(path);
+            if (item == null) return;
+
+            item.rarity = rarity;
+            EditorUtility.SetDirty(item);
         }
 
         /// <summary>自动触发道具：写入效果数值、触发条件与商店价格。</summary>

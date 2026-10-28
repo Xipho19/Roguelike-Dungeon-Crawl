@@ -12,11 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d02d436bb3af7cc4abcfa4f1fe2b5b67, type: 3}
   m_Name: FloorTheme_Inferno
   m_EditorClassIdentifier: Assembly-CSharp::Roguelike.Dungeon.FloorTheme
-  displayName: "\u7194\u5CA9"
+  displayName: "\u70BC\u72F1"
   order: 2
   floorTint: {r: 1, g: 0.72, b: 0.58, a: 1}
   wallTint: {r: 1, g: 0.66, b: 0.52, a: 1}
   cameraBackground: {r: 0.09, g: 0.02, b: 0.015, a: 1}
+  floorVariants: []
+  wallSprite: {fileID: 0}
   bossVisual: 2
   commonEnemies:
   - {fileID: 450251208061128597, guid: 148cf855e79484e40b354696749f2f09, type: 3}

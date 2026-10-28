@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d02d436bb3af7cc4abcfa4f1fe2b5b67, type: 3}
+  m_Name: FloorTheme_Sewer
+  m_EditorClassIdentifier: Assembly-CSharp::Roguelike.Dungeon.FloorTheme
+  displayName: "\u4E0B\u6C34\u9053"
+  order: 3
+  floorTint: {r: 0.5, g: 0.82, b: 0.78, a: 1}
+  wallTint: {r: 0.38, g: 0.64, b: 0.6, a: 1}
+  cameraBackground: {r: 0.012, g: 0.045, b: 0.045, a: 1}
+  floorVariants:
+  - {fileID: 21300000, guid: 2747ca8d2f446ee4c98e923c70ab194c, type: 3}
+  - {fileID: 21300000, guid: 29118570fca6a484da94ea84fbe9c407, type: 3}
+  - {fileID: 21300000, guid: 9dfce33070ec69447b9605955ee6d77f, type: 3}
+  - {fileID: 21300000, guid: 308b5d34edb46034c830e9b3e9babb15, type: 3}
+  - {fileID: 21300000, guid: a7bfbb4afd73952409d572b38adab6fe, type: 3}
+  - {fileID: 21300000, guid: 7a9a8838170acc54b91a84d0128980c2, type: 3}
+  - {fileID: 21300000, guid: cae1f0fecce683147bc97f80e6702aae, type: 3}
+  - {fileID: 21300000, guid: 87ff1f1c37d20184eb00e190133fab38, type: 3}
+  wallSprite: {fileID: 21300000, guid: 0d7840a7bc5f40c4b869cbad8e11f9e8, type: 3}
+  bossVisual: 3
+  commonEnemies:
+  - {fileID: 8281996877629084266, guid: f28fe3387f647d140a9beb8635f14f31, type: 3}
+  - {fileID: 5211323247233331200, guid: 95539291c3788c0429cb28ab72c8fbf3, type: 3}
+  - {fileID: 6145101742349338973, guid: 39f9732f971ae5a4e94b67e68f424f6a, type: 3}
+  - {fileID: 1462347642666058579, guid: 3a61fe347b9dff14d975a0c9f471aabc, type: 3}
+  - {fileID: 2522596298033652779, guid: 37b83df6c60489146a6304f917b76a77, type: 3}
+  - {fileID: 8962804757883627510, guid: 0ea2a2cba11bd7d4f848922c792d9298, type: 3}
+  bgm: {fileID: 8300000, guid: abb217af0c347cc4898dc3af1d516b73, type: 3}
+  bgmVolume: 0.5

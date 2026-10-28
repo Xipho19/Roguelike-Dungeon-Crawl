@@ -12,6 +12,7 @@ namespace Roguelike.Combat
         private Rigidbody2D _rb;
         private SpriteRenderer _renderer;
         private Vector3 _baseScale = Vector3.one;
+        private Color _baseColor = Color.white;
         private int _damage;
         private float _dieAt;
         private Transform _homingTarget;
@@ -25,15 +26,26 @@ namespace Roguelike.Combat
 
             _renderer = GetComponentInChildren<SpriteRenderer>();
             _baseScale = transform.localScale;
+            if (_renderer != null) _baseColor = _renderer.color;
         }
 
         public void Initialize(Vector2 direction, float speed, int damage, float lifetime)
         {
             _damage = damage;
             _dieAt = Time.time + lifetime;
+            _homingTarget = null;
+            _homingTurnSpeed = 0f;
+            transform.localScale = _baseScale;
+            if (_renderer != null) _renderer.color = _baseColor;
 
             if (_rb == null) _rb = GetComponent<Rigidbody2D>();
             _rb.linearVelocity = direction.normalized * speed;
+        }
+
+        /// <summary>回收本颗弹丸，而不是直接销毁，供对象池复用。</summary>
+        public void Despawn()
+        {
+            ProjectilePool.Release(this);
         }
 
         /// <summary>按 Boss 类型给弹丸染色/缩放；只影响这一颗。</summary>
@@ -56,7 +68,7 @@ namespace Roguelike.Combat
         {
             if (Time.time >= _dieAt)
             {
-                Destroy(gameObject);
+                Despawn();
                 return;
             }
 
@@ -95,11 +107,11 @@ namespace Roguelike.Combat
             if (health != null)
             {
                 health.TryDamage(_damage);
-                Destroy(gameObject);
+                Despawn();
                 return;
             }
 
-            if (!other.isTrigger) Destroy(gameObject);
+            if (!other.isTrigger) Despawn();
         }
     }
 }

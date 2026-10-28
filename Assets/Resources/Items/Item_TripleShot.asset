@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Roguelike.Items.ItemDefinition
   itemName: "\u4E09\u53C9\u5F39"
   description: "\u4E00\u6B21\u53D1\u5C04 3 \u53D1\uFF0C\u5C04\u901F\u964D\u4F4E 25%\u3002"
-  rarity: 0
+  rarity: 2
   icon: {fileID: 21300000, guid: bd037677b4307f34f9ac4661c2ae07fd, type: 3}
   color: {r: 0.95, g: 0.6, b: 0.2, a: 1}
   modifiers:

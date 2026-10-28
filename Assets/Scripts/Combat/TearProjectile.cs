@@ -114,24 +114,36 @@ namespace Roguelike.Combat
                 ? Mathf.Clamp(modifiers.bounceSpeedScale, 0.1f, 1f)
                 : 1f;
 
+            _hitEnemies.Clear();
+            _homingTarget = null;
+            _nextHomingSearch = 0f;
+            _exploded = false;
+            _canSplit = true;
+
             if (_rb == null) _rb = GetComponent<Rigidbody2D>();
             _rb.linearVelocity = direction.normalized * speed;
 
             _dieAt = Time.time + lifetime;
         }
 
+        /// <summary>回收本颗眼泪，而不是直接销毁，供对象池复用。</summary>
+        public void Despawn()
+        {
+            ProjectilePool.Release(this);
+        }
+
         private void Update()
         {
             if (Time.time >= _dieAt)
             {
-                Destroy(gameObject);
+                Despawn();
                 return;
             }
 
             // 眼泪不跨越房间边界：站在门外朝未进入的房间射击时，弹体会在门口消失
             if (_ownerRoom != null && !_ownerRoom.WorldRect.Contains(transform.position))
             {
-                Destroy(gameObject);
+                Despawn();
                 return;
             }
 
@@ -244,7 +256,7 @@ namespace Roguelike.Combat
             if (breakable != null)
             {
                 breakable.TakeHit();
-                Destroy(gameObject);
+                Despawn();
                 return;
             }
 
@@ -280,7 +292,7 @@ namespace Roguelike.Combat
                     return; // 继续飞行
                 }
 
-                Destroy(gameObject);
+                Despawn();
                 return;
             }
 
@@ -288,7 +300,7 @@ namespace Roguelike.Combat
             if (!other.isTrigger)
             {
                 if (TryBounce(other)) return;
-                Destroy(gameObject);
+                Despawn();
             }
         }
 
@@ -361,7 +373,7 @@ namespace Roguelike.Combat
                 Vector2 direction = Rotate(baseDirection, angle);
                 Vector2 position = (Vector2)transform.position + direction * 0.25f;
 
-                TearProjectile child = Instantiate(prefab, position, Quaternion.identity);
+                TearProjectile child = ProjectilePool.Spawn(prefab, position, Quaternion.identity);
 
                 TearModifiers modifiers = _modifiers;
                 modifiers.explosionRadius = 0f;

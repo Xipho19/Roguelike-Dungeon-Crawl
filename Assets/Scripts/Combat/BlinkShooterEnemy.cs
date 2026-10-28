@@ -160,9 +160,9 @@ namespace Roguelike.Combat
                 Vector2 shotDirection = Rotate(direction, start + step * i);
                 Vector2 spawnPosition = _rb.position + shotDirection * 0.8f;
 
-                EnemyProjectile bullet = Instantiate(
+                EnemyProjectile bullet = ProjectilePool.Spawn(
                     projectilePrefab,
-                    spawnPosition,
+                    new Vector3(spawnPosition.x, spawnPosition.y, 0f),
                     Quaternion.identity);
 
                 bullet.Initialize(

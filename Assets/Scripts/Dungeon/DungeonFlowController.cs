@@ -109,6 +109,15 @@ namespace Roguelike.Dungeon
         [Tooltip("留空时会从 Resources/Items 自动加载所有 ItemDefinition")]
         [SerializeField] private ItemDefinition[] itemPool;
 
+        [Header("道具稀有度权重")]
+        [SerializeField, Min(0f)] private float commonWeight = 60f;
+        [SerializeField, Min(0f)] private float rareWeight = 30f;
+        [SerializeField, Min(0f)] private float legendaryWeight = 10f;
+
+        [Header("商店刷新")]
+        [Tooltip("每次刷新商店的基础金币价格；仍会叠加楼层加价")]
+        [SerializeField, Min(1)] private int shopRerollBaseCost = 3;
+
         [Header("秘密房")]
         [Tooltip("留空时从 Resources/Items 自动加载")]
         [SerializeField] private SecretAltar secretAltarPrefab;
@@ -123,6 +132,8 @@ namespace Roguelike.Dungeon
         private RoomView _activeRoom;
         private PlayerStats _playerStats;
         private PlayerInventory _playerInventory;
+        private PlayerWallet _playerWallet;
+        private CombatDebugHud _hud;
         private bool _floorPrepared;
 
         private int _floor = 1;
@@ -206,6 +217,7 @@ namespace Roguelike.Dungeon
             coinGrowthEveryFloors <= 0 ? 0 : FloorOffset / coinGrowthEveryFloors;
 
         private int ShopPriceBonus => Mathf.Max(0, shopPriceGrowthPerFloor) * FloorOffset;
+        private int ShopRerollCost => Mathf.Max(1, shopRerollBaseCost + ShopPriceBonus);
 
         /// <summary>Boss 被击败时触发，供 RunManager 进入通关状态。</summary>
         public event System.Action BossDefeated;
@@ -244,6 +256,8 @@ namespace Roguelike.Dungeon
 
             _playerStats = FindFirstObjectByType<PlayerStats>();
             _playerInventory = FindFirstObjectByType<PlayerInventory>();
+            _playerWallet = FindFirstObjectByType<PlayerWallet>();
+            _hud = FindFirstObjectByType<CombatDebugHud>();
         }
 
         private void OnEnable()
@@ -309,8 +323,11 @@ namespace Roguelike.Dungeon
 
         private void Update()
         {
-            if (!enableDebugClearKey) return;
-            if (WasClearKeyPressed()) ClearCurrentRoom();
+            if (enableDebugClearKey && WasClearKeyPressed())
+                ClearCurrentRoom();
+
+            if (WasShopRerollPressed())
+                TryRerollCurrentShop();
         }
 
         /// <summary>玩家进入房间：战斗房且未清空则锁门并激活预生成的敌人，否则保持开启。</summary>
@@ -362,7 +379,11 @@ namespace Roguelike.Dungeon
                 TrySpawnTreasure(room);
 
             if (room.RoomType == RoomType.Shop)
+            {
                 TryStockShop(room);
+                if (room.ShopStocked && _hud != null)
+                    _hud.ShowToast($"商店：按 R 刷新商品（{ShopRerollCost} 金币）", 2.2f);
+            }
 
             if (room.RoomType == RoomType.Secret)
                 TrySpawnSecretEvent(room);
@@ -393,9 +414,9 @@ namespace Roguelike.Dungeon
 
             for (int i = 0; i < count; i++)
             {
-                int index = Random.Range(0, stock.Count);
-                ItemDefinition item = stock[index];
-                stock.RemoveAt(index);
+                ItemDefinition item = PickWeightedItem(stock);
+                if (item == null) break;
+                stock.Remove(item);
 
                 float x = center.x + startOffset + i * spacing;
                 ItemPickup pickup = Instantiate(
@@ -408,6 +429,156 @@ namespace Roguelike.Dungeon
             }
 
             Debug.Log($"[Flow] 商店 {room.GridPosition} 上架 {count} 件道具");
+        }
+
+        /// <summary>
+        /// 按 R 花费金币刷新当前商店货架。
+        /// 只替换仍在货架上的栏位；已购买的空栏位保持为空。
+        /// </summary>
+        public bool TryRerollCurrentShop()
+        {
+            // 商店购买弹窗会暂停时间；允许在弹窗中刷新，其它暂停状态不允许。
+            if (Time.timeScale <= 0.001f && !ItemPickup.HasActiveDialog) return false;
+            if (tracker == null) return false;
+
+            RoomView room = tracker.CurrentRoom;
+            if (room == null || room.RoomType != RoomType.Shop || !room.ShopStocked)
+                return false;
+
+            if (itemPickupPrefab == null) return false;
+
+            ItemPickup[] allPickups = room.GetComponentsInChildren<ItemPickup>(true);
+            var activeStock = new List<ItemPickup>();
+            var oldItems = new List<ItemDefinition>();
+
+            for (int i = 0; i < allPickups.Length; i++)
+            {
+                ItemPickup pickup = allPickups[i];
+                if (pickup == null || !pickup.gameObject.activeInHierarchy ||
+                    pickup.IsPurchased || pickup.Item == null)
+                    continue;
+
+                activeStock.Add(pickup);
+                oldItems.Add(pickup.Item);
+            }
+
+            if (activeStock.Count == 0)
+            {
+                if (_hud != null) _hud.ShowToast("商店已没有可刷新商品", 1.6f);
+                return false;
+            }
+
+            List<ItemDefinition> available = BuildAvailableItems();
+            for (int i = 0; i < oldItems.Count; i++)
+                available.Remove(oldItems[i]);
+
+            if (available.Count == 0)
+            {
+                if (_hud != null) _hud.ShowToast("商店已没有新的可刷新道具", 1.6f);
+                return false;
+            }
+
+            if (_playerWallet == null) _playerWallet = FindFirstObjectByType<PlayerWallet>();
+            if (_playerWallet == null) return false;
+
+            int cost = ShopRerollCost;
+            if (!_playerWallet.TrySpend(cost))
+            {
+                if (_hud != null) _hud.ShowToast($"金币不足，刷新需要 {cost} 金币", 1.8f);
+                return false;
+            }
+
+            ItemPickup.SuppressNewDialogs(0.6f);
+
+            for (int i = 0; i < activeStock.Count; i++)
+            {
+                ItemPickup oldPickup = activeStock[i];
+                if (oldPickup == null) continue;
+
+                Vector3 position = oldPickup.BasePosition;
+                oldPickup.gameObject.SetActive(false);
+                Destroy(oldPickup.gameObject);
+
+                ItemDefinition newItem = PickWeightedItem(available);
+                if (newItem == null) continue;
+
+                available.Remove(newItem);
+                ItemPickup newPickup = Instantiate(
+                    itemPickupPrefab,
+                    position,
+                    Quaternion.identity,
+                    room.transform);
+
+                newPickup.Setup(newItem, null, CalculateShopPrice(newItem));
+            }
+
+            if (_hud != null) _hud.ShowToast($"商店已刷新：-{cost} 金币", 1.8f);
+            return true;
+        }
+
+        /// <summary>先按稀有度类别抽权重，再在该类别内等概率选具体道具。</summary>
+        private ItemDefinition PickWeightedItem(List<ItemDefinition> items)
+        {
+            if (items == null || items.Count == 0) return null;
+
+            int commonCount = 0;
+            int rareCount = 0;
+            int legendaryCount = 0;
+
+            for (int i = 0; i < items.Count; i++)
+            {
+                ItemDefinition item = items[i];
+                if (item == null) continue;
+
+                switch (item.rarity)
+                {
+                    case ItemRarity.Common: commonCount++; break;
+                    case ItemRarity.Rare: rareCount++; break;
+                    case ItemRarity.Legendary: legendaryCount++; break;
+                }
+            }
+
+            float commonMass = commonCount > 0 ? Mathf.Max(0f, commonWeight) : 0f;
+            float rareMass = rareCount > 0 ? Mathf.Max(0f, rareWeight) : 0f;
+            float legendaryMass = legendaryCount > 0 ? Mathf.Max(0f, legendaryWeight) : 0f;
+            float totalWeight = commonMass + rareMass + legendaryMass;
+
+            if (totalWeight <= 0.0001f)
+                return items[Random.Range(0, items.Count)];
+
+            float roll = Random.value * totalWeight;
+            ItemRarity chosen;
+            int chosenCount;
+
+            if (roll < commonMass)
+            {
+                chosen = ItemRarity.Common;
+                chosenCount = commonCount;
+            }
+            else if (roll < commonMass + rareMass)
+            {
+                chosen = ItemRarity.Rare;
+                chosenCount = rareCount;
+            }
+            else
+            {
+                chosen = ItemRarity.Legendary;
+                chosenCount = legendaryCount;
+            }
+
+            if (chosenCount <= 0)
+                return items[Random.Range(0, items.Count)];
+
+            int pick = Random.Range(0, chosenCount);
+            for (int i = 0; i < items.Count; i++)
+            {
+                ItemDefinition item = items[i];
+                if (item == null || item.rarity != chosen) continue;
+                if (pick == 0) return item;
+                pick--;
+            }
+
+            return items[0];
         }
 
         private int CalculateShopPrice(ItemDefinition item)
@@ -436,7 +607,7 @@ namespace Roguelike.Dungeon
                 return;
             }
 
-            ItemDefinition item = available[Random.Range(0, available.Count)];
+            ItemDefinition item = PickWeightedItem(available);
             if (item == null) return;
 
             room.RewardSpawned = true;
@@ -469,7 +640,8 @@ namespace Roguelike.Dungeon
 
             room.SecretEventSpawned = true;
 
-            ItemDefinition item = available[Random.Range(0, available.Count)];
+            ItemDefinition item = PickWeightedItem(available);
+            if (item == null) return;
             Vector3 position = new Vector3(room.WorldCenter.x, room.WorldCenter.y, 0f);
             SecretAltar altar = Instantiate(secretAltarPrefab, position, Quaternion.identity, room.transform);
             altar.Setup(item, room);
@@ -586,7 +758,7 @@ namespace Roguelike.Dungeon
                 return;
             }
 
-            ItemDefinition item = available[Random.Range(0, available.Count)];
+            ItemDefinition item = PickWeightedItem(available);
             if (item == null) return;
 
             room.RewardSpawned = true;
@@ -683,11 +855,7 @@ namespace Roguelike.Dungeon
             ClearAllEncounters();
             _floorPrepared = false;
 
-            foreach (TearProjectile tear in FindObjectsByType<TearProjectile>(FindObjectsSortMode.None))
-                Destroy(tear.gameObject);
-
-            foreach (EnemyProjectile bullet in FindObjectsByType<EnemyProjectile>(FindObjectsSortMode.None))
-                Destroy(bullet.gameObject);
+            ProjectilePool.ResetAll();
 
             foreach (Pickup pickup in FindObjectsByType<Pickup>(FindObjectsSortMode.None))
                 Destroy(pickup.gameObject);
@@ -934,7 +1102,10 @@ namespace Roguelike.Dungeon
         /// <summary>登记新生成的敌人（包括召唤物与分裂体），保证全部清掉才开门。</summary>
         public void RegisterEnemy(Enemy enemy)
         {
-            RoomView room = enemy != null ? enemy.GetComponentInParent<RoomView>() : null;
+            if (enemy == null) return;
+
+            RoomView room = enemy.GetComponentInParent<RoomView>();
+            if (room == null) room = _activeRoom;
             RegisterEnemy(enemy, room);
         }
 
@@ -943,6 +1114,10 @@ namespace Roguelike.Dungeon
             if (enemy == null) return;
             if (room == null) room = _activeRoom;
             if (room == null) return;
+
+            // 召唤物可能生成在房间根节点之外；登记时统一补上所属房间，
+            // 让它参与清房计数，也能被 Enemy.LateUpdate 的边界钳制拉回房间。
+            enemy.SetRoom(room);
 
             if (!_roomEnemies.TryGetValue(room, out List<Enemy> list))
             {
@@ -978,6 +1153,19 @@ namespace Roguelike.Dungeon
 #endif
 #if ENABLE_LEGACY_INPUT_MANAGER
             return Input.GetKeyDown(KeyCode.K);
+#else
+            return false;
+#endif
+        }
+
+        private static bool WasShopRerollPressed()
+        {
+#if ENABLE_INPUT_SYSTEM
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard != null) return keyboard.rKey.wasPressedThisFrame;
+#endif
+#if ENABLE_LEGACY_INPUT_MANAGER
+            return Input.GetKeyDown(KeyCode.R);
 #else
             return false;
 #endif

@@ -1,3 +1,4 @@
+using Roguelike.Audio;
 using Roguelike.Combat;
 using UnityEngine;
 #if ENABLE_INPUT_SYSTEM
@@ -17,6 +18,7 @@ namespace Roguelike.Core
         private bool _paused;
         private GUIStyle _titleStyle;
         private GUIStyle _hintStyle;
+        private GUIStyle _settingStyle;
 
         public bool IsPaused => _paused;
 
@@ -41,12 +43,17 @@ namespace Roguelike.Core
 
         public void SetPaused(bool paused)
         {
+            if (_paused && !paused)
+                AudioService.SaveAudioSettings();
+
             _paused = paused;
             Time.timeScale = paused ? 0f : 1f;
         }
 
         private void OnDisable()
         {
+            AudioService.SaveAudioSettings();
+
             if (!_paused) return;
 
             _paused = false;
@@ -61,10 +68,12 @@ namespace Roguelike.Core
             {
                 _titleStyle = new GUIStyle(GUI.skin.label) { fontSize = 40, alignment = TextAnchor.MiddleCenter };
                 _hintStyle = new GUIStyle(GUI.skin.label) { fontSize = 18, alignment = TextAnchor.MiddleCenter };
+                _settingStyle = new GUIStyle(GUI.skin.label) { fontSize = 16, alignment = TextAnchor.MiddleLeft };
             }
 
             _titleStyle.normal.textColor = Color.white;
             _hintStyle.normal.textColor = new Color(0.85f, 0.85f, 0.9f);
+            _settingStyle.normal.textColor = new Color(0.85f, 0.85f, 0.9f);
 
             Color previous = GUI.color;
             GUI.color = new Color(0f, 0f, 0f, 0.65f);
@@ -76,6 +85,23 @@ namespace Roguelike.Core
 
             GUI.Label(new Rect(cx - 300f, cy - 70f, 600f, 60f), "已暂停", _titleStyle);
             GUI.Label(new Rect(cx - 300f, cy, 600f, 30f), "按 Esc 继续", _hintStyle);
+
+            float labelX = cx - 280f;
+            float sliderX = cx - 70f;
+            float row1 = cy + 45f;
+            float row2 = cy + 90f;
+
+            GUI.Label(new Rect(labelX, row1, 190f, 28f),
+                $"音乐音量 {Mathf.RoundToInt(AudioService.MusicVolume * 100f)}%", _settingStyle);
+            float music = GUI.HorizontalSlider(new Rect(sliderX, row1 + 7f, 220f, 18f), AudioService.MusicVolume, 0f, 1f);
+            if (!Mathf.Approximately(music, AudioService.MusicVolume))
+                AudioService.SetMusicVolume(music);
+
+            GUI.Label(new Rect(labelX, row2, 190f, 28f),
+                $"音效音量 {Mathf.RoundToInt(AudioService.SfxVolume * 100f)}%", _settingStyle);
+            float sfx = GUI.HorizontalSlider(new Rect(sliderX, row2 + 7f, 220f, 18f), AudioService.SfxVolume, 0f, 1f);
+            if (!Mathf.Approximately(sfx, AudioService.SfxVolume))
+                AudioService.SetSfxVolume(sfx);
         }
 
         private static bool WasPausePressed()

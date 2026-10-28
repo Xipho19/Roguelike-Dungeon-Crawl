@@ -41,10 +41,12 @@ namespace Roguelike.Combat
                     Mathf.Cos(angle * Mathf.Deg2Rad),
                     Mathf.Sin(angle * Mathf.Deg2Rad)) * splitOffset;
 
-                Vector2 position = (Vector2)transform.position + offset;
+                Vector2 position = ClampPointToRoom((Vector2)transform.position + offset, 0.55f);
 
                 Enemy minion = Instantiate(minionPrefab, position, Quaternion.identity, transform.parent);
                 minion.name = "TinyZombie_Split";
+                if (minion.Room == null) minion.SetRoom(Room);
+
                 minion.Initialize(minionHealth, minionSpeed, minionScale, Color.white, false, _flow);
                 if (_flow != null) minion.SetFloorDamageBonus(_flow.EnemyDamageBonus);
                 minion.ActivateCombat();

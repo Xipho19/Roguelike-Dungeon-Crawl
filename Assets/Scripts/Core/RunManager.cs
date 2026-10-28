@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Roguelike.Audio;
 using Roguelike.Dungeon;
 using Roguelike.Items;
@@ -47,7 +48,7 @@ namespace Roguelike.Core
         [SerializeField] private int maxFloor = 6;
 
         [Header("楼层主题")]
-        [Tooltip("留空时从 Resources/FloorThemes 加载并按 order 排序")]
+        [Tooltip("场景中显式指定的主题；留空或缺少时自动补入 Resources/FloorThemes 中的主题")]
         [SerializeField] private FloorTheme[] floorThemes = new FloorTheme[0];
 
         [Header("跨局继承")]
@@ -97,9 +98,25 @@ namespace Roguelike.Core
 
         private void LoadFloorThemes()
         {
-            FloorTheme[] themes = floorThemes;
-            if (themes == null || themes.Length == 0)
-                themes = Resources.LoadAll<FloorTheme>("FloorThemes");
+            FloorTheme[] resources = Resources.LoadAll<FloorTheme>("FloorThemes");
+            FloorTheme[] themes;
+
+            if (floorThemes == null || floorThemes.Length == 0)
+            {
+                themes = resources;
+            }
+            else
+            {
+                // 场景里可能只绑定了旧的三套主题；把 Resources 中新增的主题补进来，
+                // 这样新增第 4-6 层主题时不需要手动改场景引用。
+                var merged = new List<FloorTheme>(floorThemes);
+                for (int i = 0; i < resources.Length; i++)
+                {
+                    if (resources[i] != null && !merged.Contains(resources[i]))
+                        merged.Add(resources[i]);
+                }
+                themes = merged.ToArray();
+            }
 
             themes = System.Array.FindAll(themes, theme => theme != null);
             System.Array.Sort(themes, (a, b) =>
@@ -163,6 +180,10 @@ namespace Roguelike.Core
 
         private void Update()
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            HandleDebugFloorKeys();
+#endif
+
             if (_state == RunState.Playing) return;
             if (WasRestartPressed()) RestartRun();
         }
@@ -282,6 +303,66 @@ namespace Roguelike.Core
             Debug.Log($"[Run] 进入第 {currentFloor} 层（{CurrentThemeName}），新种子 {(builder != null ? builder.Seed : 0)}");
         }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        /// <summary>调试：直接跳到指定楼层，默认补满全部道具。</summary>
+        public void DebugJumpToFloor(int floor, bool grantAllItems = true)
+        {
+            if (_state != RunState.Playing) return;
+
+            int target = Mathf.Max(1, floor);
+            if (maxFloor > 0) target = Mathf.Min(target, maxFloor);
+
+            Time.timeScale = 1f;
+
+            if (_portal != null)
+            {
+                Destroy(_portal.gameObject);
+                _portal = null;
+            }
+
+            if (flow != null) flow.ResetForNewRun();
+
+            currentFloor = target;
+            ApplyFloorPresentation();
+
+            if (builder != null)
+            {
+                builder.SetSeed(Random.Range(1, int.MaxValue));
+                builder.BuildFromSeed();
+            }
+
+            if (flow != null) flow.PrepareFloor();
+
+            if (tracker != null && builder != null && builder.Data != null)
+            {
+                RoomView start = builder.GetRoom(builder.Data.Start.Grid);
+                tracker.TeleportTo(start);
+
+                if (roomCamera != null) roomCamera.SnapTo(start);
+            }
+
+            if (grantAllItems) GrantAllItems();
+
+            Debug.Log($"[Run] 调试跳转到第 {currentFloor} 层（{CurrentThemeName}）");
+        }
+
+        private void GrantAllItems()
+        {
+            if (inventory == null) inventory = FindFirstObjectByType<PlayerInventory>();
+            if (inventory == null) return;
+
+            ItemDefinition[] items = Resources.LoadAll<ItemDefinition>("Items");
+            for (int i = 0; i < items.Length; i++)
+            {
+                ItemDefinition item = items[i];
+                if (item == null || inventory.Owns(item)) continue;
+
+                // 批量发放时不叠 37 次开书音效。
+                ItemGrant.Apply(item, inventory, playerHealth, wallet, false);
+            }
+        }
+#endif
+
         /// <summary>用新种子原地重开一局。</summary>
         public void RestartRun()
         {
@@ -361,6 +442,30 @@ namespace Roguelike.Core
             if (GUI.Button(new Rect(cx - 110f, cy + 32f, 220f, 48f), "重新开始 (R)"))
                 RestartRun();
         }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        private void HandleDebugFloorKeys()
+        {
+#if ENABLE_INPUT_SYSTEM
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard == null) return;
+
+            if (keyboard.f1Key.wasPressedThisFrame) DebugJumpToFloor(1);
+            else if (keyboard.f2Key.wasPressedThisFrame) DebugJumpToFloor(2);
+            else if (keyboard.f3Key.wasPressedThisFrame) DebugJumpToFloor(3);
+            else if (keyboard.f4Key.wasPressedThisFrame) DebugJumpToFloor(4);
+            else if (keyboard.f5Key.wasPressedThisFrame) DebugJumpToFloor(5);
+            else if (keyboard.f6Key.wasPressedThisFrame) DebugJumpToFloor(6);
+#elif ENABLE_LEGACY_INPUT_MANAGER
+            if (Input.GetKeyDown(KeyCode.F1)) DebugJumpToFloor(1);
+            else if (Input.GetKeyDown(KeyCode.F2)) DebugJumpToFloor(2);
+            else if (Input.GetKeyDown(KeyCode.F3)) DebugJumpToFloor(3);
+            else if (Input.GetKeyDown(KeyCode.F4)) DebugJumpToFloor(4);
+            else if (Input.GetKeyDown(KeyCode.F5)) DebugJumpToFloor(5);
+            else if (Input.GetKeyDown(KeyCode.F6)) DebugJumpToFloor(6);
+#endif
+        }
+#endif
 
         private static bool WasRestartPressed()
         {

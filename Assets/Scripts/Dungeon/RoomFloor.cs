@@ -15,6 +15,27 @@ namespace Roguelike.Dungeon
         [SerializeField] private SpriteRenderer[] tiles = new SpriteRenderer[0];
         [SerializeField] private Sprite[] variants = new Sprite[0];
 
+        private Sprite[] _defaultVariants;
+
+        private void Awake()
+        {
+            _defaultVariants = variants;
+        }
+
+        /// <summary>
+        /// 应用楼层主题的地板变体，并沿用房间自己的种子重绘。
+        /// themeVariants 为空时恢复 Prefab 的默认地砖。
+        /// </summary>
+        public void ApplyTheme(Sprite[] themeVariants, int seed)
+        {
+            if (themeVariants != null && themeVariants.Length > 0)
+                variants = themeVariants;
+            else if (_defaultVariants != null && _defaultVariants.Length > 0)
+                variants = _defaultVariants;
+
+            Apply(seed);
+        }
+
         /// <summary>按种子给每格挑地砖。可重复调用，结果只取决于种子。</summary>
         public void Apply(int seed)
         {

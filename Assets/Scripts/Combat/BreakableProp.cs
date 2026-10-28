@@ -95,7 +95,7 @@ namespace Roguelike.Combat
                 return;
             }
 
-            AudioService.Play("metalPot1", 0.7f);
+            AudioService.Play("crate_break", 0.9f, 0.03f);
             Destroy(gameObject);
         }
 

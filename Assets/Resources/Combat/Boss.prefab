@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &1332890160274194947
+--- !u!1 &119253941756096637
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,42 +8,38 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 4212601677899960351}
-  - component: {fileID: 8530732834050229573}
-  - component: {fileID: 2087730884204496453}
-  - component: {fileID: 7463228360528150140}
-  - component: {fileID: 4479620899279227863}
-  - component: {fileID: 1939414500628490215}
+  - component: {fileID: 4566347019512934480}
+  - component: {fileID: 1100756203884076642}
   m_Layer: 0
-  m_Name: Boss
+  m_Name: Visual
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &4212601677899960351
+--- !u!4 &4566347019512934480
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1332890160274194947}
+  m_GameObject: {fileID: 119253941756096637}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 4212601677899960351}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!212 &8530732834050229573
+--- !u!212 &1100756203884076642
 SpriteRenderer:
   serializedVersion: 2
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1332890160274194947}
+  m_GameObject: {fileID: 119253941756096637}
   m_Enabled: 1
   m_CastShadows: 0
   m_ReceiveShadows: 0
@@ -95,6 +91,42 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
+--- !u!1 &1332890160274194947
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4212601677899960351}
+  - component: {fileID: 2087730884204496453}
+  - component: {fileID: 7463228360528150140}
+  - component: {fileID: 4479620899279227863}
+  - component: {fileID: 1939414500628490215}
+  m_Layer: 0
+  m_Name: Boss
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4212601677899960351
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1332890160274194947}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 4566347019512934480}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!50 &2087730884204496453
 Rigidbody2D:
   serializedVersion: 5
@@ -255,6 +287,23 @@ MonoBehaviour:
   - {fileID: 21300000, guid: d04d14c1e89e8fb43be8e9ceb40d3cf0, type: 3}
   - {fileID: 21300000, guid: 22a09d6fe6d467d45ac50361d057605a, type: 3}
   - {fileID: 21300000, guid: 1dd92c41e91dd0d438f179aefe3ba7bd, type: 3}
+  sewerTrollIdleFrames:
+  - {fileID: 21300000, guid: 5f0ca34a5d2a353438127ee8d0e3d23b, type: 3}
+  sewerTrollRunFrames:
+  - {fileID: 21300000, guid: 5f0ca34a5d2a353438127ee8d0e3d23b, type: 3}
+  - {fileID: 21300000, guid: 4362cbb11a423034b890c339542edbe6, type: 3}
+  - {fileID: 21300000, guid: 16a058e6986f5c246832cf16ec75f0e4, type: 3}
+  - {fileID: 21300000, guid: 1fb251f0166c3b14a9af7681a2e912e1, type: 3}
+  ruinsGolemIdleFrames:
+  - {fileID: 21300000, guid: cfbf909fb4dca1b438d72c5ad73b2eae, type: 3}
+  ruinsGolemRunFrames:
+  - {fileID: 21300000, guid: cfbf909fb4dca1b438d72c5ad73b2eae, type: 3}
+  obsidianKingIdleFrames:
+  - {fileID: 21300000, guid: 1be261f917213214ead48154efc89faa, type: 3}
+  obsidianKingRunFrames:
+  - {fileID: 21300000, guid: 1be261f917213214ead48154efc89faa, type: 3}
+  - {fileID: 21300000, guid: da51b9f701e21dd4f8e5c63c14e0d174, type: 3}
+  - {fileID: 21300000, guid: 5da7895f3ff9afe40b25c9a4d1c78fca, type: 3}
 --- !u!114 &1939414500628490215
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -1,10 +1,5 @@
-Player hurt grunt: adapted from "Voiceover Pack: Fighter" by Kenney Vleugels (Kenney.nl).
+Player hurt sound source:
+"光厂音效_6749_暗夜精灵男性受伤声.mp3"
 
-License: Creative Commons Zero (CC0 1.0)
-https://creativecommons.org/publicdomain/zero/1.0/
-
-Source:
-https://kenney.nl/assets/voiceover-pack-fighter
-
-The clip was trimmed, normalized, and mixed with a short impact thump for this project.
-Credit is not mandatory under CC0, but is included here.
+Provided by the project owner for use in this project.
+The clip was trimmed, normalized, and converted to WAV for runtime playback.
