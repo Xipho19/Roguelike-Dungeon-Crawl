@@ -17,7 +17,7 @@
 - **护盾系统**：初始 5 点护盾，优先吸收伤害，脱战 5 秒后每秒恢复 1 点。
 - **楼层主题**：地牢、墓穴、炼狱、下水道、遗迹、黑曜六套地板/墙体/BGM，按楼层轮换。
 - **难度成长**：敌人和 Boss 的血量、伤害、数量随楼层提升，第 6 层为最终层。
-- **局内 UI**：顶部状态栏、护盾、金币、背包、Boss 血条、Tab 地图、暂停菜单；暂停菜单可调音乐与音效音量，设置会保存。
+- **像素地牢 UI**：统一深色石质面板、金色描边与 Ark Pixel 中文像素字体；覆盖顶部状态栏、背包、Boss 血条、地图、商店/祭坛、暂停和结算界面；暂停菜单可调音乐与音效音量，设置会保存。
 - **像素风素材**：0x72 地牢素材、Kenney 音效（RPG）、CC0 背景音乐，以及项目自制图标。
 
 ## 操作方式
@@ -245,6 +245,7 @@ Assets/
 
 本项目使用或包含以下第三方素材：
 
+- **Ark Pixel Font 12px** — 作者 TakWolf，SIL OFL 1.1，支持简体中文；位于 `Assets/Resources/UI/ArkPixel12.ttf`
 - **16x16 DungeonTileset II** — 作者 0x72，许可 CC0 1.0
 - **16x16 Fantasy RPG Trash Mobs** — 作者 Emcee Flesher，来源 OpenGameArt，许可 OGA-BY 3.0（需署名）；测试帧位于 `Assets/Art/ThirdParty/TrashMobs`
 - **Danaida Free Pixel Animated Monsters Pack 16x16** — 作者 Danaida，免费商用/可修改，不可转售或再分发素材包；当前保留为未使用测试资源

@@ -1,4 +1,5 @@
 using Roguelike.Player;
+using Roguelike.UI;
 using UnityEngine;
 
 namespace Roguelike.Core
@@ -20,9 +21,6 @@ namespace Roguelike.Core
         private bool _promptVisible;
         private bool _dismissed;
         private bool _pausedByPrompt;
-        private GUIStyle _titleStyle;
-        private GUIStyle _bodyStyle;
-        private GUIStyle _hintStyle;
 
         public bool IsPromptVisible => _promptVisible;
 
@@ -109,53 +107,62 @@ namespace Roguelike.Core
         {
             if (!_promptVisible) return;
 
-            if (_titleStyle == null)
-            {
-                _titleStyle = new GUIStyle(GUI.skin.label)
-                {
-                    fontSize = 30,
-                    alignment = TextAnchor.MiddleCenter,
-                };
-                _titleStyle.normal.textColor = new Color(0.75f, 0.90f, 1f);
-
-                _bodyStyle = new GUIStyle(GUI.skin.label)
-                {
-                    fontSize = 20,
-                    alignment = TextAnchor.MiddleCenter,
-                };
-                _bodyStyle.normal.textColor = Color.white;
-
-                _hintStyle = new GUIStyle(GUI.skin.label)
-                {
-                    fontSize = 14,
-                    alignment = TextAnchor.MiddleCenter,
-                };
-                _hintStyle.normal.textColor = new Color(0.75f, 0.75f, 0.8f);
-            }
-
-            Color previous = GUI.color;
-            GUI.color = new Color(0f, 0f, 0f, 0.62f);
-            GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
-            GUI.color = previous;
+            UiTheme.DrawDim();
 
             float cx = Screen.width * 0.5f;
             float cy = Screen.height * 0.5f;
-            var panel = new Rect(cx - 230f, cy - 120f, 460f, 250f);
+            var panel = new Rect(cx - 240f, cy - 138f, 480f, 276f);
+            UiTheme.DrawPanel(panel, UiTheme.Mana, false);
 
-            GUI.Box(panel, GUIContent.none);
-            GUI.Label(new Rect(panel.x, panel.y + 20f, panel.width, 40f), "传送门", _titleStyle);
+            UiTheme.DrawLabelShadow(
+                new Rect(panel.x + 24f, panel.y + 18f, panel.width - 48f, 34f),
+                "传 送 门",
+                UiTheme.TitleCenter,
+                new Color(0.80f, 0.74f, 1f));
+
+            UiTheme.DrawLabelShadow(
+                new Rect(panel.x + 24f, panel.y + 54f, panel.width - 48f, 16f),
+                "ANCIENT GATE",
+                UiTheme.Tiny,
+                UiTheme.Muted);
+
+            UiTheme.DrawDivider(new Rect(panel.x + 30f, panel.y + 78f, panel.width - 60f, 1f));
 
             string question = _runManager != null
                 ? $"进入第 {_runManager.CurrentFloor + 1} 层？"
                 : "是否进入下一层？";
-            GUI.Label(new Rect(panel.x, panel.y + 76f, panel.width, 32f), question, _bodyStyle);
-            GUI.Label(new Rect(panel.x, panel.y + 116f, panel.width, 24f), "选择「否」可以留在本层继续探索", _hintStyle);
+            UiTheme.DrawLabelShadow(
+                new Rect(panel.x + 24f, panel.y + 98f, panel.width - 48f, 32f),
+                question,
+                UiTheme.TitleCenter,
+                UiTheme.Text);
 
-            if (GUI.Button(new Rect(cx - 150f, panel.y + 164f, 130f, 46f), "否"))
+            UiTheme.DrawLabelShadow(
+                new Rect(panel.x + 24f, panel.y + 138f, panel.width - 48f, 20f),
+                "选择「否」可以留在本层继续探索",
+                UiTheme.Center,
+                UiTheme.Muted);
+
+            float buttonY = panel.yMax - 62f;
+            if (UiTheme.DrawButton(
+                    new Rect(cx - 156f, buttonY, 136f, 42f),
+                    "否",
+                    false,
+                    false,
+                    16))
+            {
                 Decline();
+            }
 
-            if (GUI.Button(new Rect(cx + 20f, panel.y + 164f, 130f, 46f), "是"))
+            if (UiTheme.DrawButton(
+                    new Rect(cx + 20f, buttonY, 136f, 42f),
+                    "是",
+                    true,
+                    false,
+                    16))
+            {
                 Confirm();
+            }
         }
     }
 }

@@ -3,6 +3,7 @@ using Roguelike.Audio;
 using Roguelike.Dungeon;
 using Roguelike.Items;
 using Roguelike.Player;
+using Roguelike.UI;
 using UnityEngine;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -57,8 +58,6 @@ namespace Roguelike.Core
 
         private RunState _state = RunState.Playing;
         private NextFloorPortal _portal;
-        private GUIStyle _titleStyle;
-        private GUIStyle _bodyStyle;
         private FloorTheme _currentTheme;
 
         public RunState State => _state;
@@ -409,38 +408,59 @@ namespace Roguelike.Core
         {
             if (_state == RunState.Playing) return;
 
-            if (_titleStyle == null)
-            {
-                _titleStyle = new GUIStyle(GUI.skin.label) { fontSize = 42, alignment = TextAnchor.MiddleCenter };
-                _bodyStyle = new GUIStyle(GUI.skin.label) { fontSize = 20, alignment = TextAnchor.MiddleCenter };
-            }
-
-            _titleStyle.normal.textColor = _state == RunState.Victory
-                ? new Color(0.96f, 0.86f, 0.32f)
-                : new Color(0.92f, 0.32f, 0.32f);
-            _bodyStyle.normal.textColor = Color.white;
-
-            Color previous = GUI.color;
-            GUI.color = new Color(0f, 0f, 0f, 0.72f);
-            GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
-            GUI.color = previous;
+            UiTheme.DrawDim();
 
             float cx = Screen.width * 0.5f;
             float cy = Screen.height * 0.5f;
+            bool victory = _state == RunState.Victory;
+            var panel = new Rect(cx - 260f, Mathf.Max(66f, cy - 160f), 520f, 320f);
+            UiTheme.DrawPanel(panel, victory ? UiTheme.Gold : UiTheme.Danger, false);
 
-            GUI.Label(new Rect(cx - 300f, cy - 120f, 600f, 70f),
-                _state == RunState.Victory ? "通关！" : "你死了", _titleStyle);
+            string title = victory ? "通 关" : "你 死 了";
+            Color titleColor = victory ? UiTheme.GoldBright : UiTheme.Danger;
+            UiTheme.DrawLabelShadow(
+                new Rect(panel.x + 24f, panel.y + 24f, panel.width - 48f, 42f),
+                title,
+                UiTheme.TitleCenter,
+                titleColor);
 
-            string body = _state != RunState.Victory
+            UiTheme.DrawLabelShadow(
+                new Rect(panel.x + 24f, panel.y + 68f, panel.width - 48f, 16f),
+                victory ? "RUN COMPLETE" : "YOU DIED",
+                UiTheme.Tiny,
+                UiTheme.Muted);
+
+            UiTheme.DrawDivider(new Rect(panel.x + 30f, panel.y + 94f, panel.width - 60f, 1f));
+
+            string body = !victory
                 ? "本局结束"
                 : maxFloor > 0
                     ? $"你已征服 {maxFloor} 层地牢"
                     : "Boss 已被击败";
+            UiTheme.DrawLabelShadow(
+                new Rect(panel.x + 28f, panel.y + 116f, panel.width - 56f, 30f),
+                body,
+                UiTheme.Center,
+                UiTheme.Text);
 
-            GUI.Label(new Rect(cx - 300f, cy - 38f, 600f, 34f), body, _bodyStyle);
+            string detail = victory
+                ? "已获得的道具将保留到下一局"
+                : "道具与金币将在重开后清空";
+            UiTheme.DrawLabelShadow(
+                new Rect(panel.x + 28f, panel.y + 152f, panel.width - 56f, 22f),
+                detail,
+                UiTheme.Small,
+                UiTheme.Muted);
 
-            if (GUI.Button(new Rect(cx - 110f, cy + 32f, 220f, 48f), "重新开始 (R)"))
+            if (UiTheme.DrawButton(
+                    new Rect(panel.center.x - 110f, panel.yMax - 64f, 220f, 42f),
+                    "重新开始  R",
+                    true,
+                    false,
+                    16))
+            {
                 RestartRun();
+            }
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD

@@ -1,6 +1,7 @@
 using Roguelike.Audio;
 using Roguelike.Dungeon;
 using Roguelike.Player;
+using Roguelike.UI;
 using UnityEngine;
 
 namespace Roguelike.Items
@@ -27,13 +28,6 @@ namespace Roguelike.Items
         [Header("交易")]
         [SerializeField] private int healthCost = 1;
 
-        private static GUIStyle _nameStyle;
-        private static GUIStyle _costStyle;
-        private static GUIStyle _titleStyle;
-        private static GUIStyle _itemNameStyle;
-        private static GUIStyle _bodyStyle;
-        private static GUIStyle _hintStyle;
-        private static GUIStyle _warningStyle;
         private static SecretAltar _activeDialog;
 
         private RoomView _room;
@@ -197,160 +191,133 @@ namespace Roguelike.Items
             Vector3 costScreen = _camera.WorldToScreenPoint(transform.position + Vector3.up * 2.18f);
             if (nameScreen.z < 0f) return;
 
-            if (_nameStyle == null)
-            {
-                _nameStyle = new GUIStyle(GUI.skin.box)
-                {
-                    fontSize = 13,
-                    alignment = TextAnchor.MiddleCenter,
-                };
-                _nameStyle.normal.textColor = new Color(0.92f, 0.82f, 1f);
-
-                _costStyle = new GUIStyle(GUI.skin.box)
-                {
-                    fontSize = 13,
-                    alignment = TextAnchor.MiddleCenter,
-                };
-                _costStyle.normal.textColor = new Color(0.98f, 0.55f, 0.60f);
-            }
-
             float nameX = nameScreen.x;
             float nameY = Screen.height - nameScreen.y;
-            GUI.Box(new Rect(nameX - 90f, nameY - 12f, 180f, 24f), reward.itemName, _nameStyle);
+            UiTheme.DrawPill(
+                new Rect(nameX - 100f, nameY - 14f, 200f, 28f),
+                reward.itemName,
+                UiTheme.Mana,
+                UiTheme.Center);
 
             float costX = costScreen.x;
             float costY = Screen.height - costScreen.y;
-            GUI.Box(new Rect(costX - 70f, costY - 11f, 140f, 22f), $"献祭 {healthCost} 点生命", _costStyle);
+            UiTheme.DrawPill(
+                new Rect(costX - 76f, costY - 12f, 152f, 24f),
+                $"献祭 {healthCost} 点生命",
+                UiTheme.Danger,
+                UiTheme.Center);
         }
 
         private void DrawDialog()
         {
-            if (_titleStyle == null)
-            {
-                _titleStyle = new GUIStyle(GUI.skin.label)
-                {
-                    fontSize = 26,
-                    alignment = TextAnchor.MiddleLeft,
-                };
-                _titleStyle.normal.textColor = new Color(0.80f, 0.66f, 1f);
+            UiTheme.DrawDim();
 
-                _itemNameStyle = new GUIStyle(GUI.skin.label)
-                {
-                    fontSize = 20,
-                    alignment = TextAnchor.MiddleLeft,
-                    wordWrap = true,
-                };
-                _itemNameStyle.normal.textColor = Color.white;
-
-                _bodyStyle = new GUIStyle(GUI.skin.label)
-                {
-                    fontSize = 15,
-                    alignment = TextAnchor.UpperLeft,
-                    wordWrap = true,
-                };
-                _bodyStyle.normal.textColor = new Color(0.86f, 0.88f, 0.95f);
-
-                _hintStyle = new GUIStyle(GUI.skin.label)
-                {
-                    fontSize = 16,
-                    alignment = TextAnchor.MiddleLeft,
-                };
-                _hintStyle.normal.textColor = new Color(0.98f, 0.72f, 0.78f);
-
-                _warningStyle = new GUIStyle(GUI.skin.label)
-                {
-                    fontSize = 14,
-                    alignment = TextAnchor.MiddleLeft,
-                };
-                _warningStyle.normal.textColor = new Color(1f, 0.35f, 0.35f);
-            }
-
-            Color previous = GUI.color;
-            GUI.color = new Color(0f, 0f, 0f, 0.64f);
-            GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
-            GUI.color = previous;
-
-            const float topBarHeight = 48f;
             float cx = Screen.width * 0.5f;
             float cy = Screen.height * 0.5f;
+            float width = Mathf.Min(590f, Screen.width - 54f);
+            float height = Mathf.Min(340f, Screen.height - 72f);
+            float panelY = Mathf.Max(66f, cy - height * 0.5f);
+            var panel = new Rect(cx - width * 0.5f, panelY, width, height);
 
-            float panelWidth = Mathf.Min(580f, Screen.width - 70f);
-            float panelHeight = Mathf.Min(340f, Screen.height - 100f);
-            var panel = new Rect(
-                cx - panelWidth * 0.5f,
-                Mathf.Max(topBarHeight + 8f, cy - panelHeight * 0.5f),
-                panelWidth,
-                panelHeight);
+            UiTheme.DrawPanel(panel, UiTheme.Mana, false);
 
-            Color panelColor = GUI.color;
-            GUI.color = new Color(0.09f, 0.06f, 0.12f, 0.98f);
-            GUI.DrawTexture(panel, Texture2D.whiteTexture);
-            GUI.color = panelColor;
-            GUI.Box(panel, GUIContent.none);
+            UiTheme.DrawIconSlot(
+                new Rect(panel.x + 20f, panel.y + 14f, 42f, 42f),
+                altarRenderer != null ? altarRenderer.sprite : null,
+                UiTheme.Mana);
 
-            // 顶部紫色装饰线
-            GUI.color = new Color(0.55f, 0.34f, 0.82f, 0.9f);
-            GUI.DrawTexture(new Rect(panel.x + 20f, panel.y + 52f, panel.width - 40f, 1f), Texture2D.whiteTexture);
-            GUI.color = previous;
+            UiTheme.DrawLabelShadow(
+                new Rect(panel.x + 72f, panel.y + 10f, panel.width - 92f, 30f),
+                "秘密祭坛",
+                UiTheme.Title,
+                new Color(0.84f, 0.72f, 1f));
 
-            if (altarRenderer != null && altarRenderer.sprite != null)
+            UiTheme.DrawLabelShadow(
+                new Rect(panel.x + 74f, panel.y + 36f, panel.width - 94f, 18f),
+                "以生命换取未知的力量",
+                UiTheme.Small,
+                UiTheme.Muted);
+
+            UiTheme.DrawDivider(new Rect(panel.x + 22f, panel.y + 64f, panel.width - 44f, 1f));
+
+            if (reward != null && reward.icon != null)
             {
-                GUI.DrawTexture(
-                    new Rect(panel.x + 26f, panel.y + 12f, 38f, 38f),
-                    altarRenderer.sprite.texture,
-                    ScaleMode.ScaleToFit,
-                    true);
-            }
-
-            GUI.Label(new Rect(panel.x + 66f, panel.y + 10f, panel.width - 90f, 36f), "秘密祭坛", _titleStyle);
-
-            if (reward != null && reward.icon != null && reward.icon.texture != null)
-            {
-                GUI.DrawTexture(
-                    new Rect(panel.x + 26f, panel.y + 64f, 64f, 64f),
-                    reward.icon.texture,
-                    ScaleMode.ScaleToFit,
-                    true);
+                UiTheme.DrawIconSlot(
+                    new Rect(panel.x + 24f, panel.y + 80f, 58f, 58f),
+                    reward.icon,
+                    UiTheme.RarityColor(reward.rarity));
             }
 
             string itemName = reward != null ? reward.itemName : "未知祭品";
-            GUI.Label(new Rect(panel.x + 104f, panel.y + 64f, panel.width - 128f, 30f), itemName, _itemNameStyle);
+            UiTheme.DrawLabelShadow(
+                new Rect(panel.x + 96f, panel.y + 78f, panel.width - 120f, 30f),
+                itemName,
+                UiTheme.Title,
+                UiTheme.Text);
+
+            if (reward != null)
+            {
+                UiTheme.DrawRarityChip(
+                    new Rect(panel.x + 98f, panel.y + 109f, 64f, 18f),
+                    reward.rarity);
+            }
 
             string description = reward != null && !string.IsNullOrWhiteSpace(reward.description)
                 ? reward.description
                 : "没有详细说明。";
-            GUI.Label(new Rect(panel.x + 104f, panel.y + 94f, panel.width - 128f, 50f), description, _bodyStyle);
+            UiTheme.DrawLabelShadow(
+                new Rect(panel.x + 96f, panel.y + 132f, panel.width - 120f, 44f),
+                description,
+                UiTheme.Body,
+                UiTheme.Text);
 
-            GUI.Label(
-                new Rect(panel.x + 28f, panel.y + 152f, panel.width - 56f, 26f),
-                $"献祭 {healthCost} 点生命，获得上面这件道具。",
-                _hintStyle);
+            var costRow = new Rect(panel.x + 24f, panel.y + 190f, panel.width - 48f, 38f);
+            UiTheme.DrawInset(costRow, UiTheme.Inset);
+            UiTheme.Fill(new Rect(costRow.x + 2f, costRow.y + 2f, 3f, costRow.height - 4f), UiTheme.Danger);
+            UiTheme.DrawLabelShadow(
+                new Rect(costRow.x + 14f, costRow.y + 7f, costRow.width - 28f, 22f),
+                $"献祭 {healthCost} 点生命，获得上面的道具",
+                UiTheme.Body,
+                UiTheme.Text);
 
             int currentHealth = _health != null ? _health.Health : 0;
             int maxHealth = _health != null ? _health.MaxHealth : 0;
-            GUI.Label(
-                new Rect(panel.x + 28f, panel.y + 180f, panel.width - 56f, 24f),
+            UiTheme.DrawLabelShadow(
+                new Rect(panel.x + 28f, panel.y + 238f, panel.width - 56f, 20f),
                 $"当前生命：{currentHealth}/{maxHealth}",
-                _bodyStyle);
+                UiTheme.Small,
+                UiTheme.Muted);
 
             bool canSacrifice = _health != null && _health.Health > healthCost;
             if (!canSacrifice)
             {
-                GUI.Label(
-                    new Rect(panel.x + 28f, panel.y + 206f, panel.width - 56f, 24f),
+                UiTheme.DrawLabelShadow(
+                    new Rect(panel.x + 28f, panel.y + 262f, panel.width - 56f, 20f),
                     "生命不足，无法献祭。",
-                    _warningStyle);
+                    UiTheme.Warning,
+                    UiTheme.Danger);
             }
 
             float buttonY = panel.yMax - 56f;
-
-            if (GUI.Button(new Rect(cx - 160f, buttonY, 140f, 42f), "离开"))
+            if (UiTheme.DrawButton(
+                    new Rect(cx - 164f, buttonY, 140f, 40f),
+                    "离开",
+                    false,
+                    false,
+                    15))
+            {
                 Leave();
+            }
 
-            GUI.enabled = canSacrifice;
-            if (GUI.Button(new Rect(cx + 20f, buttonY, 140f, 42f), $"献祭 {healthCost} 点生命"))
+            if (UiTheme.DrawButton(
+                    new Rect(cx + 24f, buttonY, 140f, 40f),
+                    $"献祭 {healthCost} 点生命",
+                    true,
+                    !canSacrifice,
+                    15))
+            {
                 Sacrifice();
-            GUI.enabled = true;
+            }
         }
     }
 }

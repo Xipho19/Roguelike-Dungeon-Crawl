@@ -3,6 +3,7 @@ using Roguelike.Core;
 using Roguelike.Dungeon;
 using Roguelike.Items;
 using Roguelike.Player;
+using Roguelike.UI;
 using UnityEngine;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -11,8 +12,8 @@ using UnityEngine.InputSystem;
 namespace Roguelike.Combat
 {
     /// <summary>
-    /// 顶部状态栏：楼层、生命、金币、背包按钮，以及拾取提示与 Boss 血条。
-    /// 点击背包按钮或按 B 打开背包面板；面板打开时暂停游戏。
+    /// 战斗 HUD：顶部状态栏、楼层横幅、拾取提示、Boss 血条和背包面板。
+    /// 视觉统一使用 UiTheme 的像素地牢面板。
     /// </summary>
     public sealed class CombatDebugHud : MonoBehaviour
     {
@@ -29,24 +30,11 @@ namespace Roguelike.Combat
         [SerializeField] private Sprite coinIcon;
         [SerializeField] private Sprite backpackIcon;
 
-        private const float BarHeight = 48f;
-        private const float BackpackButtonSize = 34f;
+        private const float BarHeight = 58f;
+        private const float BackpackButtonSize = 40f;
         private const int InventoryColumns = 6;
-        private const float InventoryCellHeight = 88f;
-        private const float InventoryCellGap = 8f;
-
-        private GUIStyle _style;
-        private GUIStyle _toastStyle;
-        private GUIStyle _bossStyle;
-        private GUIStyle _inventoryTitleStyle;
-        private GUIStyle _inventoryCountStyle;
-        private GUIStyle _inventoryCellNameStyle;
-        private GUIStyle _inventoryTooltipNameStyle;
-        private GUIStyle _inventoryTooltipDescStyle;
-        private GUIStyle _inventoryHintStyle;
-        private GUIStyle _keyHintStyle;
-        private GUIStyle _themeStyle;
-        private GUIStyle _floorToastStyle;
+        private const float InventoryCellHeight = 78f;
+        private const float InventoryCellGap = 10f;
 
         private string _toastText;
         private float _toastUntil;
@@ -62,9 +50,7 @@ namespace Roguelike.Combat
         private ItemDefinition _hoveredInventoryItem;
         private static bool _anyInventoryOpen;
 
-        /// <summary>供地图等其它界面判断是否需要让位。</summary>
         public static bool IsInventoryOpen => _anyInventoryOpen;
-
         public bool IsOpen => _inventoryOpen;
 
         private void Awake()
@@ -102,7 +88,6 @@ namespace Roguelike.Combat
         private void HandleItemAdded(ItemDefinition item)
         {
             if (item == null) return;
-
             ShowToast($"获得道具：{item.itemName}\n{item.description}", 3f);
         }
 
@@ -116,14 +101,12 @@ namespace Roguelike.Combat
             ShowToast("挑战完成！奖励已出现", 2.5f);
         }
 
-        /// <summary>显示一条顶部提示（道具、事件等）。</summary>
         public void ShowToast(string text, float duration = 3f)
         {
             _toastText = text;
             _toastUntil = Time.time + Mathf.Max(0.1f, duration);
         }
 
-        /// <summary>进入新楼层时显示“第 N 层 · 主题”横幅。</summary>
         public void ShowFloorIntro(int floor, string themeName, float duration = 2.5f)
         {
             _floorToastText = string.IsNullOrEmpty(themeName)
@@ -138,7 +121,6 @@ namespace Roguelike.Combat
 
             if (_inventoryOpen)
             {
-                // 结算 / 暂停等其它界面接管时间后自动收起，避免两层界面叠在一起
                 if (runManager != null && runManager.State != RunManager.RunState.Playing)
                 {
                     CloseInventory();
@@ -169,7 +151,6 @@ namespace Roguelike.Combat
             ShowFloorIntro(floor, theme);
         }
 
-        /// <summary>打开 / 关闭背包。商店、传送门、暂停与结算界面打开时不响应。</summary>
         public void ToggleInventory()
         {
             if (_inventoryOpen)
@@ -179,7 +160,7 @@ namespace Roguelike.Combat
             }
 
             if (runManager != null && runManager.State != RunManager.RunState.Playing) return;
-            if (Time.timeScale <= 0.001f) return; // 其它界面已经把游戏暂停
+            if (Time.timeScale <= 0.001f) return;
 
             OpenInventory();
         }
@@ -194,7 +175,6 @@ namespace Roguelike.Combat
             if (_pausedByInventory) Time.timeScale = 0f;
         }
 
-        /// <summary>关闭背包并恢复时间。</summary>
         public void CloseInventory()
         {
             if (!_inventoryOpen) return;
@@ -206,29 +186,10 @@ namespace Roguelike.Combat
             _pausedByInventory = false;
         }
 
-        /// <summary>绘制一组「图标 + 数值」，返回下一组的起始 x。</summary>
-        private float DrawStat(float x, float y, float iconSize, float gap, Sprite icon, string value, float groupGap)
-        {
-            if (icon != null && icon.texture != null)
-            {
-                GUI.DrawTexture(
-                    new Rect(x, y, iconSize, iconSize),
-                    icon.texture,
-                    ScaleMode.ScaleToFit,
-                    true);
-                x += iconSize + gap;
-            }
-
-            GUI.Label(new Rect(x, y - 2f, 140f, iconSize + 4f), value, _style);
-            x += _style.CalcSize(new GUIContent(value)).x + groupGap;
-            return x;
-        }
-
         private void OnGUI()
         {
             if (health == null) return;
 
-            EnsureStyles();
             DrawStatusBar();
             DrawFloorIntro();
             DrawToast();
@@ -238,135 +199,68 @@ namespace Roguelike.Combat
             if (_inventoryOpen) DrawInventoryPanel();
         }
 
-        private void EnsureStyles()
-        {
-            if (_style != null) return;
-
-            _style = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 20,
-                alignment = TextAnchor.MiddleLeft,
-            };
-            _style.normal.textColor = Color.white;
-
-            _toastStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 16,
-                alignment = TextAnchor.MiddleCenter,
-                wordWrap = true,
-            };
-            _toastStyle.normal.textColor = Color.white;
-
-            _bossStyle = new GUIStyle(GUI.skin.label) { fontSize = 16, alignment = TextAnchor.MiddleCenter };
-            _bossStyle.normal.textColor = Color.white;
-
-            _inventoryTitleStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 26,
-                alignment = TextAnchor.MiddleLeft,
-            };
-            _inventoryTitleStyle.normal.textColor = new Color(0.85f, 0.93f, 1f);
-
-            _inventoryCountStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 14,
-                alignment = TextAnchor.MiddleLeft,
-            };
-            _inventoryCountStyle.normal.textColor = new Color(0.68f, 0.72f, 0.82f);
-
-            _inventoryCellNameStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 13,
-                alignment = TextAnchor.MiddleCenter,
-                clipping = TextClipping.Clip,
-            };
-            _inventoryCellNameStyle.normal.textColor = Color.white;
-
-            _inventoryTooltipNameStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 17,
-                alignment = TextAnchor.MiddleLeft,
-            };
-            _inventoryTooltipNameStyle.normal.textColor = Color.white;
-
-            _inventoryTooltipDescStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 14,
-                alignment = TextAnchor.UpperLeft,
-                wordWrap = true,
-            };
-            _inventoryTooltipDescStyle.normal.textColor = new Color(0.78f, 0.80f, 0.88f);
-
-            _inventoryHintStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 16,
-                alignment = TextAnchor.MiddleCenter,
-                wordWrap = true,
-            };
-            _inventoryHintStyle.normal.textColor = new Color(0.62f, 0.66f, 0.76f);
-
-            _keyHintStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 12,
-                alignment = TextAnchor.MiddleCenter,
-            };
-            _keyHintStyle.normal.textColor = new Color(0.62f, 0.66f, 0.76f);
-
-            _themeStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 14,
-                alignment = TextAnchor.MiddleLeft,
-            };
-            _themeStyle.normal.textColor = new Color(0.68f, 0.72f, 0.82f);
-
-            _floorToastStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 22,
-                alignment = TextAnchor.MiddleCenter,
-            };
-            _floorToastStyle.normal.textColor = new Color(0.95f, 0.88f, 0.70f);
-        }
-
         private void DrawStatusBar()
         {
-            var statusBar = new Rect(0f, 0f, Screen.width, BarHeight);
+            var bar = new Rect(0f, 0f, Screen.width, BarHeight);
+            UiTheme.DrawTopBar(bar);
 
-            Color previousColor = GUI.color;
-            GUI.color = new Color(0.045f, 0.04f, 0.06f, 0.82f);
-            GUI.DrawTexture(statusBar, Texture2D.whiteTexture);
-            GUI.color = new Color(0.26f, 0.55f, 0.72f, 0.55f);
-            GUI.DrawTexture(new Rect(0f, BarHeight - 1f, Screen.width, 1f), Texture2D.whiteTexture);
-            GUI.color = previousColor;
-
-            float x = 16f;
-            float y = 10f;
-            const float iconSize = 28f;
-            const float iconGap = 7f;
-            const float groupGap = 22f;
+            const float slot = 34f;
+            float y = (BarHeight - slot) * 0.5f;
+            float x = 12f;
 
             int floor = runManager != null ? runManager.CurrentFloor : 1;
             string floorText = runManager != null && runManager.MaxFloor > 0
                 ? $"{floor}/{runManager.MaxFloor}"
                 : floor.ToString();
+            string themeText = runManager != null ? runManager.CurrentThemeName : "地牢";
 
-            x = DrawStat(x, y, iconSize, iconGap, floorIcon, floorText, 8f);
+            UiTheme.DrawIconSlot(new Rect(x, y, slot, slot), floorIcon, UiTheme.Gold);
+            x += slot + 8f;
+            UiTheme.DrawLabelShadow(new Rect(x, 6f, 110f, 24f), floorText, UiTheme.Value, UiTheme.GoldBright);
+            UiTheme.DrawLabelShadow(new Rect(x, 31f, 150f, 18f), themeText, UiTheme.Small, UiTheme.Muted);
+            x += Mathf.Max(58f, UiTheme.Small.CalcSize(new GUIContent(themeText)).x + 6f);
+            x += 12f;
 
-            string themeLabel = "· " + (runManager != null ? runManager.CurrentThemeName : "地牢");
-            GUI.Label(new Rect(x, y + 8f, 200f, 20f), themeLabel, _themeStyle);
-            x += _themeStyle.CalcSize(new GUIContent(themeLabel)).x + groupGap;
+            UiTheme.DrawDivider(new Rect(x, y + 3f, 1f, slot - 6f), UiTheme.GoldDim);
+            x += 14f;
 
-            x = DrawStat(x, y, iconSize, iconGap, heartIcon,
-                $"{health.Health}/{health.MaxHealth}", groupGap);
+            float healthRatio = health.MaxHealth > 0 ? health.Health / (float)health.MaxHealth : 0f;
+            float shieldRatio = health.MaxShield > 0 ? health.Shield / (float)health.MaxShield : 0f;
 
-            x = DrawStat(x, y, iconSize, iconGap, shieldIcon,
-                $"{health.Shield}/{health.MaxShield}", groupGap);
+            x = DrawVital(x, y, slot, heartIcon, "生命", $"{health.Health}/{health.MaxHealth}", healthRatio, UiTheme.Health, 100f);
+            x = DrawVital(x, y, slot, shieldIcon, "护盾", $"{health.Shield}/{health.MaxShield}", shieldRatio, UiTheme.Shield, 92f);
 
-            DrawStat(x, y, iconSize, iconGap, coinIcon,
-                (wallet != null ? wallet.Coins : 0).ToString(), groupGap);
+            UiTheme.DrawIconSlot(new Rect(x, y, slot, slot), coinIcon, UiTheme.Coin);
+            x += slot + 8f;
+            int coins = wallet != null ? wallet.Coins : 0;
+            UiTheme.DrawLabelShadow(new Rect(x, 7f, 92f, 24f), coins.ToString(), UiTheme.Value, UiTheme.Coin);
+            UiTheme.DrawLabelShadow(new Rect(x, 32f, 92f, 16f), "金币", UiTheme.Small, UiTheme.Muted);
+        }
+
+        private static float DrawVital(
+            float x,
+            float y,
+            float slot,
+            Sprite icon,
+            string label,
+            string value,
+            float ratio,
+            Color color,
+            float width)
+        {
+            UiTheme.DrawIconSlot(new Rect(x, y, slot, slot), icon, color);
+            float textX = x + slot + 8f;
+
+            UiTheme.DrawLabelShadow(new Rect(textX, 3f, width, 15f), label, UiTheme.Small, UiTheme.Muted);
+            UiTheme.DrawLabelShadow(new Rect(textX, 17f, width, 20f), value, UiTheme.Value, UiTheme.Text);
+            UiTheme.DrawBar(new Rect(textX, 39f, width, 7f), ratio, color);
+
+            return textX + width + 18f;
         }
 
         private bool FloorIntroVisible =>
             !_inventoryOpen &&
+            !MapUI.IsOpen &&
             Time.timeScale > 0.001f &&
             !string.IsNullOrEmpty(_floorToastText) &&
             Time.time < _floorToastUntil;
@@ -375,136 +269,137 @@ namespace Roguelike.Combat
         {
             if (!FloorIntroVisible) return;
 
-            var rect = new Rect(Screen.width * 0.5f - 240f, BarHeight + 12f, 480f, 36f);
-
-            Color previous = GUI.color;
-            GUI.color = new Color(0f, 0f, 0f, 0.55f);
-            GUI.DrawTexture(rect, Texture2D.whiteTexture);
-            GUI.color = previous;
-
-            GUI.Label(
-                new Rect(rect.x, rect.y + 3f, rect.width, 28f),
+            var panel = new Rect(Screen.width * 0.5f - 210f, BarHeight + 12f, 420f, 56f);
+            UiTheme.DrawPanel(panel, UiTheme.Gold, false);
+            UiTheme.DrawLabelShadow(
+                new Rect(panel.x + 10f, panel.y + 8f, panel.width - 20f, 24f),
                 _floorToastText,
-                _floorToastStyle);
+                UiTheme.FloorTitle,
+                UiTheme.GoldBright);
+            UiTheme.DrawLabelShadow(
+                new Rect(panel.x + 10f, panel.y + 33f, panel.width - 20f, 14f),
+                "DUNGEON",
+                UiTheme.Tiny,
+                UiTheme.Muted);
         }
 
         private void DrawToast()
         {
-            if (_inventoryOpen) return;
+            if (_inventoryOpen || MapUI.IsOpen || Time.timeScale <= 0.001f) return;
             if (string.IsNullOrEmpty(_toastText) || Time.time >= _toastUntil) return;
 
-            float top = BarHeight + 14f + (FloorIntroVisible ? 46f : 0f);
-            var rect = new Rect(Screen.width * 0.5f - 230f, top, 460f, 76f);
-            GUI.Box(rect, GUIContent.none);
-            GUI.Label(new Rect(rect.x + 12f, rect.y + 8f, rect.width - 24f, rect.height - 16f), _toastText, _toastStyle);
+            float top = BarHeight + 14f + (FloorIntroVisible ? 66f : 0f);
+            var panel = new Rect(Screen.width * 0.5f - 225f, top, 450f, 66f);
+            UiTheme.DrawPanel(panel, UiTheme.GoldDim, false);
+            UiTheme.DrawLabelShadow(
+                new Rect(panel.x + 14f, panel.y + 8f, panel.width - 28f, panel.height - 16f),
+                _toastText,
+                UiTheme.Toast,
+                UiTheme.Text);
         }
 
         private void DrawBossBar()
         {
+            if (MapUI.IsOpen) return;
+            if (Time.timeScale <= 0.001f) return;
+            if (runManager != null && runManager.State != RunManager.RunState.Playing) return;
+
             BossEnemy boss = BossEnemy.Active;
             if (boss == null || boss.IsDead || !boss.CombatActive) return;
 
             float ratio = boss.MaxHealth > 0f ? Mathf.Clamp01(boss.Health / boss.MaxHealth) : 0f;
-            var bar = new Rect(Screen.width * 0.5f - 260f, Screen.height - 48f, 520f, 22f);
+            var panel = new Rect(Screen.width * 0.5f - 310f, Screen.height - 68f, 620f, 50f);
+            UiTheme.DrawPanel(panel, UiTheme.Danger, false);
 
-            GUI.Box(bar, GUIContent.none);
+            var bar = new Rect(panel.x + 14f, panel.y + 16f, panel.width - 28f, 20f);
+            UiTheme.DrawBar(bar, ratio, UiTheme.Health);
 
-            Color previous = GUI.color;
-            GUI.color = new Color(0.88f, 0.22f, 0.26f, 1f);
-            GUI.DrawTexture(new Rect(bar.x + 2f, bar.y + 2f, (bar.width - 4f) * ratio, bar.height - 4f), Texture2D.whiteTexture);
-            GUI.color = previous;
+            UiTheme.DrawLabelShadow(
+                new Rect(panel.x, panel.y - 25f, panel.width, 20f),
+                "◆  BOSS  ◆",
+                UiTheme.Boss,
+                UiTheme.GoldBright);
 
-            GUI.Label(new Rect(bar.x, bar.y - 26f, bar.width, 22f), "BOSS", _bossStyle);
+            string healthText = $"{Mathf.CeilToInt(boss.Health)} / {Mathf.CeilToInt(boss.MaxHealth)}";
+            var healthRect = new Rect(panel.x + panel.width - 154f, panel.y - 27f, 140f, 22f);
+            UiTheme.DrawInset(healthRect, new Color(0.045f, 0.035f, 0.05f, 0.96f));
+            UiTheme.DrawLabelShadow(healthRect, healthText, UiTheme.Boss, UiTheme.GoldBright);
         }
 
         private Rect GetBackpackButtonRect()
         {
-            float size = BackpackButtonSize;
             return new Rect(
-                Screen.width - size - 14f,
-                (BarHeight - size) * 0.5f,
-                size,
-                size);
+                Screen.width - BackpackButtonSize - 14f,
+                (BarHeight - BackpackButtonSize) * 0.5f,
+                BackpackButtonSize,
+                BackpackButtonSize);
         }
 
         private void DrawBackpackButton()
         {
             if (runManager != null && runManager.State != RunManager.RunState.Playing) return;
 
-            float size = BackpackButtonSize;
             Rect buttonRect = GetBackpackButtonRect();
+            if (UiTheme.DrawIconButton(buttonRect, backpackIcon, _inventoryOpen))
+                ToggleInventory();
 
-            Color previousBackground = GUI.backgroundColor;
-            GUI.backgroundColor = _inventoryOpen
-                ? new Color(0.42f, 0.62f, 0.82f, 1f)
-                : new Color(0.20f, 0.24f, 0.32f, 1f);
+            UiTheme.DrawKeyBadge(new Rect(buttonRect.x - 29f, buttonRect.y + 11f, 22f, 18f), "B");
 
-            if (GUI.Button(buttonRect, GUIContent.none)) ToggleInventory();
-
-            GUI.backgroundColor = previousBackground;
-
-            if (backpackIcon != null && backpackIcon.texture != null)
+            if (Screen.width > 760)
             {
-                GUI.DrawTexture(
-                    new Rect(buttonRect.x + 4f, buttonRect.y + 4f, buttonRect.width - 8f, buttonRect.height - 8f),
-                    backpackIcon.texture,
-                    ScaleMode.ScaleToFit,
-                    true);
+                UiTheme.DrawLabelShadow(
+                    new Rect(buttonRect.x - 122f, buttonRect.y + 9f, 88f, 20f),
+                    "TAB 地图",
+                    UiTheme.Small,
+                    UiTheme.Muted);
             }
-
-            GUI.Label(
-                new Rect(buttonRect.x - 24f, buttonRect.y + (size - 16f) * 0.5f, 18f, 16f),
-                "B",
-                _keyHintStyle);
         }
 
         private void DrawInventoryPanel()
         {
-            Color previous = GUI.color;
-            GUI.color = new Color(0f, 0f, 0f, 0.62f);
-            GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
-            GUI.color = previous;
+            UiTheme.DrawDim();
 
-            float width = Mathf.Min(720f, Screen.width - 100f);
-            float height = Mathf.Min(560f, Screen.height - 100f);
+            float width = Mathf.Min(780f, Screen.width - 48f);
+            float height = Mathf.Min(560f, Screen.height - 28f);
             var panel = new Rect(
                 (Screen.width - width) * 0.5f,
                 (Screen.height - height) * 0.5f,
                 width,
                 height);
 
-            // 先铺一层不透明底色，避免大面板透出地板显得杂乱
-            Color panelColor = GUI.color;
-            GUI.color = new Color(0.07f, 0.075f, 0.105f, 0.98f);
-            GUI.DrawTexture(panel, Texture2D.whiteTexture);
-            GUI.color = panelColor;
-            GUI.Box(panel, GUIContent.none);
+            UiTheme.DrawPanel(panel, UiTheme.Gold, false);
 
-            if (backpackIcon != null && backpackIcon.texture != null)
-            {
-                GUI.DrawTexture(
-                    new Rect(panel.x + 20f, panel.y + 14f, 40f, 40f),
-                    backpackIcon.texture,
-                    ScaleMode.ScaleToFit,
-                    true);
-            }
-
-            GUI.Label(new Rect(panel.x + 70f, panel.y + 10f, panel.width - 90f, 34f), "背包", _inventoryTitleStyle);
+            UiTheme.DrawIconSlot(new Rect(panel.x + 18f, panel.y + 14f, 44f, 44f), backpackIcon, UiTheme.Gold);
+            UiTheme.DrawLabelShadow(
+                new Rect(panel.x + 74f, panel.y + 10f, panel.width - 100f, 30f),
+                "背包",
+                UiTheme.Title,
+                UiTheme.Text);
 
             int count = inventory != null ? inventory.Items.Count : 0;
-            GUI.Label(
-                new Rect(panel.x + 72f, panel.y + 40f, panel.width - 90f, 20f),
-                $"已持有 {count} 件道具",
-                _inventoryCountStyle);
+            UiTheme.DrawLabelShadow(
+                new Rect(panel.x + 76f, panel.y + 39f, panel.width - 100f, 18f),
+                $"已收藏 {count} 件道具",
+                UiTheme.Small,
+                UiTheme.Muted);
 
-            var listRect = new Rect(panel.x + 18f, panel.y + 72f, panel.width - 36f, panel.height - 72f - 64f);
+            float legendX = panel.xMax - 214f;
+            UiTheme.DrawRarityChip(new Rect(legendX, panel.y + 22f, 60f, 18f), ItemRarity.Common);
+            UiTheme.DrawRarityChip(new Rect(legendX + 66f, panel.y + 22f, 60f, 18f), ItemRarity.Rare);
+            UiTheme.DrawRarityChip(new Rect(legendX + 132f, panel.y + 22f, 64f, 18f), ItemRarity.Legendary);
+
+            UiTheme.DrawDivider(new Rect(panel.x + 18f, panel.y + 66f, panel.width - 36f, 1f));
+
+            var listRect = new Rect(panel.x + 18f, panel.y + 76f, panel.width - 36f, panel.height - 76f - 56f);
 
             if (count == 0)
             {
-                GUI.Label(
+                UiTheme.DrawInset(listRect);
+                UiTheme.DrawLabelShadow(
                     listRect,
                     "背包是空的。\n去宝箱房开箱，或在商店购买道具吧。",
-                    _inventoryHintStyle);
+                    UiTheme.Center,
+                    UiTheme.Muted);
             }
             else
             {
@@ -537,8 +432,21 @@ namespace Roguelike.Combat
                     DrawInventoryTooltip(_hoveredInventoryItem);
             }
 
-            if (GUI.Button(new Rect(panel.center.x - 80f, panel.yMax - 52f, 160f, 38f), "关闭 (B)"))
+            if (UiTheme.DrawButton(
+                    new Rect(panel.center.x - 80f, panel.yMax - 46f, 160f, 34f),
+                    "关闭  B",
+                    false,
+                    false,
+                    14))
+            {
                 CloseInventory();
+            }
+
+            UiTheme.DrawLabelShadow(
+                new Rect(panel.x + 20f, panel.yMax - 42f, 220f, 24f),
+                "滚轮浏览 · 悬停查看效果",
+                UiTheme.Small,
+                UiTheme.Muted);
         }
 
         private void DrawInventoryCell(ItemDefinition item, Rect cell)
@@ -546,27 +454,13 @@ namespace Roguelike.Combat
             bool hovered = Event.current.type == EventType.Repaint && cell.Contains(Event.current.mousePosition);
             if (hovered) _hoveredInventoryItem = item;
 
-            Color previous = GUI.color;
-            GUI.color = hovered
-                ? new Color(0.17f, 0.19f, 0.27f, 0.96f)
-                : new Color(0.12f, 0.13f, 0.18f, 0.92f);
-            GUI.DrawTexture(cell, Texture2D.whiteTexture);
+            UiTheme.DrawInset(cell, hovered ? UiTheme.PanelRaised : UiTheme.Inset);
+            if (hovered) UiTheme.DrawOutline(cell, UiTheme.GoldBright, 1f);
 
-            if (hovered)
-            {
-                GUI.color = new Color(0.42f, 0.70f, 1f, 0.95f);
-                GUI.DrawTexture(new Rect(cell.x, cell.y, cell.width, 1f), Texture2D.whiteTexture);
-                GUI.DrawTexture(new Rect(cell.x, cell.yMax - 1f, cell.width, 1f), Texture2D.whiteTexture);
-                GUI.DrawTexture(new Rect(cell.x, cell.y, 1f, cell.height), Texture2D.whiteTexture);
-                GUI.DrawTexture(new Rect(cell.xMax - 1f, cell.y, 1f, cell.height), Texture2D.whiteTexture);
-            }
+            UiTheme.Fill(new Rect(cell.x + 2f, cell.y + 2f, 3f, cell.height - 4f), UiTheme.RarityColor(item.rarity));
+            UiTheme.Fill(new Rect(cell.xMax - 7f, cell.y + 5f, 3f, 3f), UiTheme.RarityColor(item.rarity));
 
-            // 左侧稀有度色条
-            GUI.color = RarityColor(item.rarity);
-            GUI.DrawTexture(new Rect(cell.x, cell.y, 4f, cell.height), Texture2D.whiteTexture);
-            GUI.color = previous;
-
-            float iconSize = Mathf.Min(44f, cell.width - 16f);
+            const float iconSize = 42f;
             var iconRect = new Rect(
                 cell.x + (cell.width - iconSize) * 0.5f,
                 cell.y + 8f,
@@ -575,70 +469,63 @@ namespace Roguelike.Combat
 
             if (item.icon != null && item.icon.texture != null)
             {
-                GUI.DrawTexture(iconRect, item.icon.texture, ScaleMode.ScaleToFit, true);
+                UiTheme.DrawIcon(iconRect, item.icon);
             }
             else
             {
-                Color previousColor = GUI.color;
-                GUI.color = item.color;
-                GUI.DrawTexture(iconRect, Texture2D.whiteTexture);
-                GUI.color = previousColor;
+                UiTheme.Fill(iconRect, item.color);
+                UiTheme.DrawOutline(iconRect, new Color(0f, 0f, 0f, 0.45f), 1f);
             }
 
-            GUI.Label(
-                new Rect(cell.x + 6f, cell.y + 56f, cell.width - 12f, 22f),
+            UiTheme.DrawLabelShadow(
+                new Rect(cell.x + 4f, cell.y + 53f, cell.width - 8f, 16f),
                 item.itemName,
-                _inventoryCellNameStyle);
+                UiTheme.CellName,
+                UiTheme.Text);
         }
 
         private void DrawInventoryTooltip(ItemDefinition item)
         {
             if (Event.current.type != EventType.Repaint) return;
 
-            const float width = 320f;
-            const float height = 124f;
+            const float width = 350f;
+            const float height = 156f;
 
             Vector2 mouse = Event.current.mousePosition;
             float x = mouse.x + 18f;
             float y = mouse.y + 18f;
 
             if (x + width > Screen.width - 8f) x = Screen.width - width - 8f;
-            if (y + height > Screen.height - 8f) y = Screen.height - height - 8f;
+            if (y + height > Screen.height - 8f) y = mouse.y - height - 18f;
             x = Mathf.Max(8f, x);
             y = Mathf.Max(8f, y);
 
             var rect = new Rect(x, y, width, height);
+            UiTheme.DrawPanel(rect, UiTheme.RarityColor(item.rarity), false);
 
-            Color previous = GUI.color;
-            GUI.color = new Color(0.04f, 0.05f, 0.08f, 0.97f);
-            GUI.DrawTexture(rect, Texture2D.whiteTexture);
+            if (item.icon != null && item.icon.texture != null)
+            {
+                UiTheme.DrawIconSlot(new Rect(rect.x + 14f, rect.y + 16f, 44f, 44f), item.icon, UiTheme.RarityColor(item.rarity));
+            }
 
-            GUI.color = RarityColor(item.rarity);
-            GUI.DrawTexture(new Rect(rect.x, rect.y, rect.width, 3f), Texture2D.whiteTexture);
-            GUI.color = previous;
-
-            GUI.Label(
-                new Rect(rect.x + 14f, rect.y + 12f, rect.width - 28f, 26f),
+            UiTheme.DrawLabelShadow(
+                new Rect(rect.x + 68f, rect.y + 12f, rect.width - 82f, 26f),
                 item.itemName,
-                _inventoryTooltipNameStyle);
+                UiTheme.TooltipTitle,
+                UiTheme.Text);
+
+            UiTheme.DrawRarityChip(
+                new Rect(rect.x + 68f, rect.y + 40f, 62f, 17f),
+                item.rarity);
 
             string description = string.IsNullOrWhiteSpace(item.description)
                 ? "没有详细说明。"
                 : item.description;
-            GUI.Label(
-                new Rect(rect.x + 14f, rect.y + 42f, rect.width - 28f, rect.height - 50f),
+            UiTheme.DrawLabelShadow(
+                new Rect(rect.x + 14f, rect.y + 70f, rect.width - 28f, rect.height - 82f),
                 description,
-                _inventoryTooltipDescStyle);
-        }
-
-        private static Color RarityColor(ItemRarity rarity)
-        {
-            switch (rarity)
-            {
-                case ItemRarity.Rare: return new Color(0.36f, 0.62f, 0.98f);
-                case ItemRarity.Legendary: return new Color(0.96f, 0.78f, 0.28f);
-                default: return new Color(0.55f, 0.58f, 0.66f);
-            }
+                UiTheme.TooltipBody,
+                UiTheme.Text);
         }
 
         private static bool WasBackpackPressed()

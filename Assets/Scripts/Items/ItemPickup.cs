@@ -1,5 +1,6 @@
 using Roguelike.Dungeon;
 using Roguelike.Player;
+using Roguelike.UI;
 using UnityEngine;
 
 namespace Roguelike.Items
@@ -28,12 +29,6 @@ namespace Roguelike.Items
         [SerializeField] private float bobHeight = 0.15f;
         [SerializeField] private float bobSpeed = 2.5f;
 
-        private static GUIStyle _nameStyle;
-        private static GUIStyle _priceStyle;
-        private static GUIStyle _dialogTitleStyle;
-        private static GUIStyle _dialogBodyStyle;
-        private static GUIStyle _dialogPriceStyle;
-        private static GUIStyle _warningStyle;
         private static ItemPickup _activeDialog;
         private static float _dialogsSuppressedUntil;
 
@@ -265,116 +260,108 @@ namespace Roguelike.Items
             Vector3 priceScreen = _camera.WorldToScreenPoint(transform.position + Vector3.up * 0.78f);
             if (nameScreen.z < 0f) return;
 
-            if (_nameStyle == null)
-            {
-                _nameStyle = new GUIStyle(GUI.skin.box)
-                {
-                    fontSize = 13,
-                    alignment = TextAnchor.MiddleCenter,
-                };
-                _nameStyle.normal.textColor = Color.white;
-
-                _priceStyle = new GUIStyle(GUI.skin.box)
-                {
-                    fontSize = 13,
-                    alignment = TextAnchor.MiddleCenter,
-                };
-                _priceStyle.normal.textColor = new Color(0.98f, 0.84f, 0.32f);
-            }
-
             float nameX = nameScreen.x;
             float nameY = Screen.height - nameScreen.y;
-            GUI.Box(new Rect(nameX - 90f, nameY - 12f, 180f, 24f), item.itemName, _nameStyle);
+            UiTheme.DrawPill(
+                new Rect(nameX - 100f, nameY - 14f, 200f, 28f),
+                item.itemName,
+                UiTheme.GoldDim,
+                UiTheme.Center);
 
             float priceX = priceScreen.x;
             float priceY = Screen.height - priceScreen.y;
-            GUI.Box(new Rect(priceX - 46f, priceY - 11f, 92f, 22f), Price + " 金币", _priceStyle);
+            UiTheme.DrawPill(
+                new Rect(priceX - 56f, priceY - 12f, 112f, 24f),
+                Price + " 金币",
+                UiTheme.Coin,
+                UiTheme.Center);
         }
 
         private void DrawDialog()
         {
-            if (_dialogTitleStyle == null)
-            {
-                _dialogTitleStyle = new GUIStyle(GUI.skin.label)
-                {
-                    fontSize = 26,
-                    alignment = TextAnchor.MiddleLeft,
-                    wordWrap = true,
-                };
-                _dialogTitleStyle.normal.textColor = new Color(0.85f, 0.93f, 1f);
-
-                _dialogBodyStyle = new GUIStyle(GUI.skin.label)
-                {
-                    fontSize = 16,
-                    alignment = TextAnchor.UpperLeft,
-                    wordWrap = true,
-                };
-                _dialogBodyStyle.normal.textColor = Color.white;
-
-                _dialogPriceStyle = new GUIStyle(GUI.skin.label)
-                {
-                    fontSize = 18,
-                    alignment = TextAnchor.MiddleLeft,
-                };
-                _dialogPriceStyle.normal.textColor = new Color(0.98f, 0.84f, 0.32f);
-
-                _warningStyle = new GUIStyle(GUI.skin.label)
-                {
-                    fontSize = 15,
-                    alignment = TextAnchor.MiddleCenter,
-                };
-                _warningStyle.normal.textColor = new Color(1f, 0.35f, 0.35f);
-            }
-
-            Color previous = GUI.color;
-            GUI.color = new Color(0f, 0f, 0f, 0.62f);
-            GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
-            GUI.color = previous;
+            UiTheme.DrawDim();
 
             float cx = Screen.width * 0.5f;
             float cy = Screen.height * 0.5f;
-            var panel = new Rect(cx - 280f, cy - 150f, 560f, 300f);
+            float width = Mathf.Min(580f, Screen.width - 52f);
+            float height = Mathf.Min(318f, Screen.height - 72f);
+            float panelY = Mathf.Max(66f, cy - height * 0.5f);
+            var panel = new Rect(cx - width * 0.5f, panelY, width, height);
 
-            GUI.Box(panel, GUIContent.none);
+            UiTheme.DrawPanel(panel, UiTheme.Gold, false);
 
-            if (item.icon != null && item.icon.texture != null)
-            {
-                GUI.DrawTexture(
-                    new Rect(panel.x + 24f, panel.y + 26f, 64f, 64f),
-                    item.icon.texture,
-                    ScaleMode.ScaleToFit,
-                    true);
-            }
+            UiTheme.DrawIconSlot(
+                new Rect(panel.x + 20f, panel.y + 16f, 54f, 54f),
+                item.icon,
+                UiTheme.RarityColor(item.rarity));
 
-            GUI.Label(new Rect(panel.x + 100f, panel.y + 28f, panel.width - 124f, 44f), item.itemName, _dialogTitleStyle);
+            UiTheme.DrawLabelShadow(
+                new Rect(panel.x + 86f, panel.y + 12f, panel.width - 108f, 32f),
+                item.itemName,
+                UiTheme.Title,
+                UiTheme.Text);
+
+            UiTheme.DrawRarityChip(
+                new Rect(panel.x + 88f, panel.y + 43f, 64f, 18f),
+                item.rarity);
+
+            UiTheme.DrawDivider(new Rect(panel.x + 22f, panel.y + 80f, panel.width - 44f, 1f));
 
             string description = string.IsNullOrWhiteSpace(item.description)
                 ? "没有详细说明。"
                 : item.description;
-            GUI.Label(new Rect(panel.x + 28f, panel.y + 102f, panel.width - 56f, 96f), description, _dialogBodyStyle);
+            UiTheme.DrawLabelShadow(
+                new Rect(panel.x + 24f, panel.y + 94f, panel.width - 48f, 86f),
+                description,
+                UiTheme.Body,
+                UiTheme.Text);
+
+            var priceRow = new Rect(panel.x + 24f, panel.y + 186f, panel.width - 48f, 38f);
+            UiTheme.DrawInset(priceRow, UiTheme.Inset);
+            UiTheme.DrawCoinIcon(new Rect(priceRow.x + 10f, priceRow.y + 10f, 18f, 18f));
+            UiTheme.DrawLabelShadow(
+                new Rect(priceRow.x + 36f, priceRow.y + 7f, 220f, 22f),
+                $"价格 {Price} 金币",
+                UiTheme.Body,
+                UiTheme.Coin);
 
             int coins = _playerWallet != null ? _playerWallet.Coins : 0;
-            GUI.Label(
-                new Rect(panel.x + 28f, panel.y + 202f, panel.width - 56f, 28f),
-                $"价格 {Price} 金币    持有 {coins}",
-                _dialogPriceStyle);
+            UiTheme.DrawLabelShadow(
+                new Rect(priceRow.xMax - 180f, priceRow.y + 7f, 166f, 22f),
+                $"持有 {coins}",
+                UiTheme.Small,
+                UiTheme.Muted);
 
             bool canAfford = CanAfford;
             if (!canAfford)
             {
-                GUI.Label(
-                    new Rect(panel.x + 28f, panel.y + 228f, panel.width - 56f, 22f),
+                UiTheme.DrawLabelShadow(
+                    new Rect(panel.x + 24f, panel.y + 230f, panel.width - 48f, 20f),
                     "金币不足，无法购买",
-                    _warningStyle);
+                    UiTheme.Warning,
+                    UiTheme.Danger);
             }
 
-            if (GUI.Button(new Rect(cx - 150f, panel.y + 248f, 130f, 44f), "返回"))
+            float buttonY = panel.yMax - 56f;
+            if (UiTheme.DrawButton(
+                    new Rect(cx - 154f, buttonY, 140f, 40f),
+                    "返回",
+                    false,
+                    false,
+                    15))
+            {
                 Back();
+            }
 
-            GUI.enabled = canAfford;
-            if (GUI.Button(new Rect(cx + 20f, panel.y + 248f, 130f, 44f), "购买"))
+            if (UiTheme.DrawButton(
+                    new Rect(cx + 14f, buttonY, 140f, 40f),
+                    "购买",
+                    true,
+                    !canAfford,
+                    15))
+            {
                 Buy();
-            GUI.enabled = true;
+            }
         }
     }
 }

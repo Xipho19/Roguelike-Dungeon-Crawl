@@ -1,5 +1,6 @@
 using Roguelike.Audio;
 using Roguelike.Combat;
+using Roguelike.UI;
 using UnityEngine;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -8,7 +9,7 @@ using UnityEngine.InputSystem;
 namespace Roguelike.Core
 {
     /// <summary>
-    /// Esc 暂停：冻结时间并显示暂停覆盖层；再次按 Esc 继续。
+    /// Esc 暂停：冻结时间并显示像素地牢风格的暂停面板。
     /// 结算界面（失败 / 通关）打开时自动退出暂停。
     /// </summary>
     public sealed class PauseMenu : MonoBehaviour
@@ -16,9 +17,8 @@ namespace Roguelike.Core
         [SerializeField] private RunManager runManager;
 
         private bool _paused;
-        private GUIStyle _titleStyle;
-        private GUIStyle _hintStyle;
-        private GUIStyle _settingStyle;
+        private bool _musicDragging;
+        private bool _sfxDragging;
 
         public bool IsPaused => _paused;
 
@@ -35,9 +35,7 @@ namespace Roguelike.Core
                 return;
             }
 
-            // 背包打开时 Esc 不叠加暂停菜单，避免两个覆盖层互相恢复时间
             if (CombatDebugHud.IsInventoryOpen) return;
-
             if (WasPausePressed()) SetPaused(!_paused);
         }
 
@@ -53,7 +51,6 @@ namespace Roguelike.Core
         private void OnDisable()
         {
             AudioService.SaveAudioSettings();
-
             if (!_paused) return;
 
             _paused = false;
@@ -64,44 +61,137 @@ namespace Roguelike.Core
         {
             if (!_paused) return;
 
-            if (_titleStyle == null)
+            UiTheme.DrawDim();
+
+            float width = Mathf.Min(470f, Screen.width - 60f);
+            float height = 318f;
+            var panel = new Rect(
+                (Screen.width - width) * 0.5f,
+                Mathf.Max(64f, (Screen.height - height) * 0.5f),
+                width,
+                height);
+
+            UiTheme.DrawPanel(panel, UiTheme.Gold, false);
+
+            UiTheme.DrawLabelShadow(
+                new Rect(panel.x + 24f, panel.y + 14f, panel.width - 48f, 34f),
+                "暂 停",
+                UiTheme.TitleCenter,
+                UiTheme.GoldBright);
+
+            UiTheme.DrawLabelShadow(
+                new Rect(panel.x + 24f, panel.y + 46f, panel.width - 48f, 18f),
+                "地牢的回声暂时沉寂",
+                UiTheme.Center,
+                UiTheme.Muted);
+
+            UiTheme.DrawDivider(new Rect(panel.x + 26f, panel.y + 72f, panel.width - 52f, 1f));
+
+            float row1 = panel.y + 94f;
+            float row2 = panel.y + 158f;
+            float sliderX = panel.x + 176f;
+            float sliderWidth = panel.width - 260f;
+
+            DrawVolumeRow(
+                panel,
+                row1,
+                "音乐音量",
+                AudioService.MusicVolume,
+                sliderX,
+                sliderWidth,
+                ref _musicDragging,
+                UiTheme.Gold,
+                value => AudioService.SetMusicVolume(value));
+
+            DrawVolumeRow(
+                panel,
+                row2,
+                "音效音量",
+                AudioService.SfxVolume,
+                sliderX,
+                sliderWidth,
+                ref _sfxDragging,
+                UiTheme.Shield,
+                value => AudioService.SetSfxVolume(value));
+
+            if (UiTheme.DrawButton(
+                    new Rect(panel.center.x - 88f, panel.yMax - 54f, 176f, 36f),
+                    "继续游戏  Esc",
+                    true,
+                    false,
+                    15))
             {
-                _titleStyle = new GUIStyle(GUI.skin.label) { fontSize = 40, alignment = TextAnchor.MiddleCenter };
-                _hintStyle = new GUIStyle(GUI.skin.label) { fontSize = 18, alignment = TextAnchor.MiddleCenter };
-                _settingStyle = new GUIStyle(GUI.skin.label) { fontSize = 16, alignment = TextAnchor.MiddleLeft };
+                SetPaused(false);
+            }
+        }
+
+        private static void DrawVolumeRow(
+            Rect panel,
+            float y,
+            string label,
+            float value,
+            float sliderX,
+            float sliderWidth,
+            ref bool dragging,
+            Color fill,
+            System.Action<float> apply)
+        {
+            UiTheme.DrawLabelShadow(
+                new Rect(panel.x + 28f, y, 140f, 22f),
+                label,
+                UiTheme.Body,
+                UiTheme.Text);
+
+            var slider = new Rect(sliderX, y + 2f, sliderWidth, 20f);
+            float next = DrawVolumeSlider(slider, value, ref dragging, fill);
+            if (!Mathf.Approximately(next, value)) apply(next);
+
+            UiTheme.DrawLabelShadow(
+                new Rect(panel.x + panel.width - 58f, y, 42f, 22f),
+                $"{Mathf.RoundToInt(next * 100f)}%",
+                UiTheme.Small,
+                UiTheme.GoldBright);
+        }
+
+        private static float DrawVolumeSlider(Rect rect, float value, ref bool dragging, Color fill)
+        {
+            UiTheme.DrawInset(rect, new Color(0.035f, 0.03f, 0.045f, 1f));
+
+            float fillWidth = Mathf.Max(0f, (rect.width - 4f) * Mathf.Clamp01(value));
+            if (fillWidth > 0f)
+            {
+                UiTheme.Fill(new Rect(rect.x + 2f, rect.y + 2f, fillWidth, rect.height - 4f), fill);
+                UiTheme.Fill(new Rect(rect.x + 2f, rect.y + 2f, fillWidth, 1f), new Color(1f, 1f, 1f, 0.18f));
             }
 
-            _titleStyle.normal.textColor = Color.white;
-            _hintStyle.normal.textColor = new Color(0.85f, 0.85f, 0.9f);
-            _settingStyle.normal.textColor = new Color(0.85f, 0.85f, 0.9f);
+            float handleX = rect.x + 2f + (rect.width - 4f) * Mathf.Clamp01(value);
+            var handle = new Rect(handleX - 5f, rect.y - 3f, 10f, rect.height + 6f);
+            UiTheme.Fill(handle, UiTheme.GoldBright);
+            UiTheme.DrawOutline(handle, new Color(0.18f, 0.13f, 0.05f, 1f), 1f);
 
-            Color previous = GUI.color;
-            GUI.color = new Color(0f, 0f, 0f, 0.65f);
-            GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
-            GUI.color = previous;
+            Event e = Event.current;
+            if (e.type == EventType.MouseDown && rect.Contains(e.mousePosition))
+            {
+                dragging = true;
+                e.Use();
+            }
 
-            float cx = Screen.width * 0.5f;
-            float cy = Screen.height * 0.5f;
+            if (dragging)
+            {
+                if (e.type == EventType.MouseDrag || e.type == EventType.MouseDown)
+                {
+                    value = Mathf.Clamp01((e.mousePosition.x - rect.x) / Mathf.Max(1f, rect.width));
+                    e.Use();
+                }
+                else if (e.type == EventType.MouseUp)
+                {
+                    value = Mathf.Clamp01((e.mousePosition.x - rect.x) / Mathf.Max(1f, rect.width));
+                    dragging = false;
+                    e.Use();
+                }
+            }
 
-            GUI.Label(new Rect(cx - 300f, cy - 70f, 600f, 60f), "已暂停", _titleStyle);
-            GUI.Label(new Rect(cx - 300f, cy, 600f, 30f), "按 Esc 继续", _hintStyle);
-
-            float labelX = cx - 280f;
-            float sliderX = cx - 70f;
-            float row1 = cy + 45f;
-            float row2 = cy + 90f;
-
-            GUI.Label(new Rect(labelX, row1, 190f, 28f),
-                $"音乐音量 {Mathf.RoundToInt(AudioService.MusicVolume * 100f)}%", _settingStyle);
-            float music = GUI.HorizontalSlider(new Rect(sliderX, row1 + 7f, 220f, 18f), AudioService.MusicVolume, 0f, 1f);
-            if (!Mathf.Approximately(music, AudioService.MusicVolume))
-                AudioService.SetMusicVolume(music);
-
-            GUI.Label(new Rect(labelX, row2, 190f, 28f),
-                $"音效音量 {Mathf.RoundToInt(AudioService.SfxVolume * 100f)}%", _settingStyle);
-            float sfx = GUI.HorizontalSlider(new Rect(sliderX, row2 + 7f, 220f, 18f), AudioService.SfxVolume, 0f, 1f);
-            if (!Mathf.Approximately(sfx, AudioService.SfxVolume))
-                AudioService.SetSfxVolume(sfx);
+            return value;
         }
 
         private static bool WasPausePressed()
