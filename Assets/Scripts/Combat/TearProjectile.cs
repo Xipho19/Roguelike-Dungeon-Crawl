@@ -73,11 +73,24 @@ namespace Roguelike.Combat
         private int _remainingBounces;
         private float _bounceSpeedScale = 1f;
 
+        private SpriteRenderer _renderer;
+        private Sprite _defaultSprite;
+        private ProjectileGlow _glow;
+        private Sprite[] _visualFrames;
+        private float _visualScale = 0.36f;
+        private Color _visualColor = Color.white;
+        private bool _faceVelocity;
+        private int _frameIndex;
+        private float _frameTimer;
+
         private void Awake()
         {
             _rb = GetComponent<Rigidbody2D>();
             _rb.gravityScale = 0f;
             _rb.constraints = RigidbodyConstraints2D.FreezeRotation;
+            _renderer = GetComponent<SpriteRenderer>();
+            _defaultSprite = _renderer != null ? _renderer.sprite : null;
+            _glow = GetComponentInChildren<ProjectileGlow>();
         }
 
         public void Initialize(
@@ -126,6 +139,55 @@ namespace Roguelike.Combat
             _dieAt = Time.time + lifetime;
         }
 
+        /// <summary>
+        /// 切换弹丸外观。步枪/法杖复用同一个 TearProjectile Prefab，
+        /// 因此对象池回收时必须每次都把 Sprite、缩放和旋转重置回当前武器。
+        /// </summary>
+        public void ConfigureVisual(
+            Sprite[] frames,
+            float visualScale,
+            Color color,
+            bool faceVelocity)
+        {
+            if (_renderer == null) _renderer = GetComponent<SpriteRenderer>();
+            if (_glow == null) _glow = GetComponentInChildren<ProjectileGlow>();
+
+            if (frames != null && frames.Length > 0 && frames[0] != null)
+            {
+                _visualFrames = frames;
+                _frameIndex = 0;
+                _frameTimer = 0f;
+                if (_renderer != null) _renderer.sprite = frames[0];
+            }
+            else
+            {
+                _visualFrames = null;
+                if (_renderer != null) _renderer.sprite = _defaultSprite;
+            }
+
+            _visualScale = Mathf.Max(0.05f, visualScale);
+            _visualColor = color;
+            _faceVelocity = faceVelocity;
+
+            transform.localScale = Vector3.one * _visualScale;
+
+            if (_renderer != null) _renderer.color = _visualColor;
+
+            if (_faceVelocity && _rb != null)
+            {
+                Vector2 velocity = _rb.linearVelocity;
+                if (velocity.sqrMagnitude > 0.0001f)
+                    ApplyFacing(Mathf.Atan2(velocity.y, velocity.x) * Mathf.Rad2Deg);
+            }
+            else
+            {
+                if (_rb != null) _rb.rotation = 0f;
+                transform.rotation = Quaternion.identity;
+            }
+
+            if (_glow != null) _glow.SyncNow();
+        }
+
         /// <summary>回收本颗眼泪，而不是直接销毁，供对象池复用。</summary>
         public void Despawn()
         {
@@ -147,8 +209,42 @@ namespace Roguelike.Combat
                 return;
             }
 
+            UpdateVisual();
+
             if (_homingTurnSpeed > 0f) UpdateHoming();
             if (_auraDamage > 0f) UpdateAura();
+        }
+
+        private void UpdateVisual()
+        {
+            if (_renderer == null) return;
+
+            if (_visualFrames != null && _visualFrames.Length > 1)
+            {
+                _frameTimer += Time.deltaTime;
+                const float frameStep = 1f / 12f;
+
+                while (_frameTimer >= frameStep)
+                {
+                    _frameTimer -= frameStep;
+                    _frameIndex = (_frameIndex + 1) % _visualFrames.Length;
+                    Sprite frame = _visualFrames[_frameIndex];
+                    if (frame != null) _renderer.sprite = frame;
+                }
+            }
+
+            if (!_faceVelocity || _rb == null) return;
+
+            Vector2 velocity = _rb.linearVelocity;
+            if (velocity.sqrMagnitude < 0.0001f) return;
+
+            ApplyFacing(Mathf.Atan2(velocity.y, velocity.x) * Mathf.Rad2Deg);
+        }
+
+        private void ApplyFacing(float angle)
+        {
+            if (_rb != null) _rb.rotation = angle;
+            transform.rotation = Quaternion.Euler(0f, 0f, angle);
         }
 
         /// <summary>弯勺：朝当前房间内最近的敌人缓慢转向。</summary>
@@ -390,6 +486,7 @@ namespace Roguelike.Combat
                     Mathf.Max(0.2f, lifetime * 0.75f),
                     0,
                     modifiers);
+                child.ConfigureVisual(_visualFrames, _visualScale, _visualColor, _faceVelocity);
 
                 child._canSplit = false;
             }

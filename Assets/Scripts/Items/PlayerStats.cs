@@ -27,6 +27,7 @@ namespace Roguelike.Items
         [SerializeField] private float baseCoinBonus;
 
         private readonly List<StatModifier> _modifiers = new List<StatModifier>();
+        private readonly List<StatModifier> _metaModifiers = new List<StatModifier>();
 
         /// <summary>属性变化时触发（拾取道具后）。</summary>
         public event Action StatsChanged;
@@ -59,21 +60,55 @@ namespace Roguelike.Items
             StatsChanged?.Invoke();
         }
 
+        /// <summary>
+        /// 局外技能树的永久修饰器。与道具修饰器分开保存，
+        /// Rebuild 只重算道具，不会把技能树加成清掉。
+        /// </summary>
+        public void SetMetaModifiers(IReadOnlyList<StatModifier> modifiers)
+        {
+            _metaModifiers.Clear();
+            if (modifiers != null)
+            {
+                for (int i = 0; i < modifiers.Count; i++)
+                    _metaModifiers.Add(modifiers[i]);
+            }
+
+            StatsChanged?.Invoke();
+        }
+
         private float Get(StatType type)
         {
-            float value = BaseValue(type);
+            return Resolve(type, BaseValue(type));
+        }
+
+        /// <summary>
+        /// 用当前道具修饰器结算一个外部基础值（武器伤害、射速、弹速等）。
+        /// 这样不同武器可以共享同一套道具加伤/射速规则。
+        /// </summary>
+        public float Resolve(StatType type, float baseValue)
+        {
+            float value = baseValue;
             float multiplier = 1f;
 
-            for (int i = 0; i < _modifiers.Count; i++)
+            ApplyModifiers(_metaModifiers, type, ref value, ref multiplier);
+            ApplyModifiers(_modifiers, type, ref value, ref multiplier);
+            return value * multiplier;
+        }
+
+        private static void ApplyModifiers(
+            IReadOnlyList<StatModifier> modifiers,
+            StatType type,
+            ref float value,
+            ref float multiplier)
+        {
+            for (int i = 0; i < modifiers.Count; i++)
             {
-                StatModifier modifier = _modifiers[i];
+                StatModifier modifier = modifiers[i];
                 if (modifier.stat != type) continue;
 
                 if (modifier.op == StatOp.Add) value += modifier.value;
                 else multiplier *= modifier.value;
             }
-
-            return value * multiplier;
         }
 
         private float BaseValue(StatType type)

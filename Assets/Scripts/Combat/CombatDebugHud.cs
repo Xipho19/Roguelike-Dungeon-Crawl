@@ -189,6 +189,7 @@ namespace Roguelike.Combat
         private void OnGUI()
         {
             if (health == null) return;
+            if (runManager != null && runManager.State == RunManager.RunState.MainMenu) return;
 
             DrawStatusBar();
             DrawFloorIntro();

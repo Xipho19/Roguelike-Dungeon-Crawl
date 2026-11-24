@@ -35,5 +35,12 @@ namespace Roguelike.Player
             coins = 0;
             CoinsChanged?.Invoke(coins);
         }
+
+        /// <summary>读档时恢复金币数量。</summary>
+        public void SetCoins(int amount)
+        {
+            coins = Mathf.Max(0, amount);
+            CoinsChanged?.Invoke(coins);
+        }
     }
 }

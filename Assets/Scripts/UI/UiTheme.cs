@@ -334,6 +334,135 @@ namespace Roguelike.UI
 
         public static void Fill(Rect rect, Color color) => DrawSolid(rect, color);
 
+        /// <summary>IMGUI 线段：用于技能树的放射连线。</summary>
+        /// <summary>用 9-slice 绘制带边框的按钮/面板贴图，避免拉伸时边框变形。</summary>
+        public static void DrawNineSlice(Rect rect, Texture2D texture, Color color, float border = 14f)
+        {
+            if (texture == null || rect.width <= 0f || rect.height <= 0f) return;
+
+            float b = Mathf.Min(border, Mathf.Min(rect.width, rect.height) * 0.45f);
+            float u = b / texture.width;
+            float v = b / texture.height;
+
+            float[] xs = { rect.x, rect.x + b, rect.xMax - b, rect.xMax };
+            float[] ys = { rect.y, rect.y + b, rect.yMax - b, rect.yMax };
+            float[] us = { 0f, u, 1f - u, 1f };
+            float[] vs = { 0f, v, 1f - v, 1f };
+
+            Color previous = GUI.color;
+            GUI.color = color;
+
+            for (int row = 0; row < 3; row++)
+            {
+                for (int col = 0; col < 3; col++)
+                {
+                    var dest = new Rect(
+                        xs[col],
+                        ys[row],
+                        xs[col + 1] - xs[col],
+                        ys[row + 1] - ys[row]);
+                    var uv = new Rect(
+                        us[col],
+                        vs[row],
+                        us[col + 1] - us[col],
+                        vs[row + 1] - vs[row]);
+                    GUI.DrawTextureWithTexCoords(dest, texture, uv, true);
+                }
+            }
+
+            GUI.color = previous;
+        }
+
+        public static void DrawLine(Vector2 start, Vector2 end, Color color, float width = 1f)
+        {
+            Vector2 delta = end - start;
+            float length = delta.magnitude;
+            if (length <= 0.01f) return;
+
+            float angle = Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg;
+            Matrix4x4 previousMatrix = GUI.matrix;
+            Color previousColor = GUI.color;
+
+            GUI.color = color;
+            GUIUtility.RotateAroundPivot(angle, start);
+            GUI.DrawTexture(
+                new Rect(start.x, start.y - width * 0.5f, length, Mathf.Max(1f, width)),
+                Texture2D.whiteTexture);
+            GUI.matrix = previousMatrix;
+            GUI.color = previousColor;
+        }
+
+        /// <summary>以中心点绘制一个菱形；size 是菱形的横向对角宽度。</summary>
+        public static void DrawDiamond(Vector2 center, float size, Color color)
+        {
+            float side = Mathf.Max(1f, size) * 0.70710678f;
+            Matrix4x4 previousMatrix = GUI.matrix;
+            Color previousColor = GUI.color;
+
+            GUI.color = color;
+            GUIUtility.RotateAroundPivot(45f, center);
+            GUI.DrawTexture(
+                new Rect(center.x - side * 0.5f, center.y - side * 0.5f, side, side),
+                Texture2D.whiteTexture);
+            GUI.matrix = previousMatrix;
+            GUI.color = previousColor;
+        }
+
+        public static void DrawDiamondOutline(Vector2 center, float size, Color color, float width = 1f)
+        {
+            float half = size * 0.5f;
+            Vector2 top = center + new Vector2(0f, -half);
+            Vector2 right = center + new Vector2(half, 0f);
+            Vector2 bottom = center + new Vector2(0f, half);
+            Vector2 left = center + new Vector2(-half, 0f);
+
+            DrawLine(top, right, color, width);
+            DrawLine(right, bottom, color, width);
+            DrawLine(bottom, left, color, width);
+            DrawLine(left, top, color, width);
+        }
+
+        public static void DrawCircle(
+            Vector2 center,
+            float radius,
+            Color color,
+            float width = 1f,
+            int segments = 48)
+        {
+            segments = Mathf.Max(8, segments);
+            Vector2 previous = center + new Vector2(radius, 0f);
+
+            for (int i = 1; i <= segments; i++)
+            {
+                float angle = i * Mathf.PI * 2f / segments;
+                Vector2 next = center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
+                DrawLine(previous, next, color, width);
+                previous = next;
+            }
+        }
+
+        public static void DrawDashedCircle(
+            Vector2 center,
+            float radius,
+            Color color,
+            float width = 1f,
+            int segments = 48,
+            int dashLength = 2)
+        {
+            segments = Mathf.Max(8, segments);
+            int step = Mathf.Max(1, dashLength);
+            Vector2 previous = center + new Vector2(radius, 0f);
+
+            for (int i = 1; i <= segments; i++)
+            {
+                float angle = i * Mathf.PI * 2f / segments;
+                Vector2 next = center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
+                if (i % (step * 2) <= step)
+                    DrawLine(previous, next, color, width);
+                previous = next;
+            }
+        }
+
         private static void DrawSolid(Rect rect, Color color)
         {
             Color previous = GUI.color;

@@ -5,6 +5,7 @@ using Roguelike.Dungeon;
 using Roguelike.Items;
 using Roguelike.Player;
 using Roguelike.Visual;
+using Roguelike.Weapons;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -57,6 +58,7 @@ namespace Roguelike.EditorTools
                 CombatPrefabFactory.Rebuild();
 
             ItemAssetFactory.EnsureItems();
+            WeaponAssetFactory.EnsureWeapons();
             FloorThemeAssetFactory.EnsureThemes();
             CombatPrefabFactory.EnsureTearExplosionSprite();
 
@@ -101,16 +103,38 @@ namespace Roguelike.EditorTools
 
             // 战斗
             var combat = Ensure<PlayerCombat>(player);
+            var weapons = Ensure<WeaponInventory>(player);
+            var weaponVisual = Ensure<WeaponVisual>(player);
+            var weaponHud = Ensure<WeaponHud>(player);
             var inventory = player.GetComponent<PlayerInventory>();
             var health = player.GetComponent<PlayerHealth>();
 
             var tearPrefab = AssetDatabase.LoadAssetAtPath<TearProjectile>(CombatPrefabFactory.TearPath);
+            var startingWeapon = AssetDatabase.LoadAssetAtPath<WeaponDefinition>(
+                "Assets/Resources/Weapons/Weapon_Tears.asset");
+
             var combatObject = new SerializedObject(combat);
             if (tearPrefab != null)
                 combatObject.FindProperty("tearPrefab").objectReferenceValue = tearPrefab;
             combatObject.FindProperty("inventory").objectReferenceValue = inventory;
             combatObject.FindProperty("health").objectReferenceValue = health;
+            combatObject.FindProperty("weapons").objectReferenceValue = weapons;
+            combatObject.FindProperty("weaponVisual").objectReferenceValue = weaponVisual;
             combatObject.ApplyModifiedPropertiesWithoutUndo();
+
+            var weaponObject = new SerializedObject(weapons);
+            if (startingWeapon != null)
+                weaponObject.FindProperty("startingWeapon").objectReferenceValue = startingWeapon;
+            weaponObject.ApplyModifiedPropertiesWithoutUndo();
+
+            var visualObject = new SerializedObject(weaponVisual);
+            visualObject.FindProperty("inventory").objectReferenceValue = weapons;
+            visualObject.FindProperty("combat").objectReferenceValue = combat;
+            visualObject.ApplyModifiedPropertiesWithoutUndo();
+
+            var weaponHudObject = new SerializedObject(weaponHud);
+            weaponHudObject.FindProperty("inventory").objectReferenceValue = weapons;
+            weaponHudObject.ApplyModifiedPropertiesWithoutUndo();
 
             // 触发型被动
             var itemEffects = Ensure<PlayerItemEffects>(player);
@@ -222,6 +246,9 @@ namespace Roguelike.EditorTools
 
             hudObject.FindProperty("runManager").objectReferenceValue = runManager;
             hudObject.ApplyModifiedPropertiesWithoutUndo();
+
+            weaponHudObject.FindProperty("runManager").objectReferenceValue = runManager;
+            weaponHudObject.ApplyModifiedPropertiesWithoutUndo();
 
             // Esc 暂停
             var pauseMenu = Ensure<PauseMenu>(builder.gameObject);

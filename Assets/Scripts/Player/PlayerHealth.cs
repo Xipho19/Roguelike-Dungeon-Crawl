@@ -43,6 +43,7 @@ namespace Roguelike.Player
         private int _health;
         private int _maxHealth;
         private int _shield;
+        private int _metaShieldBonus;
         private float _lastDamageTime = -999f;
         private float _nextShieldRegenTime;
         private float _invulnerableUntil;
@@ -64,7 +65,7 @@ namespace Roguelike.Player
         public int Health => _health;
         public int MaxHealth => _maxHealth;
         public int Shield => _shield;
-        public int MaxShield => maxShield;
+        public int MaxShield => Mathf.Max(0, maxShield + _metaShieldBonus);
         public bool IsInvulnerable => Time.time < _invulnerableUntil;
         public bool IsDead => _health <= 0;
         public bool IsEscapeActive => _escapeActive;
@@ -89,7 +90,7 @@ namespace Roguelike.Player
 
             _maxHealth = _stats != null ? _stats.MaxHealth : maxHealth;
             _health = _maxHealth;
-            _shield = Mathf.Max(0, maxShield);
+            _shield = MaxShield;
 
             if (_renderer != null) _baseColor = _renderer.color;
             if (_stats != null) _stats.StatsChanged += HandleStatsChanged;
@@ -127,7 +128,7 @@ namespace Roguelike.Player
         /// <summary>脱战 5 秒后，每秒恢复 1 点护盾，直到上限。</summary>
         private void UpdateShieldRegen()
         {
-            if (IsDead || _shield >= maxShield) return;
+            if (IsDead || _shield >= MaxShield) return;
             if (Time.time - _lastDamageTime < shieldRegenDelay) return;
             if (Time.time < _nextShieldRegenTime) return;
 
@@ -339,13 +340,20 @@ namespace Roguelike.Player
             _invulnerableUntil = Mathf.Max(_invulnerableUntil, Time.time + seconds);
         }
 
+        /// <summary>局外技能树提供的护盾上限加成。</summary>
+        public void SetMetaShieldBonus(int bonus)
+        {
+            _metaShieldBonus = Mathf.Max(0, bonus);
+            _shield = Mathf.Min(_shield, MaxShield);
+        }
+
         /// <summary>恢复护盾；满护盾或死亡时返回 false。</summary>
         public bool AddShield(int amount)
         {
             if (amount <= 0 || IsDead) return false;
 
             int before = _shield;
-            _shield = Mathf.Clamp(_shield + amount, 0, maxShield);
+            _shield = Mathf.Clamp(_shield + amount, 0, MaxShield);
             return _shield > before;
         }
 
@@ -373,6 +381,17 @@ namespace Roguelike.Player
             Died?.Invoke();
         }
 
+        /// <summary>读档时恢复生命与护盾，超出上限时夹紧。</summary>
+        public void RestoreVitals(int health, int shield)
+        {
+            _maxHealth = _stats != null ? _stats.MaxHealth : maxHealth;
+            _health = Mathf.Clamp(health, 1, _maxHealth);
+            _shield = Mathf.Clamp(shield, 0, MaxShield);
+            _lastDamageTime = -999f;
+            _nextShieldRegenTime = 0f;
+            _invulnerableUntil = Time.time + 1f;
+        }
+
         /// <summary>重开一局：恢复满血并重新启用操作。</summary>
         public void ResetForNewRun()
         {
@@ -382,7 +401,7 @@ namespace Roguelike.Player
 
             _maxHealth = _stats != null ? _stats.MaxHealth : maxHealth;
             _health = _maxHealth;
-            _shield = Mathf.Max(0, maxShield);
+            _shield = MaxShield;
             _lastDamageTime = -999f;
             _nextShieldRegenTime = 0f;
             _invulnerableUntil = Time.time + 1f;

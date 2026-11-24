@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Roguelike.Audio
 {
     /// <summary>
-    /// 极简音效服务：从 Resources/Audio/KenneyRPG 与 Resources/Audio/Custom
+    /// 极简音效服务：从 Resources/Audio/KenneyRPG、Custom 与 Weapons
     /// 加载全部音效，用一组 AudioSource 轮播 PlayOneShot，带轻微随机音高。
     ///
     /// 用法：AudioService.Play("tear_shot", 0.5f);
@@ -15,6 +15,7 @@ namespace Roguelike.Audio
         {
             "Audio/KenneyRPG",
             "Audio/Custom",
+            "Audio/Weapons",
         };
 
         private const string MusicVolumeKey = "audio.musicVolume";

@@ -70,6 +70,23 @@ namespace Roguelike.Items
             Cleared?.Invoke();
         }
 
+        /// <summary>读档时整体替换背包，不触发拾取提示。</summary>
+        public void RestoreItems(IReadOnlyList<ItemDefinition> items)
+        {
+            _items.Clear();
+
+            if (items != null)
+            {
+                for (int i = 0; i < items.Count; i++)
+                {
+                    if (items[i] != null) _items.Add(items[i]);
+                }
+            }
+
+            RebuildStats();
+            Cleared?.Invoke();
+        }
+
         private void RebuildStats()
         {
             if (stats != null) stats.Rebuild(_items);

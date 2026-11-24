@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Roguelike.Combat;
 using Roguelike.Items;
 using Roguelike.Player;
+using Roguelike.Weapons;
 using UnityEngine;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -114,6 +115,10 @@ namespace Roguelike.Dungeon
         [SerializeField, Min(0f)] private float rareWeight = 30f;
         [SerializeField, Min(0f)] private float legendaryWeight = 10f;
 
+        [Header("武器掉落")]
+        [Tooltip("宝箱房奖励变为武器的概率；没有可生成道具时必定给武器")]
+        [SerializeField, Range(0f, 1f)] private float treasureWeaponChance = 0.35f;
+
         [Header("商店刷新")]
         [Tooltip("每次刷新商店的基础金币价格；仍会叠加楼层加价")]
         [SerializeField, Min(1)] private int shopRerollBaseCost = 3;
@@ -134,7 +139,10 @@ namespace Roguelike.Dungeon
         private PlayerInventory _playerInventory;
         private PlayerWallet _playerWallet;
         private CombatDebugHud _hud;
+        private WeaponPickup _weaponOffering;
         private bool _floorPrepared;
+        private bool _suppressWeaponOffering;
+        private string _weaponOfferingOverride;
 
         private int _floor = 1;
         private FloorTheme _floorTheme;
@@ -142,6 +150,7 @@ namespace Roguelike.Dungeon
         public PlayerRoomTracker Tracker => tracker;
         public int Floor => _floor;
         public FloorTheme CurrentFloorTheme => _floorTheme;
+        public WeaponPickup WeaponOffering => _weaponOffering;
 
         /// <summary>当前房间还活着的敌人数（用于亡灵法师的召唤上限）。</summary>
         public int AliveEnemyCount
@@ -318,7 +327,172 @@ namespace Roguelike.Dungeon
                 }
             }
 
+            SpawnWeaponOffering();
+
             Debug.Log($"[Flow] 已为 {rooms.Count} 个房间预生成敌人");
+        }
+
+        /// <summary>
+        /// 读档时指定起始房武器架：已拾取则不再生成，未拾取则还原原来的武器。
+        /// </summary>
+        public void SetWeaponOfferingRestore(bool taken, string weaponId)
+        {
+            _suppressWeaponOffering = taken;
+            _weaponOfferingOverride = taken ? null : weaponId;
+        }
+
+        /// <summary>起始房放一件玩家尚未持有的武器，提供 MVP 的武器获取入口。</summary>
+        private void SpawnWeaponOffering()
+        {
+            if (_weaponOffering != null)
+            {
+                Destroy(_weaponOffering.gameObject);
+                _weaponOffering = null;
+            }
+
+            bool suppress = _suppressWeaponOffering;
+            string overrideId = _weaponOfferingOverride;
+            _suppressWeaponOffering = false;
+            _weaponOfferingOverride = null;
+
+            if (suppress) return;
+
+            if (builder == null) builder = GetComponent<DungeonBuilder>();
+            if (builder == null || builder.Data == null) return;
+
+            var inventory = FindFirstObjectByType<WeaponInventory>();
+            if (inventory == null) return;
+
+            List<WeaponDefinition> candidates = BuildAvailableWeapons(_weaponOffering);
+
+            WeaponDefinition chosen = null;
+            if (!string.IsNullOrEmpty(overrideId))
+            {
+                for (int i = 0; i < candidates.Count; i++)
+                {
+                    if (candidates[i] != null && candidates[i].name == overrideId)
+                    {
+                        chosen = candidates[i];
+                        break;
+                    }
+                }
+            }
+
+            if (chosen == null && candidates.Count > 0)
+                chosen = PickWeightedWeapon(candidates);
+
+            RoomView startRoom = builder.GetRoom(builder.Data.Start.Grid);
+            if (chosen == null || startRoom == null) return;
+
+            Vector3 position = (Vector3)startRoom.WorldCenter + new Vector3(0f, -1.2f, 0f);
+            _weaponOffering = SpawnWeaponReward(chosen, startRoom, position, inventory, null);
+        }
+
+        /// <summary>
+        /// 可掉落的武器池：排除泪滴、玩家已持有、以及场景中已经摆出的武器架。
+        /// 这样商店、宝箱和 Boss 奖励不会和起始房武器重复。
+        /// </summary>
+        private List<WeaponDefinition> BuildAvailableWeapons(
+            WeaponPickup ignored = null,
+            bool includeActiveOffers = false)
+        {
+            var result = new List<WeaponDefinition>();
+
+            var inventory = FindFirstObjectByType<WeaponInventory>();
+            if (inventory == null) return result;
+
+            WeaponDefinition[] all = Resources.LoadAll<WeaponDefinition>("Weapons");
+            WeaponPickup[] offerings = FindObjectsByType<WeaponPickup>(FindObjectsSortMode.None);
+
+            for (int i = 0; i < all.Length; i++)
+            {
+                WeaponDefinition weapon = all[i];
+                if (weapon == null || weapon.kind == WeaponKind.Tears) continue;
+                if (weapon.dropWeight <= 0) continue;
+                if (inventory.Owns(weapon)) continue;
+
+                bool alreadyOffered = false;
+                if (!includeActiveOffers)
+                {
+                    for (int j = 0; j < offerings.Length; j++)
+                    {
+                        WeaponPickup pickup = offerings[j];
+                        if (pickup == null || pickup == ignored || pickup.IsPurchased) continue;
+                        if (pickup.Weapon != weapon) continue;
+
+                        alreadyOffered = true;
+                        break;
+                    }
+                }
+
+                if (!alreadyOffered) result.Add(weapon);
+            }
+
+            return result;
+        }
+
+        private WeaponDefinition PickWeightedWeapon(List<WeaponDefinition> pool)
+        {
+            if (pool == null || pool.Count == 0) return null;
+
+            int total = 0;
+            for (int i = 0; i < pool.Count; i++)
+                total += Mathf.Max(1, pool[i].dropWeight);
+
+            int roll = Random.Range(0, total);
+            for (int i = 0; i < pool.Count; i++)
+            {
+                roll -= Mathf.Max(1, pool[i].dropWeight);
+                if (roll < 0) return pool[i];
+            }
+
+            return pool[pool.Count - 1];
+        }
+
+        private int CalculateWeaponShopPrice(WeaponDefinition weapon)
+        {
+            if (weapon == null) return 1;
+
+            int basePrice = weapon.shopPrice > 0
+                ? weapon.shopPrice
+                : 10 + (int)weapon.rarity * 6;
+
+            return Mathf.Max(1, basePrice + ShopPriceBonus);
+        }
+
+        private WeaponPickup SpawnWeaponReward(
+            WeaponDefinition weapon,
+            RoomView room,
+            Vector3 position,
+            WeaponInventory inventory,
+            RoomView rewardRoom)
+        {
+            if (weapon == null || room == null || inventory == null) return null;
+
+            var root = new GameObject($"WeaponReward_{weapon.weaponName}");
+            root.transform.SetParent(room.transform, false);
+            root.transform.position = position;
+
+            var pickup = root.AddComponent<WeaponPickup>();
+            pickup.Setup(weapon, inventory, rewardRoom);
+            return pickup;
+        }
+
+        private WeaponPickup SpawnWeaponForSale(
+            WeaponDefinition weapon,
+            RoomView room,
+            Vector3 position,
+            WeaponInventory inventory)
+        {
+            if (weapon == null || room == null || inventory == null) return null;
+
+            var root = new GameObject($"WeaponShop_{weapon.weaponName}");
+            root.transform.SetParent(room.transform, false);
+            root.transform.position = position;
+
+            var pickup = root.AddComponent<WeaponPickup>();
+            pickup.SetupForSale(weapon, inventory, CalculateWeaponShopPrice(weapon));
+            return pickup;
         }
 
         private void Update()
@@ -382,57 +556,76 @@ namespace Roguelike.Dungeon
             {
                 TryStockShop(room);
                 if (room.ShopStocked && _hud != null)
-                    _hud.ShowToast($"商店：按 R 刷新商品（{ShopRerollCost} 金币）", 2.2f);
+                    _hud.ShowToast($"商店：按 F 刷新商品（{ShopRerollCost} 金币）", 2.2f);
             }
 
             if (room.RoomType == RoomType.Secret)
                 TrySpawnSecretEvent(room);
         }
 
-        /// <summary>商店首次进入时上架 3 件随机道具，价格按效果数量计算。</summary>
+        /// <summary>
+        /// 商店首次进入时上架 2 件道具 + 1 件武器；
+        /// 没有可售武器时回到 3 件道具，没有道具时只上架武器。
+        /// </summary>
         private void TryStockShop(RoomView room)
         {
             if (room.ShopStocked) return;
-            if (itemPickupPrefab == null || itemPool == null || itemPool.Length == 0) return;
 
-            // 只上架玩家尚未持有的道具，避免重复购买同一件
-            List<ItemDefinition> stock = BuildAvailableItems();
-            if (stock.Count == 0)
+            var inventory = FindFirstObjectByType<WeaponInventory>();
+            List<ItemDefinition> itemStock = BuildAvailableItems();
+            List<WeaponDefinition> weaponStock = inventory != null
+                ? BuildAvailableWeapons()
+                : new List<WeaponDefinition>();
+
+            if (itemStock.Count == 0 && weaponStock.Count == 0)
             {
-                Debug.Log($"[Flow] 商店 {room.GridPosition} 无可售道具（玩家已持有全部道具）");
+                Debug.Log($"[Flow] 商店 {room.GridPosition} 无可售商品（道具与武器均已持有）");
                 return;
             }
 
+            if (itemPickupPrefab == null && weaponStock.Count == 0) return;
+
             room.ShopStocked = true;
 
-            int count = Mathf.Min(3, stock.Count);
             Vector2 center = room.WorldCenter;
-
-            // 小房间自动收窄商品间距，保证三件商品都在内部
             float spacing = Mathf.Clamp((room.InteriorRect.width - 2f) * 0.5f, 1.5f, 3f);
-            float startOffset = -(count - 1) * 0.5f * spacing;
+            var positions = new[]
+            {
+                new Vector3(center.x - spacing, center.y, 0f),
+                new Vector3(center.x, center.y, 0f),
+                new Vector3(center.x + spacing, center.y, 0f),
+            };
+
+            WeaponDefinition weapon = PickWeightedWeapon(weaponStock);
+            if (weapon != null)
+                SpawnWeaponForSale(weapon, room, positions[1], inventory);
+
+            int itemSlots = weapon != null ? 2 : 3;
+            int count = itemPickupPrefab != null ? Mathf.Min(itemSlots, itemStock.Count) : 0;
+            int[] slotIndices = weapon != null ? new[] { 0, 2 } : new[] { 0, 1, 2 };
 
             for (int i = 0; i < count; i++)
             {
-                ItemDefinition item = PickWeightedItem(stock);
+                ItemDefinition item = PickWeightedItem(itemStock);
                 if (item == null) break;
-                stock.Remove(item);
+                itemStock.Remove(item);
 
-                float x = center.x + startOffset + i * spacing;
                 ItemPickup pickup = Instantiate(
                     itemPickupPrefab,
-                    new Vector3(x, center.y, 0f),
+                    positions[slotIndices[i]],
                     Quaternion.identity,
                     room.transform);
 
                 pickup.Setup(item, null, CalculateShopPrice(item));
             }
 
-            Debug.Log($"[Flow] 商店 {room.GridPosition} 上架 {count} 件道具");
+            Debug.Log(
+                $"[Flow] 商店 {room.GridPosition} 上架 {count} 件道具" +
+                (weapon != null ? $"、1 件武器（{weapon.weaponName}）" : ""));
         }
 
         /// <summary>
-        /// 按 R 花费金币刷新当前商店货架。
+        /// 按 F 花费金币刷新当前商店货架。
         /// 只替换仍在货架上的栏位；已购买的空栏位保持为空。
         /// </summary>
         public bool TryRerollCurrentShop()
@@ -444,8 +637,6 @@ namespace Roguelike.Dungeon
             RoomView room = tracker.CurrentRoom;
             if (room == null || room.RoomType != RoomType.Shop || !room.ShopStocked)
                 return false;
-
-            if (itemPickupPrefab == null) return false;
 
             ItemPickup[] allPickups = room.GetComponentsInChildren<ItemPickup>(true);
             var activeStock = new List<ItemPickup>();
@@ -462,19 +653,39 @@ namespace Roguelike.Dungeon
                 oldItems.Add(pickup.Item);
             }
 
-            if (activeStock.Count == 0)
+            WeaponPickup[] weaponPickups = room.GetComponentsInChildren<WeaponPickup>(true);
+            WeaponPickup activeWeapon = null;
+            for (int i = 0; i < weaponPickups.Length; i++)
+            {
+                WeaponPickup pickup = weaponPickups[i];
+                if (pickup == null || !pickup.gameObject.activeInHierarchy ||
+                    pickup.IsPurchased || !pickup.ForSale)
+                    continue;
+
+                activeWeapon = pickup;
+                break;
+            }
+
+            if (activeStock.Count == 0 && activeWeapon == null)
             {
                 if (_hud != null) _hud.ShowToast("商店已没有可刷新商品", 1.6f);
                 return false;
             }
 
-            List<ItemDefinition> available = BuildAvailableItems();
+            List<ItemDefinition> availableItems = BuildAvailableItems();
             for (int i = 0; i < oldItems.Count; i++)
-                available.Remove(oldItems[i]);
+                availableItems.Remove(oldItems[i]);
 
-            if (available.Count == 0)
+            List<WeaponDefinition> availableWeapons = BuildAvailableWeapons();
+            var inventory = FindFirstObjectByType<WeaponInventory>();
+
+            bool canReplaceItems = itemPickupPrefab != null && availableItems.Count > 0;
+            bool canReplaceWeapon = activeWeapon != null &&
+                inventory != null && availableWeapons.Count > 0;
+
+            if (!canReplaceItems && !canReplaceWeapon)
             {
-                if (_hud != null) _hud.ShowToast("商店已没有新的可刷新道具", 1.6f);
+                if (_hud != null) _hud.ShowToast("商店已没有新的可刷新商品", 1.6f);
                 return false;
             }
 
@@ -490,26 +701,40 @@ namespace Roguelike.Dungeon
 
             ItemPickup.SuppressNewDialogs(0.6f);
 
-            for (int i = 0; i < activeStock.Count; i++)
+            if (canReplaceItems)
             {
-                ItemPickup oldPickup = activeStock[i];
-                if (oldPickup == null) continue;
+                for (int i = 0; i < activeStock.Count; i++)
+                {
+                    ItemPickup oldPickup = activeStock[i];
+                    if (oldPickup == null) continue;
 
-                Vector3 position = oldPickup.BasePosition;
-                oldPickup.gameObject.SetActive(false);
-                Destroy(oldPickup.gameObject);
+                    Vector3 position = oldPickup.BasePosition;
+                    oldPickup.gameObject.SetActive(false);
+                    Destroy(oldPickup.gameObject);
 
-                ItemDefinition newItem = PickWeightedItem(available);
-                if (newItem == null) continue;
+                    ItemDefinition newItem = PickWeightedItem(availableItems);
+                    if (newItem == null) continue;
 
-                available.Remove(newItem);
-                ItemPickup newPickup = Instantiate(
-                    itemPickupPrefab,
-                    position,
-                    Quaternion.identity,
-                    room.transform);
+                    availableItems.Remove(newItem);
+                    ItemPickup newPickup = Instantiate(
+                        itemPickupPrefab,
+                        position,
+                        Quaternion.identity,
+                        room.transform);
 
-                newPickup.Setup(newItem, null, CalculateShopPrice(newItem));
+                    newPickup.Setup(newItem, null, CalculateShopPrice(newItem));
+                }
+            }
+
+            if (canReplaceWeapon)
+            {
+                Vector3 position = activeWeapon.BasePosition;
+                activeWeapon.gameObject.SetActive(false);
+                Destroy(activeWeapon.gameObject);
+
+                WeaponDefinition newWeapon = PickWeightedWeapon(availableWeapons);
+                if (newWeapon != null)
+                    SpawnWeaponForSale(newWeapon, room, position, inventory);
             }
 
             if (_hud != null) _hud.ShowToast($"商店已刷新：-{cost} 金币", 1.8f);
@@ -592,27 +817,53 @@ namespace Roguelike.Dungeon
             return Mathf.Max(1, basePrice + ShopPriceBonus);
         }
 
-        /// <summary>宝箱房首次进入时生成一个随机道具，领取后不再刷新。</summary>
+        /// <summary>
+        /// 宝箱房首次进入时生成一个奖励：默认道具，有概率替换为一把武器。
+        /// 若道具池已空则必定给武器；领取后不再刷新。
+        /// </summary>
         private void TrySpawnTreasure(RoomView room)
         {
             if (room.RewardClaimed || room.RewardSpawned) return;
-            if (itemPickupPrefab == null || itemPool == null || itemPool.Length == 0) return;
 
-            // 宝箱房只给尚未持有的道具
-            List<ItemDefinition> available = BuildAvailableItems();
-            if (available.Count == 0)
+            var inventory = FindFirstObjectByType<WeaponInventory>();
+            List<ItemDefinition> availableItems = BuildAvailableItems();
+            List<WeaponDefinition> availableWeapons = BuildAvailableWeapons();
+
+            if (availableItems.Count == 0 && availableWeapons.Count == 0)
             {
                 room.RewardSpawned = true;
-                Debug.Log($"[Flow] 宝箱房 {room.GridPosition} 无可生成道具（玩家已持有全部道具）");
+                Debug.Log($"[Flow] 宝箱房 {room.GridPosition} 无可生成奖励（道具与武器均已持有）");
                 return;
             }
 
-            ItemDefinition item = PickWeightedItem(available);
-            if (item == null) return;
+            if (itemPickupPrefab == null && availableWeapons.Count == 0) return;
 
             room.RewardSpawned = true;
-
             Vector2 center = room.WorldCenter;
+
+            bool wantWeapon = availableWeapons.Count > 0 &&
+                (availableItems.Count == 0 || itemPickupPrefab == null ||
+                 Random.value < treasureWeaponChance);
+
+            if (wantWeapon)
+            {
+                WeaponDefinition weapon = PickWeightedWeapon(availableWeapons);
+                if (weapon != null && inventory != null)
+                {
+                    SpawnWeaponReward(
+                        weapon,
+                        room,
+                        new Vector3(center.x, center.y, 0f),
+                        inventory,
+                        room);
+                    Debug.Log($"[Flow] 宝箱房 {room.GridPosition} 生成武器：{weapon.weaponName}");
+                    return;
+                }
+            }
+
+            ItemDefinition item = PickWeightedItem(availableItems);
+            if (item == null) return;
+
             ItemPickup pickup = Instantiate(
                 itemPickupPrefab,
                 new Vector3(center.x, center.y, 0f),
@@ -687,6 +938,9 @@ namespace Roguelike.Dungeon
 
             RoomView room = FindEnemyRoom(enemy);
             SpawnDrops(enemy, room);
+
+            if (enemy.IsBoss)
+                SpawnBossWeaponReward(room);
 
             if (room != null && _roomEnemies.TryGetValue(room, out List<Enemy> list))
                 list.Remove(enemy);
@@ -771,6 +1025,47 @@ namespace Roguelike.Dungeon
 
             pickup.Setup(item, room);
             Debug.Log($"[Flow] 挑战房 {room.GridPosition} 通关，奖励：{item.itemName}");
+        }
+
+        /// <summary>Boss 首杀必掉一把玩家未持有的武器；同房间只生成一次。</summary>
+        private void SpawnBossWeaponReward(RoomView room)
+        {
+            if (room == null || room.RewardSpawned) return;
+
+            var inventory = FindFirstObjectByType<WeaponInventory>();
+            if (inventory == null) return;
+
+            List<WeaponDefinition> available = BuildAvailableWeapons(null, true);
+            if (available.Count == 0) return;
+
+            WeaponDefinition weapon = PickWeightedWeapon(available);
+            if (weapon == null) return;
+
+            room.RewardSpawned = true;
+
+            // Boss 奖励优先：移除其它房间里尚未领取的同一把武器，避免重复。
+            foreach (WeaponPickup pickup in FindObjectsByType<WeaponPickup>(FindObjectsSortMode.None))
+            {
+                if (pickup == null || pickup.IsPurchased || pickup.Weapon != weapon) continue;
+
+                // 商店货架会在玩家获得该武器后自动消失，不需要在这里强拆。
+                RoomView pickupRoom = pickup.GetComponentInParent<RoomView>();
+                if (pickupRoom != null && pickupRoom.RoomType == RoomType.Shop) continue;
+
+                pickup.gameObject.SetActive(false);
+                Destroy(pickup.gameObject);
+            }
+            SpawnWeaponReward(
+                weapon,
+                room,
+                (Vector3)room.WorldCenter,
+                inventory,
+                room);
+
+            if (_hud != null)
+                _hud.ShowToast($"Boss 掉落武器：{weapon.weaponName}\n{weapon.description}", 3f);
+
+            Debug.Log($"[Flow] Boss 房 {room.GridPosition} 掉落武器：{weapon.weaponName}");
         }
 
         /// <summary>按敌人类型掉落金币 / 回血，掉落物挂在敌人所属的房间里。</summary>
@@ -863,8 +1158,19 @@ namespace Roguelike.Dungeon
             foreach (ItemPickup item in FindObjectsByType<ItemPickup>(FindObjectsSortMode.None))
                 Destroy(item.gameObject);
 
+            foreach (WeaponPickup weapon in FindObjectsByType<WeaponPickup>(FindObjectsSortMode.None))
+                Destroy(weapon.gameObject);
+
+            _weaponOffering = null;
+
             foreach (ExplosionFlash flash in FindObjectsByType<ExplosionFlash>(FindObjectsSortMode.None))
                 Destroy(flash.gameObject);
+
+            foreach (MeleeSlashEffect slash in FindObjectsByType<MeleeSlashEffect>(FindObjectsSortMode.None))
+                Destroy(slash.gameObject);
+
+            _suppressWeaponOffering = false;
+            _weaponOfferingOverride = null;
         }
 
         /// <summary>
@@ -1162,10 +1468,10 @@ namespace Roguelike.Dungeon
         {
 #if ENABLE_INPUT_SYSTEM
             Keyboard keyboard = Keyboard.current;
-            if (keyboard != null) return keyboard.rKey.wasPressedThisFrame;
+            if (keyboard != null) return keyboard.fKey.wasPressedThisFrame;
 #endif
 #if ENABLE_LEGACY_INPUT_MANAGER
-            return Input.GetKeyDown(KeyCode.R);
+            return Input.GetKeyDown(KeyCode.F);
 #else
             return false;
 #endif

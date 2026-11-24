@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6e33c16240703954d9136dabfb5f6499, type: 3}
+  m_Name: Weapon_Waraxe
+  m_EditorClassIdentifier: Assembly-CSharp::Roguelike.Weapons.WeaponDefinition
+  weaponName: "\u6218\u65A7"
+  description: "\u53CC\u624B\u6218\u65A7\u7684\u5168\u5468\u65CB\u65A9\uFF0C\u7B2C\u4E8C\u6BB5\u5F3A\u5316\u91CD\u51FB\uFF0C\u62E5\u6709\u6781\u9AD8\u51FB\u9000\u3002"
+  kind: 7
+  icon: {fileID: 21300000, guid: 3f58769268a1be748bb4a69649461662, type: 3}
+  rarity: 2
+  dropWeight: 10
+  shopPrice: 26
+  damage: 4.8
+  fireInterval: 0.65
+  projectileSpeed: 14
+  projectileLifetime: 1
+  pierce: 0
+  projectiles: 1
+  spreadStep: 0
+  projectileFrames: []
+  projectileScale: 0.36
+  projectileColor: {r: 1, g: 1, b: 1, a: 1}
+  rotateProjectile: 0
+  projectileExplosionRadius: 0
+  projectileExplosionDamage: 0
+  magazineSize: 0
+  reloadTime: 0
+  meleeRadius: 2.35
+  meleeArc: 360
+  meleeKnockback: 10
+  comboHits: 2
+  comboWindow: 1
+  comboFinisherScale: 1.35
+  slashFrames:
+  - {fileID: 21300000, guid: 085641fa5f189c44886a1101ba6358ec, type: 3}
+  - {fileID: 21300000, guid: 3d2f26d2f356f4e47b47a9cf1609b2ee, type: 3}
+  - {fileID: 21300000, guid: e00631eba743dc0408a75b1fceb87c0d, type: 3}
+  slashScale: 1.55
+  heldSprite: {fileID: 21300000, guid: d47173e58a42c064fa5350979ad2f011, type: 3}
+  heldScale: 0.62
+  heldDistance: 0.14
+  heldSideOffset: 0.08
+  heldVerticalOffset: -0.32
+  heldAngleOffset: -90
+  flipHeldWhenAimingLeft: 0
+  fireSound: weapon_waraxe_swing
+  fireVolume: 0.64
+  altSound: 
+  altVolume: 0.64
+  finisherSound: weapon_waraxe_finisher
+  finisherVolume: 0.72

@@ -64,31 +64,31 @@ namespace Roguelike.Core
             UiTheme.DrawDim();
 
             float width = Mathf.Min(470f, Screen.width - 60f);
-            float height = 318f;
+            float height = 344f;
             var panel = new Rect(
                 (Screen.width - width) * 0.5f,
-                Mathf.Max(64f, (Screen.height - height) * 0.5f),
+                Mathf.Max(52f, (Screen.height - height) * 0.5f),
                 width,
                 height);
 
             UiTheme.DrawPanel(panel, UiTheme.Gold, false);
 
             UiTheme.DrawLabelShadow(
-                new Rect(panel.x + 24f, panel.y + 14f, panel.width - 48f, 34f),
+                new Rect(panel.x + 24f, panel.y + 12f, panel.width - 48f, 32f),
                 "暂 停",
                 UiTheme.TitleCenter,
                 UiTheme.GoldBright);
 
             UiTheme.DrawLabelShadow(
-                new Rect(panel.x + 24f, panel.y + 46f, panel.width - 48f, 18f),
+                new Rect(panel.x + 24f, panel.y + 42f, panel.width - 48f, 18f),
                 "地牢的回声暂时沉寂",
                 UiTheme.Center,
                 UiTheme.Muted);
 
-            UiTheme.DrawDivider(new Rect(panel.x + 26f, panel.y + 72f, panel.width - 52f, 1f));
+            UiTheme.DrawDivider(new Rect(panel.x + 26f, panel.y + 64f, panel.width - 52f, 1f));
 
-            float row1 = panel.y + 94f;
-            float row2 = panel.y + 158f;
+            float row1 = panel.y + 82f;
+            float row2 = panel.y + 130f;
             float sliderX = panel.x + 176f;
             float sliderWidth = panel.width - 260f;
 
@@ -114,8 +114,22 @@ namespace Roguelike.Core
                 UiTheme.Shield,
                 value => AudioService.SetSfxVolume(value));
 
+            UiTheme.DrawDivider(new Rect(panel.x + 26f, panel.y + 164f, panel.width - 52f, 1f));
+
             if (UiTheme.DrawButton(
-                    new Rect(panel.center.x - 88f, panel.yMax - 54f, 176f, 36f),
+                    new Rect(panel.center.x - 132f, panel.y + 180f, 264f, 40f),
+                    "保存并返回主页",
+                    false,
+                    false,
+                    15))
+            {
+                SetPaused(false);
+                if (runManager != null && !runManager.SuspendRunToMainMenu())
+                    SetPaused(true);
+            }
+
+            if (UiTheme.DrawButton(
+                    new Rect(panel.center.x - 88f, panel.y + 232f, 176f, 38f),
                     "继续游戏  Esc",
                     true,
                     false,
@@ -123,6 +137,12 @@ namespace Roguelike.Core
             {
                 SetPaused(false);
             }
+
+            UiTheme.DrawLabelShadow(
+                new Rect(panel.x + 24f, panel.yMax - 36f, panel.width - 48f, 20f),
+                "返回主页会保存当前进度，可从主页面继续",
+                UiTheme.Small,
+                UiTheme.Muted);
         }
 
         private static void DrawVolumeRow(

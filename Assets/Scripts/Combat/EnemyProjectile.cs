@@ -11,6 +11,7 @@ namespace Roguelike.Combat
     {
         private Rigidbody2D _rb;
         private SpriteRenderer _renderer;
+        private ProjectileGlow _glow;
         private Vector3 _baseScale = Vector3.one;
         private Color _baseColor = Color.white;
         private int _damage;
@@ -25,6 +26,7 @@ namespace Roguelike.Combat
             _rb.constraints = RigidbodyConstraints2D.FreezeRotation;
 
             _renderer = GetComponentInChildren<SpriteRenderer>();
+            _glow = GetComponentInChildren<ProjectileGlow>();
             _baseScale = transform.localScale;
             if (_renderer != null) _baseColor = _renderer.color;
         }
@@ -37,6 +39,7 @@ namespace Roguelike.Combat
             _homingTurnSpeed = 0f;
             transform.localScale = _baseScale;
             if (_renderer != null) _renderer.color = _baseColor;
+            if (_glow != null) _glow.SyncNow();
 
             if (_rb == null) _rb = GetComponent<Rigidbody2D>();
             _rb.linearVelocity = direction.normalized * speed;
@@ -55,6 +58,8 @@ namespace Roguelike.Combat
             if (_renderer != null) _renderer.color = tint;
 
             transform.localScale = _baseScale * Mathf.Max(0.1f, scale);
+            if (_glow == null) _glow = GetComponentInChildren<ProjectileGlow>();
+            if (_glow != null) _glow.SyncNow();
         }
 
         /// <summary>让弹丸缓慢转向目标（追踪火球）。</summary>

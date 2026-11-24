@@ -29,6 +29,7 @@ namespace Roguelike.EditorTools
         public const string BossPath = Folder + "/Boss.prefab";
         public const string EnemyProjectilePath = Folder + "/EnemyProjectile.prefab";
         public const string PortalPath = Folder + "/NextFloorPortal.prefab";
+        public const string BulletGlowPath = "Assets/Art/Effects/BulletGlow.png";
 
         // 三层专属小怪
         public const string GoblinPath = Folder + "/Goblin.prefab";
@@ -1460,6 +1461,7 @@ namespace Roguelike.EditorTools
             renderer.sprite = ArtOr(ThirdPartySprites.EnemyOrb, sprite);
             renderer.color = Color.white;
             renderer.sortingOrder = 9;
+            AttachProjectileGlow(root);
 
             var body = root.AddComponent<Rigidbody2D>();
             body.gravityScale = 0f;
@@ -1485,6 +1487,7 @@ namespace Roguelike.EditorTools
             renderer.sprite = ArtOr(ThirdPartySprites.Tear, sprite);
             renderer.color = Color.white;
             renderer.sortingOrder = 9;
+            AttachProjectileGlow(root);
 
             var body = root.AddComponent<Rigidbody2D>();
             body.gravityScale = 0f;
@@ -1575,6 +1578,24 @@ namespace Roguelike.EditorTools
 
             for (int i = 0; i < count; i++)
                 property.GetArrayElementAtIndex(i).objectReferenceValue = sprites[i];
+        }
+
+        /// <summary>给子弹加一层柔光，颜色由 ProjectileGlow 每帧复制本体颜色。</summary>
+        private static void AttachProjectileGlow(GameObject root)
+        {
+            Sprite glowSprite = AssetDatabase.LoadAssetAtPath<Sprite>(BulletGlowPath);
+            if (glowSprite == null) return;
+
+            var glowObject = new GameObject("Glow");
+            glowObject.transform.SetParent(root.transform, false);
+            glowObject.transform.localScale = Vector3.one * 2f;
+
+            var glowRenderer = glowObject.AddComponent<SpriteRenderer>();
+            glowRenderer.sprite = glowSprite;
+            glowRenderer.color = Color.white;
+            glowRenderer.sortingOrder = 8;
+
+            glowObject.AddComponent<ProjectileGlow>();
         }
 
         /// <summary>挂上帧动画；没有美术帧时保持静态 Sprite。</summary>

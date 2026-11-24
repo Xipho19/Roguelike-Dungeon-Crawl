@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6e33c16240703954d9136dabfb5f6499, type: 3}
+  m_Name: Weapon_Staff
+  m_EditorClassIdentifier: Assembly-CSharp::Roguelike.Weapons.WeaponDefinition
+  weaponName: "\u7EFF\u5B9D\u77F3\u6CD5\u6756"
+  description: "\u53D1\u5C04\u53EF\u7A7F\u900F\u7684\u7EFF\u8272\u80FD\u91CF\u7403\u3002\u5355\u53D1\u4F24\u5BB3\u9AD8\uFF0C\u5C04\u901F\u8F83\u6162\u3002"
+  kind: 1
+  icon: {fileID: 21300000, guid: 6c819b9ffc387d749ae1ea6af7e9db29, type: 3}
+  rarity: 1
+  dropWeight: 20
+  shopPrice: 14
+  damage: 2.2
+  fireInterval: 0.52
+  projectileSpeed: 9
+  projectileLifetime: 1.6
+  pierce: 1
+  projectiles: 1
+  spreadStep: 8
+  projectileFrames:
+  - {fileID: 21300000, guid: 2599841f542f0fc40ae428dc05969b99, type: 3}
+  - {fileID: 21300000, guid: d8adc8ed59445184bb793638920d21a0, type: 3}
+  - {fileID: 21300000, guid: 6868e1fe7b3daeb46ab73fb6c6a79775, type: 3}
+  - {fileID: 21300000, guid: 87a8b7f007a3d2c438a6c3029cee61f8, type: 3}
+  projectileScale: 0.68
+  projectileColor: {r: 1, g: 1, b: 1, a: 1}
+  rotateProjectile: 0
+  projectileExplosionRadius: 0
+  projectileExplosionDamage: 0
+  magazineSize: 0
+  reloadTime: 0
+  meleeRadius: 2.15
+  meleeArc: 110
+  meleeKnockback: 7
+  comboHits: 3
+  comboWindow: 0.9
+  comboFinisherScale: 1.55
+  slashFrames: []
+  slashScale: 1.3
+  heldSprite: {fileID: 21300000, guid: fd04b06142a50a742a027b6cfc158f8c, type: 3}
+  heldScale: 0.65
+  heldDistance: 0.15
+  heldSideOffset: 0.12
+  heldVerticalOffset: -0.3
+  heldAngleOffset: -90
+  flipHeldWhenAimingLeft: 0
+  fireSound: weapon_staff_zap
+  fireVolume: 0.5
+  altSound: 
+  altVolume: 0.5
+  finisherSound: 
+  finisherVolume: 0.5

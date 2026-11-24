@@ -1,0 +1,60 @@
+武器音效来源与许可
+
+本目录中的武器音效由以下 CC0 / CC-BY 素材裁剪、混音并转为 16-bit 单声道 WAV。
+文件名后的说明为项目内用途。
+
+1. weapon_staff_zap.wav
+   来源：OpenGameArt「150 Combat Sound Effects」中的 EnergyZap_s01.wav
+   原始来源：Cosmo Myzrail Gorynych - CoMiGo's Bleeps and Bloops
+   https://opengameart.org/content/150-combat-sound-effects
+   https://comigo.itch.io/bleeps-n-bloops
+   许可：CC0 1.0 Universal
+
+2. weapon_rifle_shot.wav
+   来源：OpenGameArt「Gunshot Sounds」中的 cz.wav（截取单发射击）
+   作者：Vincent Sevedge
+   https://opengameart.org/content/gunshot-sounds
+   压缩包内声明：CC-BY 3.0 Unported
+   https://creativecommons.org/licenses/by/3.0/
+   说明：OpenGameArt 页面标注为 CC0，但压缩包内附带的 creativecommons.txt 明确为 CC-BY 3.0；
+   本项目按更严格的 CC-BY 3.0 处理并署名。
+
+3. weapon_shotgun_blast.wav
+   来源：OpenGameArt「Gunshot Sounds」中的 shotty.wav
+   作者：Vincent Sevedge
+   https://opengameart.org/content/gunshot-sounds
+   压缩包内声明：CC-BY 3.0 Unported
+   https://creativecommons.org/licenses/by/3.0/
+   说明：同上，按更严格的 CC-BY 3.0 处理并署名。
+
+4. weapon_katana_slash.wav / weapon_katana_slash2.wav / weapon_waraxe_swing.wav
+   来源：OpenGameArt「Swishes Sound Pack」中的 swish-4.wav、swish-7.wav、swish-9.wav
+   作者：qubodup (Iwan Gabovitch)
+   https://opengameart.org/content/swishes-sound-pack
+   许可：CC0 1.0 Universal
+
+5. weapon_katana_finisher.wav / weapon_waraxe_finisher.wav
+   来源：OpenGameArt「3 Melee sounds」中的 sword sound.wav、melee sound.wav
+   原作者：qubodup (Iwan Gabovitch)，由 remaxim 编辑
+   https://opengameart.org/content/3-melee-sounds
+   许可：CC0 1.0 Universal
+   说明：武士刀终结技版本额外叠加了项目自制的低频冲击与金属高光层。
+
+6. weapon_crossbow_shot.wav
+   来源：OpenGameArt「Crossbow Shot」
+   作者：ElTronic
+   https://opengameart.org/content/crossbow-shot
+   许可：CC-BY 3.0 Unported
+   https://creativecommons.org/licenses/by/3.0/
+   说明：已裁剪为发射段落，并叠加项目自制的机械 click、弓弦 twang、破空噪声与低频震动层；
+   本项目在 README 与本文件中署名。
+
+7. weapon_ember_cast.wav
+   来源：OpenGameArt「Fireball」中的 105016__julien-matthey__jm-fx-fireball-01.wav
+   作者：Julien Matthey
+   https://opengameart.org/content/fireball-1
+   https://freesound.org/people/Julien%20Matthey/sounds/105016/
+   许可：CC0 1.0 Universal
+   说明：叠加了项目自制的点火噪声、低频推力与火星噼啪层，提升起手清晰度。
+
+8. 泪滴音效 tear_shot.wav 为项目自制，保留在 Resources/Audio/Custom。

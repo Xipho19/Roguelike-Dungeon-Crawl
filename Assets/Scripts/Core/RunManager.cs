@@ -3,7 +3,9 @@ using Roguelike.Audio;
 using Roguelike.Dungeon;
 using Roguelike.Items;
 using Roguelike.Player;
+using Roguelike.Progression;
 using Roguelike.UI;
+using Roguelike.Weapons;
 using UnityEngine;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -25,6 +27,7 @@ namespace Roguelike.Core
     {
         public enum RunState
         {
+            MainMenu,
             Playing,
             GameOver,
             Victory,
@@ -37,6 +40,8 @@ namespace Roguelike.Core
         [SerializeField] private RoomCamera roomCamera;
         [SerializeField] private PlayerInventory inventory;
         [SerializeField] private PlayerWallet wallet;
+        [SerializeField] private PlayerStats playerStats;
+        [SerializeField] private WeaponInventory weaponInventory;
 
         [Header("楼层推进")]
         [SerializeField] private NextFloorPortal portalPrefab;
@@ -56,15 +61,24 @@ namespace Roguelike.Core
         [Tooltip("旧版通关继承开关；现在跨楼层会保留道具，死亡时始终清空")]
         [SerializeField] private bool keepItemsAfterVictory = true;
 
-        private RunState _state = RunState.Playing;
+        private RunState _state = RunState.MainMenu;
         private NextFloorPortal _portal;
         private FloorTheme _currentTheme;
+        private bool _runCoinsBanked;
+        private int _lastBankedCoins;
+        private int _lastBankedTotal;
+        private bool _suspendedRun;
+        private bool _carryVictoryRewards;
 
         public RunState State => _state;
         public int CurrentFloor => currentFloor;
         public int MaxFloor => maxFloor;
         public bool IsEndlessRun => maxFloor <= 0;
         public FloorTheme CurrentFloorTheme => _currentTheme;
+
+        /// <summary>存在可继续的进度：本局仍挂起，或磁盘上有单局存档。</summary>
+        public bool HasResumableRun =>
+            _state == RunState.MainMenu && (_suspendedRun || RunSaveService.HasSave);
 
         /// <summary>原地重开完成后触发（换层不触发），用于重置主动冷却与击杀计数。</summary>
         public event System.Action RunRestarted;
@@ -76,7 +90,7 @@ namespace Roguelike.Core
 
         private void Awake()
         {
-            Time.timeScale = 1f;
+            Time.timeScale = _state == RunState.MainMenu ? 0f : 1f;
 
             if (playerHealth == null) playerHealth = FindFirstObjectByType<PlayerHealth>();
             if (flow == null) flow = FindFirstObjectByType<DungeonFlowController>();
@@ -85,6 +99,8 @@ namespace Roguelike.Core
             if (roomCamera == null) roomCamera = FindFirstObjectByType<RoomCamera>();
             if (inventory == null) inventory = FindFirstObjectByType<PlayerInventory>();
             if (wallet == null) wallet = FindFirstObjectByType<PlayerWallet>();
+            if (playerStats == null) playerStats = FindFirstObjectByType<PlayerStats>();
+            if (weaponInventory == null) weaponInventory = FindFirstObjectByType<WeaponInventory>();
             if (portalPrefab == null) portalPrefab = Resources.Load<NextFloorPortal>("Combat/NextFloorPortal");
 
             if (playerHealth != null) playerHealth.Died += HandlePlayerDied;
@@ -158,6 +174,8 @@ namespace Roguelike.Core
 
         private void EnterVictory(string reason)
         {
+            if (_state == RunState.Victory || _state == RunState.GameOver) return;
+
             if (_portal != null)
             {
                 Destroy(_portal.gameObject);
@@ -166,6 +184,10 @@ namespace Roguelike.Core
 
             _state = RunState.Victory;
             Time.timeScale = 0f;
+            _suspendedRun = false;
+            _carryVictoryRewards = true;
+            RunSaveService.Delete();
+            BankRunCoins(true);
             AudioService.StopMusic();
             AudioService.Play("bookOpen", 0.9f);
             Debug.Log($"[Run] 通关：{reason}");
@@ -183,8 +205,7 @@ namespace Roguelike.Core
             HandleDebugFloorKeys();
 #endif
 
-            if (_state == RunState.Playing) return;
-            if (WasRestartPressed()) RestartRun();
+            if (_state == RunState.Playing || _state == RunState.MainMenu) return;
         }
 
         private void HandlePlayerDied()
@@ -193,9 +214,84 @@ namespace Roguelike.Core
 
             _state = RunState.GameOver;
             Time.timeScale = 0f;
+            _suspendedRun = false;
+            RunSaveService.Delete();
+            BankRunCoins(false);
             AudioService.StopMusic();
             AudioService.Play("Get_Out_Loser", 1f, 0f);
             Debug.Log("[Run] 玩家死亡，本局结束");
+        }
+
+        /// <summary>每局结束时把剩余金币存入局外金库；重复调用只结算一次。</summary>
+        private void BankRunCoins(bool victory)
+        {
+            if (_runCoinsBanked) return;
+
+            _runCoinsBanked = true;
+            int remaining = wallet != null ? wallet.Coins : 0;
+            RunBankResult result = MetaProgression.BankRunCoins(remaining, currentFloor, victory);
+            _lastBankedCoins = result.BankedCoins;
+            _lastBankedTotal = result.TotalCoins;
+        }
+
+        /// <summary>把已购买的技能树节点转成永久属性修正，并在每局开始时应用。</summary>
+        private void ApplyMetaUpgrades()
+        {
+            var modifiers = new List<StatModifier>();
+            int shieldBonus = 0;
+
+            MetaUpgradeDefinition[] nodes = MetaUpgrades.Nodes;
+            for (int i = 0; i < nodes.Length; i++)
+            {
+                MetaUpgradeDefinition definition = nodes[i];
+                int level = MetaProgression.GetUpgradeLevel(definition.id);
+                if (level <= 0) continue;
+
+                switch (definition.effect)
+                {
+                    case MetaUpgradeEffect.MaxHealth:
+                        modifiers.Add(new StatModifier(
+                            StatType.MaxHealth,
+                            StatOp.Add,
+                            definition.value * level));
+                        break;
+
+                    case MetaUpgradeEffect.MaxShield:
+                        shieldBonus += Mathf.RoundToInt(definition.value * level);
+                        break;
+
+                    case MetaUpgradeEffect.MoveSpeed:
+                        modifiers.Add(new StatModifier(
+                            StatType.MoveSpeed,
+                            StatOp.Multiply,
+                            Mathf.Pow(definition.value, level)));
+                        break;
+
+                    case MetaUpgradeEffect.Damage:
+                        modifiers.Add(new StatModifier(
+                            StatType.Damage,
+                            StatOp.Multiply,
+                            Mathf.Pow(definition.value, level)));
+                        break;
+
+                    case MetaUpgradeEffect.CoinBonus:
+                        modifiers.Add(new StatModifier(
+                            StatType.CoinBonus,
+                            StatOp.Add,
+                            definition.value * level));
+                        break;
+
+                    case MetaUpgradeEffect.FireInterval:
+                        modifiers.Add(new StatModifier(
+                            StatType.FireInterval,
+                            StatOp.Multiply,
+                            Mathf.Pow(definition.value, level)));
+                        break;
+                }
+            }
+
+            if (playerStats != null) playerStats.SetMetaModifiers(modifiers);
+            if (playerHealth != null) playerHealth.SetMetaShieldBonus(shieldBonus);
         }
 
         private void HandleBossDefeated()
@@ -257,6 +353,320 @@ namespace Roguelike.Core
             return null;
         }
 
+        /// <summary>保留旧入口：从主菜单开始一局全新的游戏。</summary>
+        public bool StartRun() => StartNewRun();
+
+        /// <summary>从主菜单开始新的一局：清空存档、道具、金币与武器，并重建地牢。</summary>
+        public bool StartNewRun()
+        {
+            if (_state != RunState.MainMenu) return false;
+
+            RunSaveService.Delete();
+            _suspendedRun = false;
+
+            bool carryVictory = _carryVictoryRewards;
+            _carryVictoryRewards = false;
+
+            if (!carryVictory && weaponInventory != null)
+                weaponInventory.ResetToStarting();
+
+            RestartRun(carryVictory);
+            Debug.Log(carryVictory ? "[Run] 开始新的一局（继承通关道具与武器）" : "[Run] 开始新的一局");
+            return true;
+        }
+
+        /// <summary>继续上次挂起或保存的进度。</summary>
+        public bool ResumeRun()
+        {
+            if (_state != RunState.MainMenu) return false;
+
+            if (_suspendedRun)
+            {
+                _suspendedRun = false;
+                ApplyMetaUpgrades();
+                _state = RunState.Playing;
+                Time.timeScale = 1f;
+
+                if (_currentTheme != null)
+                    AudioService.PlayMusic(_currentTheme.bgm, _currentTheme.bgmVolume);
+
+                Debug.Log("[Run] 继续当前局");
+                return true;
+            }
+
+            if (!RunSaveService.TryLoad(out RunSaveData save))
+            {
+                Debug.LogWarning("[Run] 没有可继续的单局存档");
+                return false;
+            }
+
+            return RestoreRun(save);
+        }
+
+        /// <summary>保存本局进度、冻结游戏并返回主菜单。</summary>
+        public bool SuspendRunToMainMenu()
+        {
+            if (_state != RunState.Playing) return false;
+
+            RunSaveData snapshot = CreateRunSnapshot();
+            if (snapshot == null) return false;
+
+            if (!RunSaveService.TrySave(snapshot))
+                return false;
+
+            _suspendedRun = true;
+            _state = RunState.MainMenu;
+            Time.timeScale = 0f;
+            AudioService.SaveAudioSettings();
+            AudioService.StopMusic();
+
+            MainMenuUI menu = FindFirstObjectByType<MainMenuUI>(FindObjectsInactive.Include);
+            if (menu != null) menu.ShowMenu();
+
+            Debug.Log("[Run] 已保存本局进度并返回主菜单");
+            return true;
+        }
+
+        private RunSaveData CreateRunSnapshot()
+        {
+            if (builder == null || builder.Data == null)
+            {
+                Debug.LogError("[Save] 地牢尚未构建，无法保存单局进度");
+                return null;
+            }
+
+            var data = new RunSaveData
+            {
+                floor = currentFloor,
+                seed = builder.Seed,
+                coins = wallet != null ? wallet.Coins : 0,
+                health = playerHealth != null ? playerHealth.Health : 1,
+                shield = playerHealth != null ? playerHealth.Shield : 0,
+                bossCleared = false,
+                startWeaponTaken = true,
+                currentWeaponSlot = weaponInventory != null ? weaponInventory.CurrentSlot : 0,
+            };
+
+            RoomView currentRoom = tracker != null ? tracker.CurrentRoom : null;
+            if (currentRoom == null) currentRoom = builder.GetRoom(builder.Data.Start.Grid);
+            if (currentRoom != null)
+            {
+                data.currentRoomX = currentRoom.GridPosition.x;
+                data.currentRoomY = currentRoom.GridPosition.y;
+            }
+
+            RoomView bossRoom = FindBossRoom();
+            data.bossCleared = bossRoom != null && bossRoom.IsCleared;
+
+            if (flow != null && flow.WeaponOffering != null &&
+                flow.WeaponOffering.Weapon != null)
+            {
+                data.startWeaponTaken = false;
+                data.startWeaponId = flow.WeaponOffering.Weapon.name;
+            }
+
+            if (inventory != null)
+            {
+                IReadOnlyList<ItemDefinition> items = inventory.Items;
+                data.itemIds = new string[items.Count];
+                for (int i = 0; i < items.Count; i++)
+                    data.itemIds[i] = items[i] != null ? items[i].name : string.Empty;
+            }
+
+            data.weaponIds = new string[WeaponInventory.SlotCount];
+            data.weaponAmmo = new int[WeaponInventory.SlotCount];
+            if (weaponInventory != null)
+            {
+                for (int i = 0; i < WeaponInventory.SlotCount; i++)
+                {
+                    WeaponDefinition weapon = weaponInventory.SlotAt(i);
+                    data.weaponIds[i] = weapon != null ? weapon.name : string.Empty;
+                    data.weaponAmmo[i] = weaponInventory.AmmoAt(i);
+                }
+            }
+
+            var rooms = new List<RunRoomSave>();
+            IReadOnlyList<RoomView> allRooms = builder.Rooms;
+            for (int i = 0; i < allRooms.Count; i++)
+            {
+                RoomView room = allRooms[i];
+                if (room == null) continue;
+                if (!room.IsVisited && !room.IsCleared &&
+                    !room.RewardClaimed && !room.SecretEventUsed)
+                    continue;
+
+                rooms.Add(new RunRoomSave
+                {
+                    x = room.GridPosition.x,
+                    y = room.GridPosition.y,
+                    visited = room.IsVisited,
+                    cleared = room.IsCleared,
+                    rewardClaimed = room.RewardClaimed,
+                    secretUsed = room.SecretEventUsed,
+                });
+            }
+
+            data.rooms = rooms.ToArray();
+            return data;
+        }
+
+        private bool RestoreRun(RunSaveData save)
+        {
+            if (save == null || builder == null) return false;
+
+            Time.timeScale = 1f;
+            _runCoinsBanked = false;
+            _lastBankedCoins = 0;
+            _lastBankedTotal = MetaProgression.Coins;
+            _suspendedRun = false;
+
+            if (_portal != null)
+            {
+                Destroy(_portal.gameObject);
+                _portal = null;
+            }
+
+            if (flow != null) flow.ResetForNewRun();
+
+            currentFloor = maxFloor > 0
+                ? Mathf.Clamp(save.floor, 1, maxFloor)
+                : Mathf.Max(1, save.floor);
+            ApplyFloorPresentation();
+
+            builder.SetSeed(save.seed);
+            builder.BuildFromSeed();
+
+            RestoreRoomStates(save);
+
+            if (flow != null)
+                flow.SetWeaponOfferingRestore(save.startWeaponTaken, save.startWeaponId);
+
+            ApplyMetaUpgrades();
+            if (playerHealth != null) playerHealth.ResetForNewRun();
+
+            RestoreInventory(save);
+            if (wallet != null) wallet.SetCoins(save.coins);
+
+            if (flow != null) flow.PrepareFloor();
+
+            if (playerHealth != null)
+                playerHealth.RestoreVitals(save.health, save.shield);
+
+            if (save.bossCleared && (maxFloor <= 0 || currentFloor < maxFloor))
+                SpawnNextFloorPortal();
+
+            if (tracker != null && builder.Data != null)
+            {
+                var savedGrid = new Vector2Int(save.currentRoomX, save.currentRoomY);
+                RoomView room = builder.GetRoom(savedGrid);
+                if (room == null) room = builder.GetRoom(builder.Data.Start.Grid);
+
+                if (room != null)
+                {
+                    tracker.TeleportTo(room);
+                    if (roomCamera != null) roomCamera.SnapTo(room);
+                }
+            }
+
+            _state = RunState.Playing;
+            RunRestarted?.Invoke();
+            RestoreWeapons(save);
+
+            Debug.Log($"[Run] 已继续第 {currentFloor} 层进度（种子 {save.seed}）");
+            return true;
+        }
+
+        private void RestoreRoomStates(RunSaveData save)
+        {
+            if (save.rooms == null) return;
+
+            for (int i = 0; i < save.rooms.Length; i++)
+            {
+                RunRoomSave entry = save.rooms[i];
+                if (entry == null) continue;
+
+                RoomView room = builder.GetRoom(new Vector2Int(entry.x, entry.y));
+                if (room == null) continue;
+
+                room.IsVisited = entry.visited;
+                room.IsCleared = entry.cleared;
+                room.RewardClaimed = entry.rewardClaimed;
+                if (entry.rewardClaimed) room.RewardSpawned = true;
+                room.SecretEventUsed = entry.secretUsed;
+                if (entry.secretUsed) room.SecretEventSpawned = true;
+            }
+        }
+
+        private void RestoreInventory(RunSaveData save)
+        {
+            if (inventory == null) return;
+
+            var restored = new List<ItemDefinition>();
+            if (save.itemIds != null && save.itemIds.Length > 0)
+            {
+                Dictionary<string, ItemDefinition> pool = BuildItemLookup();
+                for (int i = 0; i < save.itemIds.Length; i++)
+                {
+                    string id = save.itemIds[i];
+                    if (!string.IsNullOrEmpty(id) && pool.TryGetValue(id, out ItemDefinition item))
+                        restored.Add(item);
+                }
+            }
+
+            inventory.RestoreItems(restored);
+        }
+
+        private void RestoreWeapons(RunSaveData save)
+        {
+            if (weaponInventory == null) return;
+
+            Dictionary<string, WeaponDefinition> pool = BuildWeaponLookup();
+            WeaponDefinition slot0 = null;
+            WeaponDefinition slot1 = null;
+            int ammo0 = 0;
+            int ammo1 = 0;
+
+            if (save.weaponIds != null && save.weaponIds.Length > 0)
+            {
+                pool.TryGetValue(save.weaponIds[0] ?? string.Empty, out slot0);
+                if (save.weaponAmmo != null && save.weaponAmmo.Length > 0)
+                    ammo0 = save.weaponAmmo[0];
+            }
+
+            if (save.weaponIds != null && save.weaponIds.Length > 1)
+            {
+                pool.TryGetValue(save.weaponIds[1] ?? string.Empty, out slot1);
+                if (save.weaponAmmo != null && save.weaponAmmo.Length > 1)
+                    ammo1 = save.weaponAmmo[1];
+            }
+
+            weaponInventory.RestoreFromSave(slot0, ammo0, slot1, ammo1, save.currentWeaponSlot);
+        }
+
+        private static Dictionary<string, ItemDefinition> BuildItemLookup()
+        {
+            var lookup = new Dictionary<string, ItemDefinition>();
+            ItemDefinition[] items = Resources.LoadAll<ItemDefinition>("Items");
+            for (int i = 0; i < items.Length; i++)
+            {
+                if (items[i] != null) lookup[items[i].name] = items[i];
+            }
+
+            return lookup;
+        }
+
+        private static Dictionary<string, WeaponDefinition> BuildWeaponLookup()
+        {
+            var lookup = new Dictionary<string, WeaponDefinition>();
+            WeaponDefinition[] weapons = Resources.LoadAll<WeaponDefinition>("Weapons");
+            for (int i = 0; i < weapons.Length; i++)
+            {
+                if (weapons[i] != null) lookup[weapons[i].name] = weapons[i];
+            }
+
+            return lookup;
+        }
+
         /// <summary>进入下一层：保留生命、金币与道具，重建地牢并回到新起点房。</summary>
         public void DescendToNextFloor()
         {
@@ -270,6 +680,7 @@ namespace Roguelike.Core
 
             AudioService.Play("teleport", 0.9f, 0f);
             Time.timeScale = 1f;
+            RunSaveService.Delete();
 
             if (_portal != null)
             {
@@ -363,11 +774,19 @@ namespace Roguelike.Core
 #endif
 
         /// <summary>用新种子原地重开一局。</summary>
-        public void RestartRun()
+        public void RestartRun() => RestartRun(false);
+
+        private void RestartRun(bool keepItemsOverride)
         {
             Time.timeScale = 1f;
+            RunSaveService.Delete();
+            _suspendedRun = false;
 
-            bool keepItems = keepItemsAfterVictory && _state == RunState.Victory;
+            _runCoinsBanked = false;
+            _lastBankedCoins = 0;
+            _lastBankedTotal = MetaProgression.Coins;
+            bool keepItems = keepItemsOverride ||
+                (keepItemsAfterVictory && _state == RunState.Victory);
 
             if (_portal != null)
             {
@@ -389,6 +808,7 @@ namespace Roguelike.Core
 
             if (flow != null) flow.PrepareFloor();
 
+            ApplyMetaUpgrades();
             if (playerHealth != null) playerHealth.ResetForNewRun();
 
             if (tracker != null && builder != null && builder.Data != null)
@@ -406,7 +826,7 @@ namespace Roguelike.Core
 
         private void OnGUI()
         {
-            if (_state == RunState.Playing) return;
+            if (_state == RunState.Playing || _state == RunState.MainMenu) return;
 
             UiTheme.DrawDim();
 
@@ -444,22 +864,30 @@ namespace Roguelike.Core
                 UiTheme.Text);
 
             string detail = victory
-                ? "已获得的道具将保留到下一局"
-                : "道具与金币将在重开后清空";
+                ? "已获得的道具与武器将保留到下一局；剩余金币已存入局外金库"
+                : "剩余金币已存入局外金库；返回主页后可开始新的一局";
             UiTheme.DrawLabelShadow(
                 new Rect(panel.x + 28f, panel.y + 152f, panel.width - 56f, 22f),
                 detail,
-                UiTheme.Small,
+                UiTheme.Center,
                 UiTheme.Muted);
+
+            var coinIconRect = new Rect(panel.x + 36f, panel.y + 187f, 16f, 16f);
+            UiTheme.DrawCoinIcon(coinIconRect);
+            UiTheme.DrawLabelShadow(
+                new Rect(coinIconRect.x + 24f, panel.y + 183f, panel.width - 100f, 24f),
+                $"带出金币 +{_lastBankedCoins}  ·  局外金库 {_lastBankedTotal}",
+                UiTheme.Small,
+                UiTheme.GoldBright);
 
             if (UiTheme.DrawButton(
                     new Rect(panel.center.x - 110f, panel.yMax - 64f, 220f, 42f),
-                    "重新开始  R",
+                    "返回主页面",
                     true,
                     false,
                     16))
             {
-                RestartRun();
+                ReturnToMainMenuFromResults();
             }
         }
 
@@ -487,17 +915,21 @@ namespace Roguelike.Core
         }
 #endif
 
-        private static bool WasRestartPressed()
+        /// <summary>结算页返回主页：保留局外结算结果，清掉本局残留状态。</summary>
+        public bool ReturnToMainMenuFromResults()
         {
-#if ENABLE_INPUT_SYSTEM
-            Keyboard keyboard = Keyboard.current;
-            if (keyboard != null) return keyboard.rKey.wasPressedThisFrame;
-#endif
-#if ENABLE_LEGACY_INPUT_MANAGER
-            return Input.GetKeyDown(KeyCode.R);
-#else
-            return false;
-#endif
+            if (_state != RunState.GameOver && _state != RunState.Victory) return false;
+
+            _state = RunState.MainMenu;
+            _suspendedRun = false;
+            Time.timeScale = 0f;
+            AudioService.StopMusic();
+
+            MainMenuUI menu = FindFirstObjectByType<MainMenuUI>(FindObjectsInactive.Include);
+            if (menu != null) menu.ShowMenu();
+
+            Debug.Log("[Run] 已从结算页返回主页面");
+            return true;
         }
     }
 }
