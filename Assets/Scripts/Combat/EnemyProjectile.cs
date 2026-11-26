@@ -1,4 +1,5 @@
 using Roguelike.Player;
+using Roguelike.Visual;
 using UnityEngine;
 
 namespace Roguelike.Combat
@@ -29,6 +30,17 @@ namespace Roguelike.Combat
             _glow = GetComponentInChildren<ProjectileGlow>();
             _baseScale = transform.localScale;
             if (_renderer != null) _baseColor = _renderer.color;
+
+            ApplyDepthOrder();
+        }
+
+        /// <summary>敌方弹丸与光晕始终压在角色和石像之上。</summary>
+        private void ApplyDepthOrder()
+        {
+            if (_renderer != null) _renderer.sortingOrder = DepthSort.Projectile;
+
+            var glowRenderer = _glow != null ? _glow.GetComponent<SpriteRenderer>() : null;
+            if (glowRenderer != null) glowRenderer.sortingOrder = DepthSort.Projectile - 1;
         }
 
         public void Initialize(Vector2 direction, float speed, int damage, float lifetime)
@@ -56,6 +68,7 @@ namespace Roguelike.Combat
         {
             if (_renderer == null) _renderer = GetComponentInChildren<SpriteRenderer>();
             if (_renderer != null) _renderer.color = tint;
+            ApplyDepthOrder();
 
             transform.localScale = _baseScale * Mathf.Max(0.1f, scale);
             if (_glow == null) _glow = GetComponentInChildren<ProjectileGlow>();

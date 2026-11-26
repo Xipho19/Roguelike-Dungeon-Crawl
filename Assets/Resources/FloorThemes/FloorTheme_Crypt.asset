@@ -14,11 +14,40 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Roguelike.Dungeon.FloorTheme
   displayName: "\u5893\u7A74"
   order: 1
-  floorTint: {r: 0.68, g: 0.92, b: 0.95, a: 1}
-  wallTint: {r: 0.7, g: 0.88, b: 0.92, a: 1}
-  cameraBackground: {r: 0.015, g: 0.04, b: 0.055, a: 1}
+  floorTint: {r: 0.72, g: 0.78, b: 0.82, a: 1}
+  wallTint: {r: 0.5, g: 0.6, b: 0.68, a: 1}
+  cameraBackground: {r: 0.008, g: 0.014, b: 0.024, a: 1}
+  floorTexture: {fileID: 21300000, guid: 90ea6b502f006c34fa735995592cde9a, type: 3}
   floorVariants: []
-  wallSprite: {fileID: 0}
+  allowFloorFlip: 0
+  useRoomTypeTint: 0
+  hideLegacyDecorations: 1
+  hideDoorIndicators: 0
+  useDoorThresholds: 1
+  crateSprite: {fileID: 21300000, guid: 5e050b4fe70194142afbbe526a470664, type: 3}
+  crateAltSprite: {fileID: 21300000, guid: 2d783c77900c91f46a9321d4df6e4847, type: 3}
+  crateSprites:
+  - {fileID: 21300000, guid: 5e050b4fe70194142afbbe526a470664, type: 3}
+  - {fileID: 21300000, guid: 2d783c77900c91f46a9321d4df6e4847, type: 3}
+  - {fileID: 21300000, guid: 9ec1b6d929ff8c34ca31c0d7c4f52510, type: 3}
+  chestSprite: {fileID: 21300000, guid: a73cf9202ad4a99489abbfd4c3299b0f, type: 3}
+  chestOpenSprite: {fileID: 21300000, guid: 7e095130c7c71b84788ffb0a5dbfbe2d, type: 3}
+  skullSprite: {fileID: 21300000, guid: bd337d85f97c89c409fd06e54c6b46a0, type: 3}
+  columnSprite: {fileID: 21300000, guid: 4814a15f87a75244a951b2fea0c321b4, type: 3}
+  columnLowerSprite: {fileID: 21300000, guid: 3ae6ba6ed3e8b034bb0df57c16b5473a, type: 3}
+  columnUpperSprite: {fileID: 21300000, guid: a58ecaf886b7b304e92af41ebec6b0c1, type: 3}
+  brazierSprite: {fileID: 21300000, guid: 0bccce3b57b59634a81dd962a75608f7, type: 3}
+  urnSprite: {fileID: 21300000, guid: 6b61e4db5860dc948980217ace339e07, type: 3}
+  floorClutterSprites:
+  - {fileID: 21300000, guid: bd337d85f97c89c409fd06e54c6b46a0, type: 3}
+  - {fileID: 21300000, guid: a1311d26189c23b49bedf2245707e07c, type: 3}
+  - {fileID: 21300000, guid: e266c7dfdd1e83546931a2c9b19046db, type: 3}
+  - {fileID: 21300000, guid: 2d70c762c087be74d9a299cd04fd9344, type: 3}
+  - {fileID: 21300000, guid: f238291a4e345824bbb827f4fd53fa13, type: 3}
+  - {fileID: 21300000, guid: 6b61e4db5860dc948980217ace339e07, type: 3}
+  wallSprite: {fileID: 21300000, guid: 98847887dd677cf458d699f120a212d5, type: 3}
+  wallHorizontalSprite: {fileID: 21300000, guid: 98847887dd677cf458d699f120a212d5, type: 3}
+  wallVerticalSprite: {fileID: 21300000, guid: 3075e2a20c853b34e9f1e8bd0031dab9, type: 3}
   bossVisual: 1
   commonEnemies:
   - {fileID: 5048551713628059921, guid: 822456a88da57ca44846c0d745161706, type: 3}

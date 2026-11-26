@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: defb6bdc2d896bd408812277eafafec4, type: 3}
+  m_Name: BigZombie
+  m_EditorClassIdentifier: Assembly-CSharp::Roguelike.Combat.BossVisualDefinition
+  displayName: "\u6B7B\u4EA1\u9A91\u58EB"
+  subtitle: "\u4EA1\u8005\u519B\u56E2\u4E0E\u8150\u8680"
+  visualScale: 0.95
+  idleDown:
+  - {fileID: 21300000, guid: 699bd1a528c52474b9b2be315c42122c, type: 3}
+  runDown:
+  - {fileID: 21300000, guid: 4e3c374224d277d489868c7ecafc272b, type: 3}
+  - {fileID: 21300000, guid: 78c9651c9c75ecb419cda6d91bfbec6e, type: 3}
+  - {fileID: 21300000, guid: c50ac8ddd6e302547a226254865d6678, type: 3}
+  idleSide:
+  - {fileID: 21300000, guid: ea8d170383c46dc4eafcd5d26ed847bb, type: 3}
+  runSide:
+  - {fileID: 21300000, guid: 20e46fb89bb5b2f42a2f030e56a05da2, type: 3}
+  - {fileID: 21300000, guid: 28f89a4ee0f0f234eb51dcfefde85633, type: 3}
+  - {fileID: 21300000, guid: 35a6e6b45ed3e54489c55d5026b04180, type: 3}
+  idleUp:
+  - {fileID: 21300000, guid: 8975eeb4c2d06ec47b61e8ba2a76f81c, type: 3}
+  runUp:
+  - {fileID: 21300000, guid: 59566a890ae695d4f98471d88f55d508, type: 3}
+  - {fileID: 21300000, guid: f9964abcd541548459f6b9e46d2f5190, type: 3}
+  - {fileID: 21300000, guid: 2361b850c3462e54fa2a6851cddc8a84, type: 3}
+  portrait: {fileID: 21300000, guid: 699bd1a528c52474b9b2be315c42122c, type: 3}
+  hudIcon: {fileID: 21300000, guid: 699bd1a528c52474b9b2be315c42122c, type: 3}

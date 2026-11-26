@@ -1,3 +1,4 @@
+using Roguelike.Visual;
 using UnityEngine;
 
 namespace Roguelike.Combat
@@ -31,7 +32,7 @@ namespace Roguelike.Combat
             _renderer = gameObject.AddComponent<SpriteRenderer>();
             _frames = LoadFrames();
             _renderer.sprite = _frames.Length > 0 ? _frames[0] : sprite;
-            _renderer.sortingOrder = 9;
+            _renderer.sortingOrder = DepthSort.Effect;
             _renderer.color = Color.white;
 
             _duration = Mathf.Max(0.05f, duration);

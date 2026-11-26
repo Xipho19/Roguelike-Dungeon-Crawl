@@ -14,19 +14,39 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Roguelike.Dungeon.FloorTheme
   displayName: "\u4E0B\u6C34\u9053"
   order: 3
-  floorTint: {r: 0.5, g: 0.82, b: 0.78, a: 1}
-  wallTint: {r: 0.38, g: 0.64, b: 0.6, a: 1}
-  cameraBackground: {r: 0.012, g: 0.045, b: 0.045, a: 1}
-  floorVariants:
-  - {fileID: 21300000, guid: 2747ca8d2f446ee4c98e923c70ab194c, type: 3}
-  - {fileID: 21300000, guid: 29118570fca6a484da94ea84fbe9c407, type: 3}
-  - {fileID: 21300000, guid: 9dfce33070ec69447b9605955ee6d77f, type: 3}
-  - {fileID: 21300000, guid: 308b5d34edb46034c830e9b3e9babb15, type: 3}
-  - {fileID: 21300000, guid: a7bfbb4afd73952409d572b38adab6fe, type: 3}
-  - {fileID: 21300000, guid: 7a9a8838170acc54b91a84d0128980c2, type: 3}
-  - {fileID: 21300000, guid: cae1f0fecce683147bc97f80e6702aae, type: 3}
-  - {fileID: 21300000, guid: 87ff1f1c37d20184eb00e190133fab38, type: 3}
-  wallSprite: {fileID: 21300000, guid: 0d7840a7bc5f40c4b869cbad8e11f9e8, type: 3}
+  floorTint: {r: 0.78, g: 0.95, b: 0.76, a: 1}
+  wallTint: {r: 0.55, g: 0.78, b: 0.62, a: 1}
+  cameraBackground: {r: 0.008, g: 0.026, b: 0.022, a: 1}
+  floorTexture: {fileID: 21300000, guid: 69c636afaabce5247a6572de3bc0c025, type: 3}
+  floorVariants: []
+  allowFloorFlip: 0
+  useRoomTypeTint: 0
+  hideLegacyDecorations: 1
+  hideDoorIndicators: 0
+  useDoorThresholds: 1
+  crateSprite: {fileID: 21300000, guid: 5e050b4fe70194142afbbe526a470664, type: 3}
+  crateAltSprite: {fileID: 21300000, guid: 2d783c77900c91f46a9321d4df6e4847, type: 3}
+  crateSprites:
+  - {fileID: 21300000, guid: 5e050b4fe70194142afbbe526a470664, type: 3}
+  - {fileID: 21300000, guid: 2d783c77900c91f46a9321d4df6e4847, type: 3}
+  - {fileID: 21300000, guid: 9ec1b6d929ff8c34ca31c0d7c4f52510, type: 3}
+  chestSprite: {fileID: 21300000, guid: a73cf9202ad4a99489abbfd4c3299b0f, type: 3}
+  chestOpenSprite: {fileID: 21300000, guid: 7e095130c7c71b84788ffb0a5dbfbe2d, type: 3}
+  skullSprite: {fileID: 21300000, guid: 0c0a195da010c574a9be72f42de63d4b, type: 3}
+  columnSprite: {fileID: 21300000, guid: ceefd4b4af9a671439043e546c1e83bc, type: 3}
+  columnLowerSprite: {fileID: 0}
+  columnUpperSprite: {fileID: 0}
+  brazierSprite: {fileID: 21300000, guid: 0bccce3b57b59634a81dd962a75608f7, type: 3}
+  urnSprite: {fileID: 21300000, guid: 9f3ffcaba14e942459cfa620353c7ace, type: 3}
+  floorClutterSprites:
+  - {fileID: 21300000, guid: 26b1cbb5698fd9e4c8c8cc55410826c7, type: 3}
+  - {fileID: 21300000, guid: 5680e4dceaff75c469a88ead11f17a7d, type: 3}
+  - {fileID: 21300000, guid: 3b2bde9c3e39ab64c96b56552d138497, type: 3}
+  - {fileID: 21300000, guid: f80052bcc8764874f928b37fa592293c, type: 3}
+  - {fileID: 21300000, guid: d4b7bd19d36582a4f9d5c5bfd65a538a, type: 3}
+  wallSprite: {fileID: 21300000, guid: 565a3830a32f96f42be3ba1144e9b755, type: 3}
+  wallHorizontalSprite: {fileID: 21300000, guid: 565a3830a32f96f42be3ba1144e9b755, type: 3}
+  wallVerticalSprite: {fileID: 21300000, guid: f9256511167902e4eb9cfcd6af560aa6, type: 3}
   bossVisual: 3
   commonEnemies:
   - {fileID: 8281996877629084266, guid: f28fe3387f647d140a9beb8635f14f31, type: 3}

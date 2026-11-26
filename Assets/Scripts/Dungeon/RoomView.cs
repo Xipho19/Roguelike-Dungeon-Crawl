@@ -62,10 +62,18 @@ namespace Roguelike.Dungeon
         [SerializeField] private Color floorBaseColor = new Color(0.22f, 0.23f, 0.28f, 1f);
 
         private bool _hasFloorTheme;
+        private bool _useRoomTypeTint = true;
+        private bool _hideDoorIndicators;
+        private bool _useDoorThresholds;
+        private readonly SpriteRenderer[] _doorThresholds = new SpriteRenderer[4];
         private Color _floorThemeTint = Color.white;
         private int _variationSeed;
+        private Sprite _themeFloorTexture;
         private Sprite[] _themeFloorVariants;
-        private Sprite _themeWallSprite;
+        private Sprite _themeWallHorizontal;
+        private Sprite _themeWallVertical;
+        private FloorTheme _decorTheme;
+        private RoomWallShadow _wallShadow;
 
         public RoomType RoomType => roomType;
         public Vector2Int GridPosition => gridPosition;
@@ -199,7 +207,7 @@ namespace Roguelike.Dungeon
                 SpriteRenderer indicator = doorIndicators[i];
                 if (indicator == null) continue;
 
-                indicator.enabled = danger && HasDoor((WallSide)i);
+                indicator.enabled = danger && HasDoor((WallSide)i) && !_hideDoorIndicators;
             }
         }
 
@@ -276,7 +284,7 @@ namespace Roguelike.Dungeon
                     roomFloor.Apply(roomSeed);
             }
 
-            if (decorations != null) decorations.Apply(roomType, doors, roomSeed);
+            if (decorations != null) decorations.Apply(roomType, doors, roomSeed, null, footprint.x, footprint.y);
         }
 
         /// <summary>应用楼层主题：地板与墙体的贴图和染色。</summary>
@@ -285,22 +293,57 @@ namespace Roguelike.Dungeon
             if (theme == null) return;
 
             _hasFloorTheme = true;
+            _useRoomTypeTint = theme.useRoomTypeTint;
+            _hideDoorIndicators = theme.hideDoorIndicators;
+            _useDoorThresholds = theme.useDoorThresholds;
+            RefreshDoorIndicators();
             _floorThemeTint = theme.floorTint;
+            _themeFloorTexture = theme.floorTexture;
             _themeFloorVariants = theme.floorVariants;
-            _themeWallSprite = theme.wallSprite;
+            _themeWallHorizontal = theme.wallHorizontalSprite != null
+                ? theme.wallHorizontalSprite
+                : theme.wallSprite;
+            _themeWallVertical = theme.wallVerticalSprite != null
+                ? theme.wallVerticalSprite
+                : theme.wallSprite;
+            ApplyDoorThresholds();
 
             if (roomFloor != null)
             {
-                roomFloor.ApplyTheme(_themeFloorVariants, _variationSeed);
-                roomFloor.SetTint(_floorThemeTint);
+                if (_themeFloorTexture != null)
+                {
+                    roomFloor.ApplyTiled(
+                        _themeFloorTexture,
+                        _floorThemeTint,
+                        footprint.x - RoomGeometry.WallThickness * 2,
+                        footprint.y - RoomGeometry.WallThickness * 2);
+                }
+                else
+                {
+                    roomFloor.ApplyTheme(_themeFloorVariants, _variationSeed, theme.allowFloorFlip);
+                    roomFloor.SetTint(_floorThemeTint);
+                }
             }
             else if (floorRenderer != null)
             {
                 floorRenderer.color = _floorThemeTint;
             }
 
-            // 墙面装饰（旗帜、破洞/苔藓、立柱）自带砖墙底图，要和墙体一起染色
-            if (decorations != null) decorations.SetWallTint(theme.wallTint);
+            // 装饰在房间搭建时已按默认素材生成；主题变化时用主题道具重建一次。
+            if (decorations != null)
+            {
+                if (_decorTheme != theme)
+                {
+                    decorations.Apply(roomType, doors, _variationSeed, theme, footprint.x, footprint.y);
+                    _decorTheme = theme;
+                }
+
+                // 墙面装饰（旗帜、破洞/苔藓、立柱）自带砖墙底图，要和墙体一起染色
+                decorations.SetWallTint(theme.wallTint);
+                decorations.SetLegacyDecorVisible(!theme.hideLegacyDecorations);
+            }
+
+            ApplyWallShadow();
 
             if (walls == null) return;
 
@@ -308,8 +351,70 @@ namespace Roguelike.Dungeon
             {
                 if (walls[i] == null) continue;
 
-                walls[i].SetSprite(_themeWallSprite);
+                walls[i].SetSprites(_themeWallHorizontal, _themeWallVertical);
                 walls[i].SetTint(theme.wallTint);
+            }
+        }
+
+        /// <summary>在房间内侧四面墙下铺一层渐变阴影；主题启用墙体时才有意义。</summary>
+        private void ApplyWallShadow()
+        {
+            if (_wallShadow == null)
+            {
+                var shadowObject = new GameObject("WallShadows");
+                shadowObject.transform.SetParent(transform, false);
+                _wallShadow = shadowObject.AddComponent<RoomWallShadow>();
+            }
+
+            _wallShadow.Rebuild(footprint.x, footprint.y, doors);
+        }
+
+        /// <summary>
+        /// 门洞处铺一条与地板同色的石板通道，避免开门后露出相机背景的黑色空洞。
+        /// 只使用主题墙体贴图本身，不新增碰撞或玩法物件。
+        /// </summary>
+        private void ApplyDoorThresholds()
+        {
+            if (doorIndicators == null) return;
+
+            for (int i = 0; i < 4; i++)
+            {
+                if (i >= doorIndicators.Length || doorIndicators[i] == null) continue;
+
+                WallSide side = (WallSide)i;
+                bool horizontal = side == WallSide.Up || side == WallSide.Down;
+                Sprite sprite = _themeFloorTexture != null
+                    ? _themeFloorTexture
+                    : (horizontal ? _themeWallHorizontal : _themeWallVertical);
+                bool show = _useDoorThresholds && HasDoor(side) && sprite != null;
+
+                SpriteRenderer threshold = _doorThresholds[i];
+                if (!show)
+                {
+                    if (threshold != null) threshold.gameObject.SetActive(false);
+                    continue;
+                }
+
+                if (threshold == null)
+                {
+                    var go = new GameObject($"DoorThreshold_{side}");
+                    go.transform.SetParent(doorIndicators[i].transform.parent, false);
+                    threshold = go.AddComponent<SpriteRenderer>();
+                    _doorThresholds[i] = threshold;
+                }
+
+                Transform indicator = doorIndicators[i].transform;
+                threshold.transform.localPosition = indicator.localPosition;
+                threshold.transform.localRotation = indicator.localRotation;
+                threshold.transform.localScale = Vector3.one;
+                threshold.sprite = sprite;
+                threshold.drawMode = SpriteDrawMode.Tiled;
+                threshold.tileMode = SpriteTileMode.Continuous;
+                threshold.size = horizontal ? new Vector2(3f, 1f) : new Vector2(1f, 3f);
+                threshold.color = _floorThemeTint;
+                // 门槛石板在地板之上、红色警示地毯（-8）之下，避免盖住战斗提示
+                threshold.sortingOrder = -9;
+                threshold.gameObject.SetActive(true);
             }
         }
 
@@ -320,7 +425,7 @@ namespace Roguelike.Dungeon
         public void ApplyDebugVisuals(RoomType type, bool enabled)
         {
             Color baseTint = _hasFloorTheme ? _floorThemeTint : floorBaseColor;
-            Color tint = enabled
+            Color tint = enabled && _useRoomTypeTint
                 ? RoomTypePalette.FloorTint(type, baseTint)
                 : baseTint;
 

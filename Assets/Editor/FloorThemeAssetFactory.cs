@@ -109,7 +109,7 @@ namespace Roguelike.EditorTools
         private static readonly Color OvergrownWallTint = new Color(0.48f, 0.64f, 0.38f, 1f);
         private static readonly Color OvergrownBackground = new Color(0.018f, 0.05f, 0.022f, 1f);
 
-        // 第 6 层走暗紫黑曜，和第三层的橙红炼狱拉开色相
+        // 第 6 层走暗紫黑曜，和第三层的暖金黄金城拉开色相
         private static readonly Color ObsidianFloorTint = new Color(0.56f, 0.30f, 0.82f, 1f);
         private static readonly Color ObsidianWallTint = new Color(0.30f, 0.16f, 0.44f, 1f);
         private static readonly Color ObsidianBackground = new Color(0.025f, 0.006f, 0.045f, 1f);
@@ -151,7 +151,7 @@ namespace Roguelike.EditorTools
 
             CreateOrUpdate(
                 InfernoPath,
-                "炼狱",
+                "黄金城",
                 2,
                 InfernoFloorTint,
                 InfernoWallTint,
@@ -230,7 +230,7 @@ namespace Roguelike.EditorTools
 
             Ensure(
                 InfernoPath,
-                "炼狱",
+                "黄金城",
                 2,
                 InfernoFloorTint,
                 InfernoWallTint,

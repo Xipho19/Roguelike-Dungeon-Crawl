@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: defb6bdc2d896bd408812277eafafec4, type: 3}
+  m_Name: BigDemon
+  m_EditorClassIdentifier: Assembly-CSharp::Roguelike.Combat.BossVisualDefinition
+  displayName: "\u8D64\u91D1\u72EE\u874E"
+  subtitle: "\u87BA\u65CB\u5F39\u5E55\u4E0E\u8FFD\u8E2A\u706B\u7403"
+  visualScale: 1
+  idleDown:
+  - {fileID: 21300000, guid: 3fa361d9942c2d041a270591b9723892, type: 3}
+  runDown:
+  - {fileID: 21300000, guid: a8e441591269d6b419826cc569b1290e, type: 3}
+  - {fileID: 21300000, guid: 8ec557600d963e8489e09577c308f979, type: 3}
+  - {fileID: 21300000, guid: ada00c6025acdbe458aa819b03ec6155, type: 3}
+  idleSide:
+  - {fileID: 21300000, guid: ca553daf385975540897b00bf57eff6e, type: 3}
+  runSide:
+  - {fileID: 21300000, guid: a498b9aac3a5ce64fa36df4641d0c4d2, type: 3}
+  - {fileID: 21300000, guid: f58e407c9b5af0145aec34b35e398fe3, type: 3}
+  - {fileID: 21300000, guid: 4cf4be75a15dad745b1b3cdad6f04055, type: 3}
+  idleUp:
+  - {fileID: 21300000, guid: e2fe8f02591027143be2b6a39915a606, type: 3}
+  runUp:
+  - {fileID: 21300000, guid: f35325d750c5c6b4b9f3b862f31b77c3, type: 3}
+  - {fileID: 21300000, guid: 5ccc4ccef42d3084e972ee6485d5558c, type: 3}
+  - {fileID: 21300000, guid: 05f9ca24fdfcbf441a10f12e19fa988d, type: 3}
+  portrait: {fileID: 21300000, guid: 3fa361d9942c2d041a270591b9723892, type: 3}
+  hudIcon: {fileID: 21300000, guid: 3fa361d9942c2d041a270591b9723892, type: 3}

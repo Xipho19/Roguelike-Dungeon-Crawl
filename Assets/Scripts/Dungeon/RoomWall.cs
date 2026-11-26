@@ -60,7 +60,17 @@ namespace Roguelike.Dungeon
         /// <summary>替换整面墙的砖块贴图；传 null 恢复 Prefab 默认贴图。</summary>
         public void SetSprite(Sprite sprite)
         {
+            SetSprites(sprite, sprite);
+        }
+
+        /// <summary>横向墙使用 horizontal，纵向墙使用 vertical；空值回退默认贴图。</summary>
+        public void SetSprites(Sprite horizontal, Sprite vertical)
+        {
             CacheRenderers();
+
+            Sprite sprite = side == WallSide.Up || side == WallSide.Down
+                ? horizontal
+                : vertical;
 
             for (int i = 0; i < _renderers.Length; i++)
             {

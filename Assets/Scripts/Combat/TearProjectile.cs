@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Roguelike.Audio;
 using Roguelike.Dungeon;
 using Roguelike.Player;
+using Roguelike.Visual;
 using UnityEngine;
 
 namespace Roguelike.Combat
@@ -172,6 +173,7 @@ namespace Roguelike.Combat
             transform.localScale = Vector3.one * _visualScale;
 
             if (_renderer != null) _renderer.color = _visualColor;
+            ApplyDepthOrder();
 
             if (_faceVelocity && _rb != null)
             {
@@ -186,6 +188,19 @@ namespace Roguelike.Combat
             }
 
             if (_glow != null) _glow.SyncNow();
+        }
+
+        /// <summary>眼泪与光晕始终压在角色和石像之上。</summary>
+        private void ApplyDepthOrder()
+        {
+            if (_renderer != null) _renderer.sortingOrder = DepthSort.Projectile;
+
+            if (_glow == null) _glow = GetComponentInChildren<ProjectileGlow>();
+            if (_glow != null)
+            {
+                var glowRenderer = _glow.GetComponent<SpriteRenderer>();
+                if (glowRenderer != null) glowRenderer.sortingOrder = DepthSort.Projectile - 1;
+            }
         }
 
         /// <summary>回收本颗眼泪，而不是直接销毁，供对象池复用。</summary>

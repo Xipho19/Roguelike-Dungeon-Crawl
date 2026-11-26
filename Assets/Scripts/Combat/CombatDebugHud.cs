@@ -309,17 +309,25 @@ namespace Roguelike.Combat
             if (boss == null || boss.IsDead || !boss.CombatActive) return;
 
             float ratio = boss.MaxHealth > 0f ? Mathf.Clamp01(boss.Health / boss.MaxHealth) : 0f;
+            Color accent = boss.IsFinalBoss
+                ? new Color(0.62f, 0.34f, 0.92f, 1f)
+                : UiTheme.Danger;
             var panel = new Rect(Screen.width * 0.5f - 310f, Screen.height - 68f, 620f, 50f);
-            UiTheme.DrawPanel(panel, UiTheme.Danger, false);
+            UiTheme.DrawPanel(panel, accent, false);
 
             var bar = new Rect(panel.x + 14f, panel.y + 16f, panel.width - 28f, 20f);
-            UiTheme.DrawBar(bar, ratio, UiTheme.Health);
+            Color barColor = boss.IsPhase3
+                ? new Color(0.86f, 0.32f, 1f, 1f)
+                : boss.IsPhase2
+                    ? new Color(0.92f, 0.34f, 0.3f, 1f)
+                    : UiTheme.Health;
+            UiTheme.DrawBar(bar, ratio, barColor);
 
             UiTheme.DrawLabelShadow(
                 new Rect(panel.x, panel.y - 25f, panel.width, 20f),
-                "◆  BOSS  ◆",
+                boss.HudTitle,
                 UiTheme.Boss,
-                UiTheme.GoldBright);
+                boss.IsFinalBoss ? new Color(0.84f, 0.64f, 1f, 1f) : UiTheme.GoldBright);
 
             string healthText = $"{Mathf.CeilToInt(boss.Health)} / {Mathf.CeilToInt(boss.MaxHealth)}";
             var healthRect = new Rect(panel.x + panel.width - 154f, panel.y - 27f, 140f, 22f);

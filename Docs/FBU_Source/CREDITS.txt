@@ -1,0 +1,34 @@
+FBU Tileset Package — 素材来源与署名
+
+本项目为非商用原型。使用 FBU 图块包时需保留以下署名；
+若未来转为商用，需要先联系作者并确认授权。
+
+FBU's Tileset Package:
+- Enterbrain
+- Mack
+- Davias（Suikoden 2 素材 RIP）
+- Smithygcn（Tales of Destiny 素材 RIP）
+
+Pack of Tilesets #2:
+- Celianna
+- Enterbrain
+- Mack
+- Davias（Suikoden 2 素材 RIP）
+- Smithygcn（Tales of Destiny 素材 RIP）
+- Wild Arms
+- Soruve
+- Zanyzora
+- Inquisitor
+
+作者网站：http://rmvxace.blogspot.com
+商用联系：andrefcasimiro@gmail.com
+
+试点提取源文件：
+- FBU's Tileset Package/Dungeon Bonus/62328908.png（无缝花岗岩地面）
+- FBU's Tileset Package/Dungeon Bonus/45323392.png（灰色砖墙）
+- Pack of Tilesets #2/Tiles/Dungeons/TileB.png（骸骨、碎石、石瓮、兜帽石像）
+- FBU's Tileset Package/Winter Time/chest1.png（宝箱开/关）
+- FBU's Tileset Package/Golden Cave/other2.png（火盆）
+- FBU's Tileset Package/Golden Cave/dungeonbn.png（陶罐）
+- 说明：第 1 层地牢试点仅使用上述表的裁剪区域；
+  平铺、染色、门洞石板与道具摆放均由本项目在 Unity 内处理。

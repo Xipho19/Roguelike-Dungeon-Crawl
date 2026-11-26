@@ -1,4 +1,5 @@
 using Roguelike.Player;
+using Roguelike.Visual;
 using UnityEngine;
 
 namespace Roguelike.Weapons
@@ -78,6 +79,9 @@ namespace Roguelike.Weapons
             _weaponTransform.localRotation = Quaternion.Euler(0f, 0f, angle);
             _weaponTransform.localScale = new Vector3(weapon.heldScale, scaleY, 1f);
             _renderer.enabled = true;
+
+            // 手持武器跟着角色一起按 Y 排序，并压在身体之上（+1），避免被身体挡住
+            _renderer.sortingOrder = DepthSort.OrderFor(transform.position.y, 1);
         }
 
         /// <summary>武士刀三段斩的手持摆动，让每一刀的动作方向不同。</summary>

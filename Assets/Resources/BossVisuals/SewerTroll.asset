@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: defb6bdc2d896bd408812277eafafec4, type: 3}
+  m_Name: SewerTroll
+  m_EditorClassIdentifier: Assembly-CSharp::Roguelike.Combat.BossVisualDefinition
+  displayName: "\u761F\u75AB\u9F20\u738B"
+  subtitle: "\u6BD2\u6CBC\u4E0E\u8FDE\u7EED\u51B2\u950B"
+  visualScale: 0.68
+  idleDown:
+  - {fileID: 21300000, guid: 2ceaf73387f0c8b4b84320e730be7e13, type: 3}
+  runDown:
+  - {fileID: 21300000, guid: b6a4f34ad365659479300258495007f7, type: 3}
+  - {fileID: 21300000, guid: 62d219bf38391c54d9be1c006b9a6114, type: 3}
+  - {fileID: 21300000, guid: 65ff63a25b6e6f24fb357fa784c8b329, type: 3}
+  idleSide:
+  - {fileID: 21300000, guid: 855c6488f356fd24798c39a2e3a72724, type: 3}
+  runSide:
+  - {fileID: 21300000, guid: 02aa194e936e29146b414e2b1c127e15, type: 3}
+  - {fileID: 21300000, guid: 4029624fe4f15b64fa978a222f61c0dc, type: 3}
+  - {fileID: 21300000, guid: 54da7dc0791c341428fa43b5b8ab23e0, type: 3}
+  idleUp:
+  - {fileID: 21300000, guid: d631df6b38749be4297833dc08df379f, type: 3}
+  runUp:
+  - {fileID: 21300000, guid: 4e9bceda3a6e233438c88874195f17bf, type: 3}
+  - {fileID: 21300000, guid: df5e14681d7c24a4aaa60bed4fac4ffa, type: 3}
+  - {fileID: 21300000, guid: cae759c67817abb46914e26398d1898d, type: 3}
+  portrait: {fileID: 21300000, guid: 2ceaf73387f0c8b4b84320e730be7e13, type: 3}
+  hudIcon: {fileID: 21300000, guid: 2ceaf73387f0c8b4b84320e730be7e13, type: 3}

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Roguelike.Combat;
+using Roguelike.Core;
 using Roguelike.Items;
 using Roguelike.Player;
 using Roguelike.Weapons;
@@ -140,6 +141,7 @@ namespace Roguelike.Dungeon
         private PlayerWallet _playerWallet;
         private CombatDebugHud _hud;
         private WeaponPickup _weaponOffering;
+        private RunManager _runManager;
         private bool _floorPrepared;
         private bool _suppressWeaponOffering;
         private string _weaponOfferingOverride;
@@ -259,6 +261,7 @@ namespace Roguelike.Dungeon
             if (heartPrefab == null) heartPrefab = Resources.Load<Pickup>("Combat/Heart");
             if (itemPickupPrefab == null) itemPickupPrefab = Resources.Load<ItemPickup>("Items/ItemPickup");
             if (secretAltarPrefab == null) secretAltarPrefab = Resources.Load<SecretAltar>("Items/SecretAltar");
+            _runManager = FindFirstObjectByType<RunManager>();
 
             if (itemPool == null || itemPool.Length == 0)
                 itemPool = Resources.LoadAll<ItemDefinition>("Items");
@@ -1209,7 +1212,13 @@ namespace Roguelike.Dungeon
             for (int i = 0; i < count; i++)
             {
                 Vector3 spawnPosition;
-                if (i < points.Count)
+                if (isBoss)
+                {
+                    // 新 Boss 体型远大于旧 32px 素材，固定放在房间中央偏下，
+                    // 避免出生点靠墙时头部穿进墙体。
+                    spawnPosition = (Vector3)room.WorldCenter + new Vector3(0f, -1.1f, 0f);
+                }
+                else if (i < points.Count)
                 {
                     spawnPosition = points[i].position;
                 }
@@ -1253,6 +1262,10 @@ namespace Roguelike.Dungeon
 
                 if (isBoss && enemy is BossEnemy boss)
                 {
+                    bool isFinalBoss = _runManager != null &&
+                        _runManager.MaxFloor > 0 &&
+                        _floor >= _runManager.MaxFloor;
+                    boss.SetFinalBoss(isFinalBoss);
                     boss.ApplyFloorScaling(_floor);
                     boss.SetVisual(_floorTheme != null ? _floorTheme.bossVisual : FloorBossVisual.BigDemon);
                 }

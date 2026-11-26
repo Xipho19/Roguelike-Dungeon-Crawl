@@ -1,3 +1,4 @@
+using Roguelike.Visual;
 using UnityEngine;
 
 namespace Roguelike.Weapons
@@ -46,7 +47,7 @@ namespace Roguelike.Weapons
             var renderer = root.AddComponent<SpriteRenderer>();
             renderer.sprite = frames[0];
             renderer.color = color;
-            renderer.sortingOrder = 20;
+            renderer.sortingOrder = DepthSort.Effect;
 
             var effect = root.AddComponent<MeleeSlashEffect>();
             effect._frames = frames;
